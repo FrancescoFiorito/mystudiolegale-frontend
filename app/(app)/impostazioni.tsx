@@ -1,0 +1,158 @@
+import React from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Share } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useTheme } from "@/src/ThemeContext";
+import { useAuth, useHasPerm } from "@/src/AuthContext";
+import { api } from "@/src/api";
+import { SPACING, RADIUS, SHADOW } from "@/src/theme";
+import Header from "@/src/components/Header";
+
+export default function Impostazioni() {
+  const { t, mode, setMode } = useTheme();
+  const { logout } = useAuth();
+  const router = useRouter();
+  const canManageTeam = useHasPerm("manage_team");
+  const canViewAudit = useHasPerm("view_audit");
+  const canBackup = useHasPerm("backup");
+  const canGdprAdmin = useHasPerm("gdpr_admin");
+
+  const [integrazioni, setIntegrazioni] = React.useState<{ google?: any; outlook?: any }>({});
+
+  const loadIntegrazioni = React.useCallback(async () => {
+    try { setIntegrazioni(await api.get("/integrations/status")); } catch {}
+  }, []);
+  React.useEffect(() => { loadIntegrazioni(); }, [loadIntegrazioni]);
+
+  const Item = ({ icon, label, onPress, testID, right }: any) => (
+    <Pressable testID={testID} onPress={onPress} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+      <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
+        <Feather name={icon} size={16} color={t.brand} />
+      </View>
+      <Text style={{ flex: 1, color: t.onSurface, fontSize: 14, fontWeight: "600" }}>{label}</Text>
+      {right || <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />}
+    </Pressable>
+  );
+
+  const connettiCalendario = async (provider: "google" | "outlook") => {
+    try {
+      const r = await api.get(`/integrations/${provider}/connect`);
+      await WebBrowser.openBrowserAsync(r.auth_url);
+      setTimeout(loadIntegrazioni, 1500);
+    } catch (e: any) {
+      Alert.alert(provider === "google" ? "Google Calendar" : "Outlook Calendar", e.message || "Integrazione non configurata dal tuo amministratore di sistema");
+    }
+  };
+
+  const sincronizzaCalendario = async (provider: "google" | "outlook") => {
+    try {
+      const r = await api.post(`/integrations/${provider}/sync`);
+      Alert.alert("Sincronizzazione completata", `${r.sincronizzate} scadenze sincronizzate${r.errori ? `, ${r.errori} errori` : ""}.`);
+    } catch (e: any) {
+      Alert.alert("Errore sincronizzazione", e.message);
+    }
+  };
+
+  const disconnetti = async (provider: "google" | "outlook") => {
+    await api.del(`/integrations/${provider}`);
+    loadIntegrazioni();
+  };
+
+  const esportaDatiGdpr = async () => {
+    try {
+      const url = `${api.base}/api/gdpr/export`;
+      if (Platform.OS === "web") {
+        window.open(url, "_blank");
+      } else {
+        await Share.share({ message: `Esportazione dati studio (GDPR): apri ${url} dal browser autenticato, oppure richiedi il file al tuo amministratore.` });
+      }
+    } catch (e: any) {
+      Alert.alert("Errore", e.message);
+    }
+  };
+
+  const richiediCancellazioneAccount = () => {
+    Alert.alert(
+      "Cancella account (GDPR)",
+      "Il tuo account personale verrà anonimizzato in modo irreversibile. I dati dello studio (pratiche, clienti) restano disponibili al team. Continuare?",
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Conferma cancellazione", style: "destructive", onPress: async () => {
+            await api.post("/gdpr/delete-account");
+            Alert.alert("Fatto", "Il tuo account è stato anonimizzato.");
+            logout();
+          },
+        },
+      ]
+    );
+  };
+
+  const eseguiBackupOra = async () => {
+    try {
+      const r = await api.post("/admin/backup");
+      Alert.alert("Backup completato", `Salvato in: ${r.backup_path}`);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message);
+    }
+  };
+
+  return (
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+      <Header variant="hero" title="Impostazioni" onBack={() => router.back()} />
+      <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
+        <Text style={[s.section, { color: t.onSurfaceSecondary, marginTop: 0 }]}>STUDIO</Text>
+        {canManageTeam ? (
+          <Item testID="menu-team" icon="user-plus" label="Team & Ruoli" onPress={() => router.push("/(app)/team")} />
+        ) : null}
+        {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} /> : null}
+        {canBackup ? (
+          <Item testID="menu-backup" icon="database" label="Backup manuale ora" onPress={eseguiBackupOra} right={<Feather name="download" size={16} color={t.onSurfaceTertiary} />} />
+        ) : null}
+
+        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO ESTERNO</Text>
+        <Item
+          icon="calendar"
+          label={integrazioni.google?.connesso ? "Google Calendar · connesso" : "Collega Google Calendar"}
+          onPress={() => (integrazioni.google?.connesso ? sincronizzaCalendario("google") : connettiCalendario("google"))}
+          right={integrazioni.google?.connesso ? (
+            <Pressable onPress={() => disconnetti("google")}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
+          ) : undefined}
+        />
+        <Item
+          icon="calendar"
+          label={integrazioni.outlook?.connesso ? "Outlook Calendar · connesso" : "Collega Outlook Calendar"}
+          onPress={() => (integrazioni.outlook?.connesso ? sincronizzaCalendario("outlook") : connettiCalendario("outlook"))}
+          right={integrazioni.outlook?.connesso ? (
+            <Pressable onPress={() => disconnetti("outlook")}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
+          ) : undefined}
+        />
+
+        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>PRIVACY (GDPR)</Text>
+        {canGdprAdmin ? <Item icon="download-cloud" label="Esporta tutti i dati dello studio" onPress={esportaDatiGdpr} /> : null}
+        <Item icon="user-x" label="Richiedi cancellazione account" onPress={richiediCancellazioneAccount} />
+
+        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>ASPETTO</Text>
+        <View style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+          <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}><Feather name="moon" size={16} color={t.brand} /></View>
+          <Text style={{ flex: 1, color: t.onSurface, fontSize: 14, fontWeight: "600" }}>Tema</Text>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            {(["light", "dark", "system"] as const).map((m) => (
+              <Pressable key={m} testID={`theme-${m}`} onPress={() => setMode(m)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, backgroundColor: mode === m ? t.brand : t.surfaceSecondary }}>
+                <Text style={{ color: mode === m ? t.onBrand : t.onSurfaceSecondary, fontSize: 11, textTransform: "capitalize" }}>{m === "system" ? "Auto" : m === "dark" ? "Scuro" : "Chiaro"}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  section: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm },
+  item: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
+  itemIcon: { width: 34, height: 34, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+});
