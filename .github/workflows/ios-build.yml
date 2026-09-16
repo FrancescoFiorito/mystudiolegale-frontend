@@ -28,3 +28,18 @@ jobs:
         with:
           name: mystudiolegale-ios
           path: build.ipa
+
+      - name: Prepare App Store Connect API Key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          cat <<'EOF' > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8
+          ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          EOF
+
+      - name: Upload to TestFlight
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file build.ipa \
+            --apiKey ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
+            --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
