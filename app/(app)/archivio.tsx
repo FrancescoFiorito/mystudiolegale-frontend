@@ -35,6 +35,16 @@ export default function Archivio() {
   const params = useLocalSearchParams<{ tab?: string; stato?: string; new?: string }>();
   const [tab, setTab] = React.useState<"pratiche" | "documenti" | "parcelle">(params.tab === "documenti" ? "documenti" : params.tab === "parcelle" ? "parcelle" : "pratiche");
 
+  // La schermata resta montata quando si cambia tab (e' una delle 3 tab
+  // principali): se si arriva qui di nuovo con parametri diversi (es. dalle
+  // card della Home), bisogna aggiornare la sezione attiva anche se il
+  // componente non viene ricreato da zero.
+  React.useEffect(() => {
+    if (params.tab === "documenti") setTab("documenti");
+    else if (params.tab === "parcelle") setTab("parcelle");
+    else if (params.tab === "pratiche") setTab("pratiche");
+  }, [params.tab]);
+
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Archivio" onBack={() => router.back()} />
@@ -66,6 +76,10 @@ function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; a
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
   const [stato, setStato] = React.useState(statoIniziale && STATI.includes(statoIniziale) ? statoIniziale : "Tutte");
+
+  React.useEffect(() => {
+    if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
+  }, [statoIniziale]);
   const [showNew, setShowNew] = React.useState(!!autoNew);
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
@@ -86,7 +100,7 @@ function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; a
     load();
   };
 
-  const statoColor = (st: string) => st === "Aperta" ? t.info : st === "Chiusa" ? t.success : t.onSurfaceTertiary;
+  const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
   return (
     <>
@@ -115,8 +129,7 @@ function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; a
             <Pressable key={p.id} testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
               <View style={[s.cardIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
               <View style={{ flex: 1 }}>
-                <View style={s.cardHead}>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{p.numero}</Text>
+                <View style={[s.cardHead, { justifyContent: "flex-end" }]}>
                   <View style={{ backgroundColor: statoColor(p.stato) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
                     <Text style={{ color: statoColor(p.stato), fontSize: 11, fontWeight: "700" }}>{p.stato}</Text>
                   </View>
@@ -194,8 +207,6 @@ function SezioneDocumenti() {
   const [cartellaCorrente, setCartellaCorrente] = React.useState<string | null>(null);
   const [q, setQ] = React.useState("");
   const [uploading, setUploading] = React.useState(false);
-  const [showNewFolder, setShowNewFolder] = React.useState(false);
-  const [nuovaCartella, setNuovaCartella] = React.useState("");
 
   const load = React.useCallback(async () => {
     const [c, d] = await Promise.all([
@@ -210,14 +221,6 @@ function SezioneDocumenti() {
 
   const cartelleVisibili = cartelle.filter((c) => (c.parent_id || null) === cartellaCorrente);
   const documentiVisibili = q ? documenti : documenti.filter((d) => (d.cartella_id || null) === cartellaCorrente);
-
-  const creaCartella = async () => {
-    if (!nuovaCartella.trim()) return;
-    await api.post("/cartelle", { nome: nuovaCartella.trim(), parent_id: cartellaCorrente });
-    setNuovaCartella("");
-    setShowNewFolder(false);
-    load();
-  };
 
   const caricaFile = async () => {
     try {
@@ -260,23 +263,11 @@ function SezioneDocumenti() {
             <Feather name="search" size={16} color={t.onSurfaceTertiary} />
             <TextInput testID="doc-search" placeholder="Cerca documenti..." placeholderTextColor={t.onSurfaceTertiary} value={q} onChangeText={setQ} style={{ flex: 1, marginLeft: 8, color: t.onSurface }} />
           </View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: SPACING.sm }}>
-            {!q && cartellaCorrente ? (
-              <Pressable onPress={() => setCartellaCorrente(null)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                <Feather name="arrow-left" size={14} color={t.brand} />
-                <Text style={{ color: t.brand, fontSize: 13, fontWeight: "600" }}>Cartella principale</Text>
-              </Pressable>
-            ) : <View />}
-            <Pressable testID="doc-new-folder" onPress={() => setShowNewFolder(true)} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Feather name="folder-plus" size={15} color={t.brand} />
-              <Text style={{ color: t.brand, fontSize: 13, fontWeight: "600" }}>Nuova cartella</Text>
+          {!q && cartellaCorrente ? (
+            <Pressable onPress={() => setCartellaCorrente(null)} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: SPACING.sm }}>
+              <Feather name="arrow-left" size={14} color={t.brand} />
+              <Text style={{ color: t.brand, fontSize: 13, fontWeight: "600" }}>Cartella principale</Text>
             </Pressable>
-          </View>
-          {showNewFolder ? (
-            <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm }}>
-              <TextInput testID="doc-new-folder-name" value={nuovaCartella} onChangeText={setNuovaCartella} placeholder="Nome cartella" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-              <Pressable onPress={creaCartella} style={[s.smallBtn, { backgroundColor: t.brand }]}><Text style={{ color: t.onBrand, fontWeight: "700" }}>Crea</Text></Pressable>
-            </View>
           ) : null}
         </View>
       </View>

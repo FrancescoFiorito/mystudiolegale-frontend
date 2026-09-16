@@ -10,7 +10,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 
-const TABS = ["Timeline", "Note", "Scadenze", "Documenti"] as const;
+const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
 
 export default function PraticaDetail() {
@@ -18,10 +18,10 @@ export default function PraticaDetail() {
   const { t } = useTheme();
   const router = useRouter();
   const [pratica, setPratica] = React.useState<any>(null);
-  const [tab, setTab] = React.useState<Tab>("Timeline");
-  const [timeline, setTimeline] = React.useState<any[]>([]);
+  const [tab, setTab] = React.useState<Tab>("Note");
   const [note, setNote] = React.useState<any[]>([]);
   const [scadenze, setScadenze] = React.useState<any[]>([]);
+  const [parcelle, setParcelle] = React.useState<any[]>([]);
   const [documenti, setDocumenti] = React.useState<any[]>([]);
   const [showAdd, setShowAdd] = React.useState(false);
   const [addForm, setAddForm] = React.useState<any>({});
@@ -35,14 +35,14 @@ export default function PraticaDetail() {
 
   const load = React.useCallback(async () => {
     if (!id) return;
-    const [p, tl, n, sc, doc] = await Promise.all([
+    const [p, n, sc, par, doc] = await Promise.all([
       api.get(`/pratiche/${id}`),
-      api.get(`/pratiche/${id}/timeline`),
       api.get(`/pratiche/${id}/note`),
       api.get(`/scadenze?pratica_id=${id}`),
+      api.get(`/parcelle?pratica_id=${id}`),
       api.get(`/documenti?pratica_id=${id}`),
     ]);
-    setPratica(p); setTimeline(tl); setNote(n); setScadenze(sc); setDocumenti(doc);
+    setPratica(p); setNote(n); setScadenze(sc); setParcelle(par); setDocumenti(doc);
   }, [id]);
 
   React.useEffect(() => { load(); }, [load]);
@@ -100,11 +100,9 @@ export default function PraticaDetail() {
 
   const submitAdd = async () => {
     try {
-      if (tab === "Timeline") {
-        await api.post("/timeline", { pratica_id: id, tipo: addForm.tipo || "nota", titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data });
-      } else if (tab === "Note") {
+      if (tab === "Note") {
         await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
-      } else {
+      } else if (tab === "Scadenze") {
         await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria: [1, 7] });
       }
       setShowAdd(false); load();
@@ -158,6 +156,7 @@ export default function PraticaDetail() {
   if (!pratica) return <View style={{ flex: 1, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={t.brand} /></View>;
 
   const priColor = (p: string, done?: boolean) => done ? t.success : p === "alta" ? t.error : p === "media" ? t.warning : t.success;
+  const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
@@ -180,12 +179,11 @@ export default function PraticaDetail() {
       <ScrollView stickyHeaderIndices={[1]} contentContainerStyle={{ paddingBottom: SPACING.xxxl }}>
         <View style={{ padding: SPACING.lg }}>
           <View style={[s.infoCard, { backgroundColor: t.surface }, SHADOW.card]}>
-            <Text style={[s.numero, { color: t.brand, fontVariant: ["tabular-nums"] }]}>{pratica.numero}</Text>
             <Text style={[s.title, { color: t.onSurface }]}>{pratica.oggetto}</Text>
             <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm, flexWrap: "wrap" }}>
-              <Pressable testID="cambia-stato-btn" onPress={cambiaStato} style={[s.tag, { backgroundColor: t.brandSecondary, flexDirection: "row", alignItems: "center", gap: 4 }]}>
-                <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700" }}>{pratica.stato}</Text>
-                <Feather name="chevron-down" size={11} color={t.onBrandSecondary} />
+              <Pressable testID="cambia-stato-btn" onPress={cambiaStato} style={[s.tag, { backgroundColor: statoColor(pratica.stato) + "22", flexDirection: "row", alignItems: "center", gap: 4 }]}>
+                <Text style={{ color: statoColor(pratica.stato), fontSize: 11, fontWeight: "700" }}>{pratica.stato}</Text>
+                <Feather name="chevron-down" size={11} color={statoColor(pratica.stato)} />
               </Pressable>
               <View style={[s.tag, { backgroundColor: priColor(pratica.priorita) + "22" }]}><Text style={{ color: priColor(pratica.priorita), fontSize: 11, fontWeight: "700" }}>Priorità {pratica.priorita}</Text></View>
             </View>
@@ -209,22 +207,6 @@ export default function PraticaDetail() {
         </View>
 
         <View style={{ padding: SPACING.lg }}>
-          {tab === "Timeline" && (
-            timeline.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun evento</Text> :
-            timeline.map((e, idx) => (
-              <View key={e.id} style={{ flexDirection: "row", gap: SPACING.md }}>
-                <View style={{ alignItems: "center" }}>
-                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: t.brand, marginTop: 4 }} />
-                  {idx < timeline.length - 1 ? <View style={{ width: 2, flex: 1, backgroundColor: t.border, marginVertical: 4 }} /> : null}
-                </View>
-                <View style={{ flex: 1, paddingBottom: SPACING.md }}>
-                  <Text style={{ color: t.onSurface, fontWeight: "700" }}>{e.titolo}</Text>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{e.data} · {e.tipo}</Text>
-                  {e.descrizione ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 4, fontSize: 13 }}>{e.descrizione}</Text> : null}
-                </View>
-              </View>
-            ))
-          )}
           {tab === "Note" && (
             note.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna nota</Text> :
             note.map((n) => (
@@ -261,12 +243,22 @@ export default function PraticaDetail() {
               </View>
             ))
           )}
+          {tab === "Parcelle" && (
+            parcelle.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna parcella collegata</Text> :
+            parcelle.map((p) => (
+              <View key={p.id} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 16, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
+                  <View style={{ backgroundColor: (p.emessa ? t.success : t.warning) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
+                    <Text style={{ color: p.emessa ? t.success : t.warning, fontSize: 10, fontWeight: "700" }}>{p.emessa ? "EMESSA" : "BOZZA"}</Text>
+                  </View>
+                </View>
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{p.numero}</Text>
+              </View>
+            ))
+          )}
           {tab === "Documenti" && (
             <>
-              <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, justifyContent: "center", marginBottom: SPACING.md }}>
-                {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={16} color={t.onBrand} />}
-                <Text style={{ color: t.onBrand, fontWeight: "700" }}>Carica documento</Text>
-              </Pressable>
               {documenti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun documento nel fascicolo</Text> :
                 documenti.map((d) => (
                   <Pressable key={d.id} onPress={() => apriDocumento(d)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
@@ -280,7 +272,11 @@ export default function PraticaDetail() {
         </View>
       </ScrollView>
 
-      {tab !== "Documenti" ? (
+      {tab === "Documenti" ? (
+        <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
+          {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
+        </Pressable>
+      ) : tab !== "Parcelle" ? (
         <Pressable testID="fab-add" onPress={openAdd} style={[s.fab, { backgroundColor: t.brand }]}>
           <Feather name="plus" size={24} color={t.onBrand} />
         </Pressable>
@@ -384,18 +380,6 @@ export default function PraticaDetail() {
                           </Pressable>
                         ))}
                       </View>
-                    </>
-                  )}
-                  {tab === "Timeline" && (
-                    <>
-                      <Text style={s.lbl}>Tipo</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                        {["deposito", "memoria", "udienza", "sentenza", "nota", "altro"].map((c) => (
-                          <Pressable key={c} onPress={() => setAddForm({ ...addForm, tipo: c })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: addForm.tipo === c ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
-                            <Text style={{ color: addForm.tipo === c ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{c}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
                     </>
                   )}
                 </>

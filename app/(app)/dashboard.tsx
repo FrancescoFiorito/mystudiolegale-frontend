@@ -78,8 +78,12 @@ export default function Dashboard() {
         avatarInitials={initials(user?.nome)}
         onAvatarPress={() => setShowMenu(true)}
         right={
-          <Pressable testID="calendar-btn" onPress={() => router.push("/(app)/calendario")} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" }}>
-            <Feather name="calendar" size={19} color={t.onBrand} />
+          <Pressable testID="calendar-btn" onPress={() => router.push("/(app)/calendario")} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: 10, borderRadius: RADIUS.pill, backgroundColor: "rgba(255,255,255,0.18)" }}>
+            <Feather name="calendar" size={17} color={t.onBrand} />
+            <View>
+              <Text style={{ color: t.onBrand, fontSize: 12, fontWeight: "800", lineHeight: 14 }}>{new Date().getDate()} {new Date().toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</Text>
+              <Text style={{ color: t.onBrand, fontSize: 10, opacity: 0.75, lineHeight: 12 }}>{data.scadenze_oggi > 0 ? `${data.scadenze_oggi} oggi` : "nessun impegno"}</Text>
+            </View>
           </Pressable>
         }
       />
@@ -91,11 +95,11 @@ export default function Dashboard() {
               <Feather name="bell" size={17} color={t.onSurfaceSecondary} />
               <Text style={[s.menuItemLbl, { color: t.onSurface }]}>Notifiche</Text>
             </Pressable>
-            <View style={[s.menuDivider, { backgroundColor: t.divider }]} />
             <Pressable testID="quickmenu-profilo" onPress={() => { setShowMenu(false); router.push("/(app)/profilo"); }} style={s.menuItem}>
               <Feather name="user" size={17} color={t.onSurfaceSecondary} />
               <Text style={[s.menuItemLbl, { color: t.onSurface }]}>Profilo</Text>
             </Pressable>
+            <View style={[s.menuDivider, { backgroundColor: t.gold, opacity: 0.55 }]} />
             <Pressable testID="quickmenu-settings" onPress={() => { setShowMenu(false); router.push("/(app)/impostazioni"); }} style={s.menuItem}>
               <Feather name="settings" size={17} color={t.brand} />
               <Text style={[s.menuItemLbl, { color: t.brand, fontWeight: "700" }]}>Impostazioni</Text>

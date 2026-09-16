@@ -48,8 +48,8 @@ export default function Header({ title, subtitle, onBack, backTestID, avatarInit
       <View style={s.row}>
         {leftAction || <View style={s.roundBtn} />}
         <View style={{ flex: 1, marginLeft: SPACING.md }}>
-          {subtitle ? <Text style={{ color: hero ? t.onBrand : t.onSurfaceTertiary, opacity: hero ? 0.75 : 1, fontSize: 12 }}>{subtitle}</Text> : null}
-          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: subtitle ? 19 : 21, fontFamily: FONT.serif }} numberOfLines={1}>{title}</Text>
+          <Text style={{ color: hero ? t.onBrand : t.onSurfaceTertiary, opacity: hero ? (subtitle ? 0.75 : 0) : subtitle ? 1 : 0, fontSize: 12, height: 16 }}>{subtitle || " "}</Text>
+          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: 19, fontFamily: FONT.serif }} numberOfLines={1}>{title}</Text>
         </View>
         {right || <View style={s.roundBtn} />}
       </View>
