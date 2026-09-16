@@ -21,4 +21,10 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - run: eas build --platform ios --profile production --local --non-interactive --output build.ipa
+            - run: eas build --platform ios --profile production --local --non-interactive --output build.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: mystudiolegale-ios
+          path: build.ipa
