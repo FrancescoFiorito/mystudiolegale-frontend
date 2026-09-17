@@ -7,6 +7,7 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const MONTHS = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const DOW = ["L","M","M","G","V","S","D"];
@@ -21,8 +22,12 @@ export default function Calendario() {
   const { t } = useTheme();
   const router = useRouter();
   const today = new Date();
-  const params = useLocalSearchParams<{ view?: string }>();
+  const params = useLocalSearchParams<{ view?: string; _t?: string }>();
   const [view, setView] = React.useState<ViewMode>((params.view as ViewMode) && VIEWS.includes(params.view as ViewMode) ? (params.view as ViewMode) : "Mese");
+
+  React.useEffect(() => {
+    if (params.view && VIEWS.includes(params.view as ViewMode)) setView(params.view as ViewMode);
+  }, [params.view, params._t]);
   const [cursor, setCursor] = React.useState(today);
   const [selectedDay, setSelectedDay] = React.useState<string>(toISODate(today));
   const [events, setEvents] = React.useState<any[]>([]);
@@ -101,7 +106,7 @@ export default function Calendario() {
   const weekDays = React.useMemo(() => { const s0 = startOfWeek(cursor); return Array.from({ length: 7 }, (_, i) => addDays(s0, i)); }, [cursor]);
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calendario" onBack={() => router.back()} />
 
       <View style={{ flexDirection: "row", backgroundColor: t.surface, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
@@ -198,7 +203,7 @@ export default function Calendario() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

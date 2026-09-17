@@ -113,10 +113,10 @@ export default function Dashboard() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.brand} />}
       >
         <View style={s.grid}>
-          <Stat testID="stat-pratiche-aperte" label="Pratiche aperte" value={data.pratiche_aperte} icon="folder" color={t.brand} bg={t.brandSecondary} onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", stato: "Aperta" } })} />
-          <Stat testID="stat-pratiche-chiuse" label="Pratiche chiuse" value={data.pratiche_chiuse} icon="check-circle" color={t.success} bg={t.mode === "dark" ? t.surfaceTertiary : "#ECFDF5"} onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", stato: "Chiusa" } })} />
-          <Stat testID="stat-scadenze-oggi" label="Scadenze oggi" value={data.scadenze_oggi} icon="alert-circle" color={t.error} bg={t.mode === "dark" ? t.surfaceTertiary : "#FEF2F2"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Giorno" } })} />
-          <Stat testID="stat-scadenze-settimana" label="Questa settimana" value={data.scadenze_settimana} icon="clock" color={t.warning} bg={t.mode === "dark" ? t.surfaceTertiary : "#FFFBEB"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Settimana" } })} />
+          <Stat testID="stat-pratiche-aperte" label="Pratiche aperte" value={data.pratiche_aperte} icon="folder" color={t.brand} bg={t.brandSecondary} onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", stato: "Aperta", _t: String(Date.now()) } })} />
+          <Stat testID="stat-pratiche-chiuse" label="Pratiche chiuse" value={data.pratiche_chiuse} icon="check-circle" color={t.success} bg={t.mode === "dark" ? t.surfaceTertiary : "#ECFDF5"} onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", stato: "Chiusa", _t: String(Date.now()) } })} />
+          <Stat testID="stat-scadenze-oggi" label="Scadenze oggi" value={data.scadenze_oggi} icon="alert-circle" color={t.error} bg={t.mode === "dark" ? t.surfaceTertiary : "#FEF2F2"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Giorno", _t: String(Date.now()) } })} />
+          <Stat testID="stat-scadenze-settimana" label="Questa settimana" value={data.scadenze_settimana} icon="clock" color={t.warning} bg={t.mode === "dark" ? t.surfaceTertiary : "#FFFBEB"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Settimana", _t: String(Date.now()) } })} />
         </View>
 
         {prossimi.length > 0 ? (
@@ -135,19 +135,19 @@ export default function Dashboard() {
           </Pressable>
         ) : null}
 
-        <Pressable testID="nuova-pratica-btn" onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", new: "1" } })} style={[s.banner, { backgroundColor: t.brand }]}>
+        <Pressable testID="nuova-pratica-btn" onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", new: "1", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.brand }]}>
           <View style={s.bannerIcon}><Feather name="folder-plus" size={22} color={t.onBrand} /></View>
           <Text style={[s.bannerTitle, { color: t.onBrand }]}>Nuova pratica</Text>
           <Feather name="chevron-right" size={20} color={t.onBrand} />
         </Pressable>
 
-        <Pressable testID="crea-parcella-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle" } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
+        <Pressable testID="crea-parcella-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
           <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={22} color={t.brand} /></View>
           <Text style={[s.bannerTitle, { color: t.onSurface }]}>Crea parcella</Text>
           <Feather name="chevron-right" size={20} color={t.onSurfaceTertiary} />
         </Pressable>
 
-        <Pressable testID="aggiungi-scadenza-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "scadenze" } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
+        <Pressable testID="aggiungi-scadenza-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "scadenze", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
           <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="calendar" size={22} color={t.brand} /></View>
           <Text style={[s.bannerTitle, { color: t.onSurface }]}>Aggiungi scadenza</Text>
           <Feather name="chevron-right" size={20} color={t.onSurfaceTertiary} />

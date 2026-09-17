@@ -8,6 +8,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
 
@@ -32,21 +33,24 @@ function formatSize(bytes: number) {
 export default function Archivio() {
   const { t } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ tab?: string; stato?: string; new?: string }>();
+  const params = useLocalSearchParams<{ tab?: string; stato?: string; new?: string; _t?: string }>();
   const [tab, setTab] = React.useState<"pratiche" | "documenti" | "parcelle">(params.tab === "documenti" ? "documenti" : params.tab === "parcelle" ? "parcelle" : "pratiche");
 
   // La schermata resta montata quando si cambia tab (e' una delle 3 tab
   // principali): se si arriva qui di nuovo con parametri diversi (es. dalle
   // card della Home), bisogna aggiornare la sezione attiva anche se il
-  // componente non viene ricreato da zero.
+  // componente non viene ricreato da zero. Si include anche params._t
+  // (un valore che cambia ad ogni click, anche se tab/stato sono identici
+  // all'ultima volta) cosi' l'effetto si riattiva sempre su un vero rientro
+  // dalla Home, anche se nel frattempo si era cambiata sezione a mano.
   React.useEffect(() => {
     if (params.tab === "documenti") setTab("documenti");
     else if (params.tab === "parcelle") setTab("parcelle");
     else if (params.tab === "pratiche") setTab("pratiche");
-  }, [params.tab]);
+  }, [params.tab, params._t]);
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Archivio" onBack={() => router.back()} />
       <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <Pressable testID="archivio-tab-pratiche" onPress={() => setTab("pratiche")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "pratiche" ? t.brand : t.surfaceSecondary }}>
@@ -60,17 +64,17 @@ export default function Archivio() {
         </Pressable>
       </View>
       {tab === "pratiche" ? (
-        <SezionePratiche statoIniziale={params.stato} autoNew={params.new === "1"} />
+        <SezionePratiche statoIniziale={params.stato} autoNew={params.new === "1"} navKey={params._t} />
       ) : tab === "documenti" ? (
         <SezioneDocumenti />
       ) : (
         <SezioneParcelle />
       )}
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 
-function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; autoNew?: boolean }) {
+function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: string; autoNew?: boolean; navKey?: string }) {
   const { t } = useTheme();
   const router = useRouter();
   const [items, setItems] = React.useState<any[] | null>(null);
@@ -79,8 +83,11 @@ function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; a
 
   React.useEffect(() => {
     if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
-  }, [statoIniziale]);
+  }, [statoIniziale, navKey]);
   const [showNew, setShowNew] = React.useState(!!autoNew);
+  React.useEffect(() => {
+    if (autoNew) setShowNew(true);
+  }, [autoNew, navKey]);
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
 
@@ -126,19 +133,21 @@ function SezionePratiche({ statoIniziale, autoNew }: { statoIniziale?: string; a
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna pratica</Text>
             </View>
           ) : items.map((p) => (
-            <Pressable key={p.id} testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
+            <Pressable key={p.id} testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface, alignItems: "flex-start" }, SHADOW.card]}>
               <View style={[s.cardIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
               <View style={{ flex: 1 }}>
-                <View style={[s.cardHead, { justifyContent: "flex-end" }]}>
-                  <View style={{ backgroundColor: statoColor(p.stato) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
+                <View style={[s.cardHead, { justifyContent: "space-between" }]}>
+                  <Text style={{ color: t.onSurface, fontSize: 15, fontWeight: "700", flex: 1 }} numberOfLines={1}>{p.oggetto}</Text>
+                  <View style={{ backgroundColor: statoColor(p.stato) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, marginLeft: 8 }}>
                     <Text style={{ color: statoColor(p.stato), fontSize: 11, fontWeight: "700" }}>{p.stato}</Text>
                   </View>
                 </View>
-                <Text style={{ color: t.onSurface, fontSize: 15, fontWeight: "700" }} numberOfLines={1}>{p.oggetto}</Text>
-                {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, marginTop: 4 }} numberOfLines={1}>Cliente: {p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
+                {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, marginTop: 4 }} numberOfLines={1}>👤 {p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
                 {p.controparte ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>vs {p.controparte}</Text> : null}
+                {p.tribunale ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{p.tribunale}</Text> : null}
+                {p.created_at ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 4, fontVariant: ["tabular-nums"] }}>Aperta il {p.created_at.slice(0, 10).split("-").reverse().join("/")}</Text> : null}
               </View>
-              <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+              <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} style={{ marginTop: 8 }} />
             </Pressable>
           ))}
       </ScrollView>

@@ -7,6 +7,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 type CestinoItem = { tipo: "pratica" | "cliente"; id: string; label: string; sub: string; deleted_at: string };
 
@@ -43,7 +44,7 @@ export default function Cestino() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Cestino" onBack={() => router.back()} />
 
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, padding: SPACING.lg, paddingBottom: 0 }}>
@@ -71,7 +72,7 @@ export default function Cestino() {
           </View>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

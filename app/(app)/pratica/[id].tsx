@@ -9,6 +9,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -159,7 +160,7 @@ export default function PraticaDetail() {
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title="Pratica"
@@ -208,9 +209,14 @@ export default function PraticaDetail() {
 
         <View style={{ padding: SPACING.lg }}>
           {tab === "Note" && (
-            note.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna nota</Text> :
-            note.map((n) => (
-              <View key={n.id} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
+            <>
+              <Pressable testID="add-nota-inline" onPress={openAdd} style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.brandSecondary, marginBottom: SPACING.md }}>
+                <Feather name="plus-circle" size={16} color={t.brand} />
+                <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi nota</Text>
+              </Pressable>
+              {note.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna nota</Text> :
+              note.map((n) => (
+                <View key={n.id} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
                 {n.titolo ? <Text style={{ color: t.onSurface, fontWeight: "700", marginBottom: 4 }}>{n.titolo}</Text> : null}
                 {n.contenuto ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{n.contenuto}</Text> : null}
                 {(n.checklist || []).length > 0 ? (
@@ -224,7 +230,8 @@ export default function PraticaDetail() {
                   </View>
                 ) : null}
               </View>
-            ))
+            ))}
+            </>
           )}
           {tab === "Scadenze" && (
             scadenze.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna scadenza</Text> :
@@ -276,7 +283,7 @@ export default function PraticaDetail() {
         <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
           {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
         </Pressable>
-      ) : tab !== "Parcelle" ? (
+      ) : tab === "Scadenze" ? (
         <Pressable testID="fab-add" onPress={openAdd} style={[s.fab, { backgroundColor: t.brand }]}>
           <Feather name="plus" size={24} color={t.onBrand} />
         </Pressable>
@@ -392,7 +399,7 @@ export default function PraticaDetail() {
         </SafeAreaView>
         </SafeAreaProvider>
       </Modal>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

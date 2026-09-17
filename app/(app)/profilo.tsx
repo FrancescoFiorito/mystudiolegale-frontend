@@ -8,6 +8,7 @@ import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const initials = (name?: string) => {
   if (!name) return "A";
@@ -67,7 +68,7 @@ export default function Profilo() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title={user?.nome ? `${user.nome} ${user.cognome || ""}`.trim() : user?.email || "Profilo"}
@@ -155,7 +156,7 @@ export default function Profilo() {
         </SafeAreaView>
         </SafeAreaProvider>
       </Modal>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

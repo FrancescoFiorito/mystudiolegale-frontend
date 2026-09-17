@@ -7,6 +7,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const ENTITA = ["", "pratica", "cliente", "documento", "parcella", "cartella", "team", "utente"];
 
@@ -35,7 +36,7 @@ export default function AuditLog() {
   React.useEffect(() => { load(); }, [load]);
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Registro attività" onBack={() => router.back()} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: 8, paddingVertical: SPACING.md }}>
@@ -63,7 +64,7 @@ export default function AuditLog() {
           </View>
         ))}
       </ScrollView>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

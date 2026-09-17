@@ -8,13 +8,25 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 export default function Calcolatori() {
   const { t } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ tab?: string }>();
+  const params = useLocalSearchParams<{ tab?: string; _t?: string }>();
   const locked = params.tab === "parcelle" || params.tab === "scadenze";
   const [tab, setTab] = React.useState<"scadenze" | "parcelle">(params.tab === "parcelle" ? "parcelle" : "scadenze");
+  const scrollRef = React.useRef<ScrollView>(null);
+
+  // La schermata resta montata da una visita all'altra: se si arriva qui di
+  // nuovo (anche con lo stesso tab di prima, grazie a params._t che cambia
+  // ad ogni click), riparte sempre dalla scheda giusta e dall'inizio dello
+  // scroll, invece di restare dov'era stata lasciata l'ultima volta.
+  React.useEffect(() => {
+    if (params.tab === "parcelle") setTab("parcelle");
+    else if (params.tab === "scadenze") setTab("scadenze");
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [params.tab, params._t]);
   const headerTitle = locked ? (tab === "parcelle" ? "Crea parcella" : "Aggiungi scadenza") : "Calcolatori";
   // Scadenze
   const [dataPartenza, setDataPartenza] = React.useState(new Date().toISOString().slice(0,10));
@@ -74,7 +86,7 @@ export default function Calcolatori() {
   );
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title={headerTitle} onBack={() => router.back()} />
       {!locked && (
         <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
@@ -89,7 +101,7 @@ export default function Calcolatori() {
         </View>
       )}
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }} keyboardShouldPersistTaps="handled">
         {tab === "scadenze" ? (
           <View>
             <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza (YYYY-MM-DD)</Text>
@@ -202,7 +214,7 @@ export default function Calcolatori() {
         )}
       </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 

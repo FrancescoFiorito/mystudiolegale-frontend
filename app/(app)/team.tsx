@@ -8,6 +8,7 @@ import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const RUOLI = ["Amministratore", "Avvocato", "Collaboratore", "Segreteria"];
 
@@ -60,7 +61,7 @@ export default function Team() {
   };
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title="Team & Ruoli"
@@ -155,7 +156,7 @@ export default function Team() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </SwipeBackScreen>
   );
 }
 
