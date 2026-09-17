@@ -24,7 +24,7 @@ export default function LoadingScreen() {
     return () => loop.stop();
   }, [anim]);
 
-  const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ["18deg", "63deg"] });
+  const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ["18deg", "-27deg"] });
 
   return (
     <Modal visible animationType="none" transparent={false} statusBarTranslucent presentationStyle="fullScreen">
@@ -65,8 +65,11 @@ const s = StyleSheet.create({
   // quindi restano sempre a 90 gradi tra loro per costruzione. Solo il
   // contenitore "swingWrap" (che li contiene entrambi) si anima, ruotando
   // attorno all'impugnatura in cima al manico: a riposo e' a 18deg, poi va
-  // a 63deg (+45) allontanando la testa dalla base e avvicinando il manico.
-  swingWrap: { position: "absolute", left: 5, top: -10, width: 60, height: 50 },
+  // a -27deg (-45 rispetto al riposo) allontanando la testa dalla base.
+  // NOTA: la direzione e' stata verificata empiricamente da una
+  // registrazione dello schermo reale, non solo calcolata a tavolino -
+  // la simulazione teorica aveva il verso opposto a quello vero su device.
+  swingWrap: { position: "absolute", left: 13, top: -4, width: 60, height: 50 },
   handle: { position: "absolute", left: 39.26, top: 15.5, width: 4, height: 26, borderRadius: 2, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
   head: { position: "absolute", left: 17, top: 30, width: 26, height: 10, borderRadius: 3, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
 });
