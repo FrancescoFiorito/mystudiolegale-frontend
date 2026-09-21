@@ -75,24 +75,26 @@ const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: "#16233E", alignItems: "center", justifyContent: "center" },
   logo: { width: 170, height: 150, marginBottom: 8 },
   gavelBox: { width: 70, height: 60, marginTop: 4 },
-  // Base ferma: non fa parte del gruppo animato. Left ricalcolato (17 ->
-  // 10.24): l'intera sagoma (base + manico + testa), non la sola base, e'
-  // ora centrata sull'asse verticale della gavelBox/logo (vedi nota sotto).
-  block: { position: "absolute", left: 10.24, top: 48, width: 36, height: 8, borderRadius: 4, backgroundColor: GOLD },
+  // Base ferma (il "piattino"): non fa parte del gruppo animato. Larghezza
+  // 36, left 17 -> centro a x=35, che e' esattamente l'asse verticale della
+  // gavelBox/logo (entrambi centrati in flex sullo stesso punto). Il
+  // piattino e' quindi centrato per costruzione, indipendentemente da dove
+  // si trova il manico.
+  block: { position: "absolute", left: 17, top: 48, width: 36, height: 8, borderRadius: 4, backgroundColor: GOLD },
   // Perno fisso: View 0x0 posizionata esattamente dove il manico si aggancia
   // (l'impugnatura). Ruotando QUESTA view, il centro di rotazione di
   // default (che per una view 0x0 coincide col suo left/top) e' gia' il
-  // perno corretto: nessuna traslazione compensativa necessaria, quindi
-  // nessun margine di errore sui segni/offset come nel tentativo precedente.
-  // Left ricalcolato (65.52 -> 58.76): la gavelBox e' larga 70 ed e'
-  // centrata in flex sotto il logo esattamente come il logo stesso (stesso
-  // asse a x=35 nel proprio spazio locale); il bounding box dell'intera
-  // sagoma martelletto+base a riposo (0deg) risultava pero' centrato a
-  // x=41.76, non a 35 -> spostando l'intero gruppo (base, perno, manico,
-  // testa) di -6.76px si riallinea il centro della sagoma con l'asse del
-  // logo, senza alterare la geometria relativa (il perno resta esattamente
-  // all'estremita' del manico).
-  pivot: { position: "absolute", left: 58.76, top: 18, width: 0, height: 0 },
+  // perno corretto: nessuna traslazione compensativa necessaria.
+  // Left = 51.18: nel tentativo precedente avevo centrato il bounding box
+  // dell'INTERA sagoma (piattino+manico+testa insieme), il che spostava il
+  // piattino fuori dal proprio centro (left 17 -> 10.24) ed era percepibile.
+  // Ora il piattino resta fermo e centrato (sopra) e invece e' il gruppo
+  // manico+testa, da solo, ad essere centrato sullo stesso asse x=35: il
+  // suo bounding box locale (calcolato includendo la rotazione propria di
+  // 60deg di manico e testa) ha centro a x=-16.18 rispetto al perno, quindi
+  // il perno va posizionato a 35-(-16.18)=51.18 perche' il gruppo
+  // manico+testa risulti centrato sull'asse del piattino/logo.
+  pivot: { position: "absolute", left: 51.18, top: 18, width: 0, height: 0 },
   // Manico e testa sono posizionati come offset dal perno (non piu' dalla
   // gavelBox): stessa inclinazione locale di 60deg di sempre -> stesso
   // aspetto a riposo -> ma ora l'estremita' superiore del manico coincide
