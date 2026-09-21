@@ -313,6 +313,7 @@ function SezioneDocumenti() {
 
 function SezioneParcelle() {
   const { t } = useTheme();
+  const router = useRouter();
   const [items, setItems] = React.useState<any[] | null>(null);
 
   const load = React.useCallback(async () => setItems(await api.get("/parcelle")), []);
@@ -327,6 +328,7 @@ function SezioneParcelle() {
   };
 
   return (
+    <>
     <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
       {!items ? <ActivityIndicator color={t.brand} /> : emesse.length === 0 ? (
         <View style={s.emptyBox}>
@@ -350,6 +352,15 @@ function SezioneParcelle() {
         </View>
       ))}
     </ScrollView>
+
+      <Pressable
+        testID="new-parcella-fab"
+        onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", _t: String(Date.now()) } })}
+        style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
+      >
+        <Feather name="plus" size={22} color={t.onBrand} />
+      </Pressable>
+    </>
   );
 }
 

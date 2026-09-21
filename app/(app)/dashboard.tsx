@@ -48,7 +48,7 @@ export default function Dashboard() {
       ]);
       setData(d);
       const oggi = new Date().toISOString().slice(0, 10);
-      setProssimi((sc || []).filter((s: any) => !s.completata && s.data >= oggi).sort((a: any, b: any) => (a.data + a.ora).localeCompare(b.data + b.ora)).slice(0, 3));
+      setProssimi((sc || []).filter((s: any) => !s.completata && s.data >= oggi).sort((a: any, b: any) => (a.data + a.ora).localeCompare(b.data + b.ora)).slice(0, 5));
     } catch {}
   }, []);
 
@@ -62,10 +62,12 @@ export default function Dashboard() {
   const Stat = ({ label, value, icon, color, bg, testID, onPress }: any) => (
     <Pressable testID={testID} onPress={onPress} style={[s.stat, { backgroundColor: t.surface }, SHADOW.card]}>
       <View style={[s.statBadge, { backgroundColor: bg }]}>
-        <Feather name={icon} size={18} color={color} />
+        <Feather name={icon} size={16} color={color} />
       </View>
-      <Text style={[s.statVal, { color: t.onSurface, fontVariant: ["tabular-nums"] }]}>{value}</Text>
-      <Text style={[s.statLbl, { color: t.onSurfaceSecondary }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.statVal, { color: t.onSurface, fontVariant: ["tabular-nums"] }]}>{value}</Text>
+        <Text style={[s.statLbl, { color: t.onSurfaceSecondary }]} numberOfLines={1}>{label}</Text>
+      </View>
     </Pressable>
   );
 
@@ -78,7 +80,7 @@ export default function Dashboard() {
         avatarInitials={initials(user?.nome)}
         onAvatarPress={() => setShowMenu(true)}
         right={
-          <Pressable testID="calendar-btn" onPress={() => router.push("/(app)/calendario")} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: 10, borderRadius: RADIUS.pill, backgroundColor: "rgba(255,255,255,0.18)" }}>
+          <Pressable testID="calendar-btn" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: 10, borderRadius: RADIUS.pill, backgroundColor: "rgba(255,255,255,0.18)" }}>
             <Feather name="calendar" size={17} color={t.onBrand} />
             <View>
               <Text style={{ color: t.onBrand, fontSize: 12, fontWeight: "800", lineHeight: 14 }}>{new Date().getDate()} {new Date().toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</Text>
@@ -119,21 +121,23 @@ export default function Dashboard() {
           <Stat testID="stat-scadenze-settimana" label="Questa settimana" value={data.scadenze_settimana} icon="clock" color={t.warning} bg={t.mode === "dark" ? t.surfaceTertiary : "#FFFBEB"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Settimana", _t: String(Date.now()) } })} />
         </View>
 
-        {prossimi.length > 0 ? (
-          <Pressable testID="prossimi-impegni-card" onPress={() => router.push("/(app)/calendario")} style={[s.calCard, { backgroundColor: t.surface }, SHADOW.card]}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.sm }}>
-              <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 14 }}>Prossimi impegni</Text>
-              <Feather name="chevron-right" size={16} color={t.onSurfaceTertiary} />
-            </View>
-            {prossimi.map((ev) => (
+        <Pressable testID="prossimi-impegni-card" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={[s.calCard, { backgroundColor: t.surface }, SHADOW.card]}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.sm }}>
+            <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 14 }}>Prossimi impegni</Text>
+            <Feather name="chevron-right" size={16} color={t.onSurfaceTertiary} />
+          </View>
+          {prossimi.length === 0 ? (
+            <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 4 }}>Nessun impegno in programma</Text>
+          ) : (
+            prossimi.map((ev) => (
               <View key={ev.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.brand }} />
                 <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, fontVariant: ["tabular-nums"] }}>{giornoBreve(ev.data)} · {ev.ora}</Text>
                 <Text style={{ color: t.onSurface, fontSize: 12, fontWeight: "600", flex: 1 }} numberOfLines={1}>{ev.titolo}</Text>
               </View>
-            ))}
-          </Pressable>
-        ) : null}
+            ))
+          )}
+        </Pressable>
 
         <Pressable testID="nuova-pratica-btn" onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", new: "1", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.brand }]}>
           <View style={s.bannerIcon}><Feather name="folder-plus" size={22} color={t.onBrand} /></View>
@@ -161,11 +165,11 @@ export default function Dashboard() {
 const s = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md, marginBottom: SPACING.lg },
-  stat: { width: "47%", padding: SPACING.md, borderRadius: RADIUS.lg },
-  statBadge: { width: 36, height: 36, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", marginBottom: SPACING.sm },
-  statVal: { fontSize: 26, fontWeight: "800" },
-  statLbl: { fontSize: 12, fontWeight: "600", marginTop: 2 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginBottom: SPACING.lg },
+  stat: { width: "47.5%", flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: 10, paddingHorizontal: SPACING.sm + 2, borderRadius: RADIUS.lg },
+  statBadge: { width: 30, height: 30, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+  statVal: { fontSize: 18, fontWeight: "800", lineHeight: 21 },
+  statLbl: { fontSize: 11, fontWeight: "600", marginTop: 1 },
 
   calCard: { padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.lg },
 

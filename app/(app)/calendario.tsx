@@ -128,28 +128,49 @@ export default function Calendario() {
 
         {view === "Mese" && (
           <>
-            <View style={{ flexDirection: "row", paddingHorizontal: SPACING.md, marginTop: SPACING.sm }}>
-              {DOW.map((d, i) => <Text key={i} style={{ flex: 1, textAlign: "center", color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700" }}>{d}</Text>)}
+            <View style={[s.monthCard, { backgroundColor: t.surface }, SHADOW.card]}>
+              <View style={{ flexDirection: "row" }}>
+                {DOW.map((d, i) => <Text key={i} style={{ flex: 1, textAlign: "center", color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700" }}>{d}</Text>)}
+              </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 8 }}>
+                {cells.map((d, i) => {
+                  if (d === null) return <View key={i} style={{ width: "14.28%", aspectRatio: 1 }} />;
+                  const ds = `${monthStr}-${String(d).padStart(2, "0")}`;
+                  const dayEvents = evByDay[ds] || [];
+                  const has = dayEvents.length > 0;
+                  const hasAlta = dayEvents.some((e: any) => e.priorita === "alta");
+                  const sel = ds === selectedDay;
+                  const isToday = ds === toISODate(today);
+                  const dotColor = sel ? t.onBrand : hasAlta ? t.error : t.brand;
+                  return (
+                    <Pressable key={i} testID={`day-${d}`} onPress={() => setSelectedDay(ds)} style={{ width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}>
+                      <View
+                        style={{
+                          width: 34, height: 34, borderRadius: 17,
+                          backgroundColor: sel ? t.brand : has ? t.brandSecondary : "transparent",
+                          borderWidth: isToday && !sel ? 1.5 : 0, borderColor: t.brand,
+                          alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ color: sel ? t.onBrand : isToday ? t.brand : t.onSurface, fontWeight: sel || isToday ? "800" : "500", fontSize: 13, fontVariant: ["tabular-nums"] }}>{d}</Text>
+                      </View>
+                      {has ? (
+                        <View style={{ flexDirection: "row", gap: 2, marginTop: 3, height: 5 }}>
+                          {dayEvents.slice(0, 3).map((_: any, di: number) => (
+                            <View key={di} style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: dotColor }} />
+                          ))}
+                        </View>
+                      ) : (
+                        <View style={{ height: 5, marginTop: 3 }} />
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", paddingHorizontal: SPACING.md, marginTop: 6 }}>
-              {cells.map((d, i) => {
-                if (d === null) return <View key={i} style={{ width: "14.28%", aspectRatio: 1 }} />;
-                const ds = `${monthStr}-${String(d).padStart(2, "0")}`;
-                const has = !!evByDay[ds];
-                const sel = ds === selectedDay;
-                const isToday = ds === toISODate(today);
-                return (
-                  <Pressable key={i} testID={`day-${d}`} onPress={() => setSelectedDay(ds)} style={{ width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}>
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: sel ? t.brand : "transparent", borderWidth: isToday && !sel ? 1 : 0, borderColor: t.brand, alignItems: "center", justifyContent: "center" }}>
-                      <Text style={{ color: sel ? t.onBrand : t.onSurface, fontWeight: sel ? "800" : "500", fontVariant: ["tabular-nums"] }}>{d}</Text>
-                    </View>
-                    {has ? <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: sel ? t.onBrand : t.brand, marginTop: 2 }} /> : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={{ padding: SPACING.lg, paddingBottom: SPACING.sm, color: t.onSurface, fontWeight: "700", fontSize: 15 }}>Eventi del {selectedDay}</Text>
-            <View style={{ paddingHorizontal: SPACING.lg }}>
+
+            <View style={[s.monthCard, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
+              <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 15, marginBottom: SPACING.sm }}>Eventi del {selectedDay}</Text>
               {(evByDay[selectedDay] || []).length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun evento</Text> :
                 (evByDay[selectedDay] || []).map((e) => <EventCard key={e.id} e={e} />)}
             </View>
@@ -209,4 +230,5 @@ export default function Calendario() {
 
 const s = StyleSheet.create({
   monthBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: SPACING.lg, borderBottomWidth: 1 },
+  monthCard: { marginHorizontal: SPACING.lg, marginTop: SPACING.md, borderRadius: RADIUS.lg, padding: SPACING.md },
 });
