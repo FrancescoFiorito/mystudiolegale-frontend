@@ -3,28 +3,55 @@ import { View, StyleSheet, Animated, Easing, Modal, Image } from "react-native";
 
 const GOLD = "#D9B564";
 
-// Schermata di caricamento unificata. E' avvolta in un Modal nativo (non un
-// semplice View a schermo intero) apposta: un Modal presenta sempre in un
-// livello separato SOPRA tutto il resto dell'interfaccia, barra di
-// navigazione flottante inclusa, che altrimenti in certi casi rimarrebbe
-// visibile dietro. Il martelletto (manico+testa) ruota tutto insieme
-// attorno alla propria impugnatura, colpendo la base ferma sotto di se'.
+// Schermata di caricamento unificata, in un Modal nativo a schermo pieno
+// (necessario per coprire sempre la tab bar, vedi commento storico sotto).
+//
+// PERNO DI ROTAZIONE (fix): il martelletto (manico+testa, un unico pezzo
+// rigido) e' racchiuso in una View "pivot" di dimensione 0x0, posizionata
+// ESATTAMENTE nel punto in cui il manico si aggancia al perno fisso
+// (l'impugnatura in cima al manico). Su una View 0x0 il centro di
+// rotazione di default (transform-origin 50%/50%) COINCIDE col suo stesso
+// punto left/top: ruotare questa View equivale quindi, per costruzione
+// geometrica e non per un trucco di traslazioni compensative fragile, a
+// ruotare esattamente attorno a quel punto. Manico e testa sono figli
+// assoluti di "pivot", con left/top espressi come offset dal perno stesso
+// (prima erano offset dall'angolo della gavelBox): a riposo (rotate=0deg)
+// hanno lo stesso aspetto di sempre (manico dalle 8 alle 2, testa vicino
+// alla base), ma ora l'intero gruppo oscilla realmente attorno
+// all'estremita' del manico, non attorno al proprio centro / "galleggiando".
 export default function LoadingScreen() {
   const anim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
+    // Oscillazione tipo pendolo: un solo Animated.Value continuo che guida
+    // sempre e solo la stessa transform (nessun reset improvviso, nessuna
+    // doppia animazione in conflitto). Ogni tratto riparte esattamente dal
+    // valore raggiunto dal precedente (Animated.timing parte sempre dal
+    // valore corrente), quindi l'angolo varia in modo perfettamente
+    // continuo. L'ampiezza decresce progressivamente (14 -> 8 -> 5 -> 3 ->
+    // 1.4 -> 0) fino a fermarsi esattamente a 0deg, con easing morbido
+    // sull'ultimo tratto per evitare uno "snap" finale.
+    const swing = (to: number, duration: number, easing = Easing.inOut(Easing.sin)) =>
+      Animated.timing(anim, { toValue: to, duration, easing, useNativeDriver: true });
+
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 170, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-        Animated.timing(anim, { toValue: 0, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.delay(450),
+        swing(14, 300, Easing.out(Easing.quad)), // colpo: sale
+        swing(-8, 340),                          // oscillazione 1
+        swing(5, 290),                           // oscillazione 2
+        swing(-3, 240),                          // oscillazione 3
+        swing(1.4, 190),                         // oscillazione 4 (quasi ferma)
+        swing(0, 150, Easing.out(Easing.sin)),   // stop morbido esattamente a 0deg
+        Animated.delay(500),
       ])
     );
     loop.start();
     return () => loop.stop();
   }, [anim]);
 
-  const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: ["18deg", "-27deg"] });
+  // Mappatura 1:1 gradi -> stringa "deg": anim rappresenta direttamente
+  // l'angolo del pendolo attorno al perno; a riposo vale 0.
+  const rotate = anim.interpolate({ inputRange: [-30, 30], outputRange: ["-30deg", "30deg"] });
 
   return (
     <Modal visible animationType="none" transparent={false} statusBarTranslucent presentationStyle="fullScreen">
@@ -33,18 +60,7 @@ export default function LoadingScreen() {
 
         <View style={s.gavelBox}>
           <View style={s.block} />
-          <Animated.View
-            style={[
-              s.swingWrap,
-              {
-                transform: [
-                  { translateX: -17.52 }, { translateY: -7 },
-                  { rotate },
-                  { translateY: 7 }, { translateX: 17.52 },
-                ],
-              },
-            ]}
-          >
+          <Animated.View style={[s.pivot, { transform: [{ rotate }] }]}>
             <View style={s.handle} />
             <View style={s.head} />
           </Animated.View>
@@ -58,18 +74,18 @@ const s = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: "#16233E", alignItems: "center", justifyContent: "center" },
   logo: { width: 170, height: 150, marginBottom: 8 },
   gavelBox: { width: 70, height: 60, marginTop: 4 },
-  // Base ferma: non fa parte del gruppo animato qui sotto.
+  // Base ferma: non fa parte del gruppo animato.
   block: { position: "absolute", left: 17, top: 48, width: 36, height: 8, borderRadius: 4, backgroundColor: GOLD },
-  // Manico e testa sono UN unico pezzo rigido: entrambi ruotati della STESSA
-  // inclinazione (60deg, manico dalle 8 alle 2) attorno al proprio centro,
-  // quindi restano sempre a 90 gradi tra loro per costruzione. Solo il
-  // contenitore "swingWrap" (che li contiene entrambi) si anima, ruotando
-  // attorno all'impugnatura in cima al manico: a riposo e' a 18deg, poi va
-  // a -27deg (-45 rispetto al riposo) allontanando la testa dalla base.
-  // NOTA: la direzione e' stata verificata empiricamente da una
-  // registrazione dello schermo reale, non solo calcolata a tavolino -
-  // la simulazione teorica aveva il verso opposto a quello vero su device.
-  swingWrap: { position: "absolute", left: 13, top: -4, width: 60, height: 50 },
-  handle: { position: "absolute", left: 39.26, top: 15.5, width: 4, height: 26, borderRadius: 2, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
-  head: { position: "absolute", left: 17, top: 30, width: 26, height: 10, borderRadius: 3, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
+  // Perno fisso: View 0x0 posizionata esattamente dove il manico si aggancia
+  // (l'impugnatura). Ruotando QUESTA view, il centro di rotazione di
+  // default (che per una view 0x0 coincide col suo left/top) e' gia' il
+  // perno corretto: nessuna traslazione compensativa necessaria, quindi
+  // nessun margine di errore sui segni/offset come nel tentativo precedente.
+  pivot: { position: "absolute", left: 65.52, top: 18, width: 0, height: 0 },
+  // Manico e testa sono posizionati come offset dal perno (non piu' dalla
+  // gavelBox): stessa inclinazione locale di 60deg di sempre -> stesso
+  // aspetto a riposo -> ma ora l'estremita' superiore del manico coincide
+  // matematicamente col punto (0,0) del genitore "pivot".
+  handle: { position: "absolute", left: -13.26, top: -6.5, width: 4, height: 26, borderRadius: 2, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
+  head: { position: "absolute", left: -35.52, top: 8, width: 26, height: 10, borderRadius: 3, backgroundColor: GOLD, transform: [{ rotate: "60deg" }] },
 });
