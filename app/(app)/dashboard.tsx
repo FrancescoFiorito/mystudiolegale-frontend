@@ -75,7 +75,6 @@ export default function Dashboard() {
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
-        centerTitle={false}
         title={user?.nome || user?.email || "Avvocato"}
         subtitle="Bentornato/a"
         avatarInitials={initials(user?.nome)}
