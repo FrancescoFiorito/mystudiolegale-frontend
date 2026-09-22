@@ -62,7 +62,7 @@ export default function Dashboard() {
   const Stat = ({ label, value, icon, color, bg, testID, onPress }: any) => (
     <Pressable testID={testID} onPress={onPress} style={[s.stat, { backgroundColor: t.surface }, SHADOW.card]}>
       <View style={[s.statBadge, { backgroundColor: bg }]}>
-        <Feather name={icon} size={17} color={color} />
+        <Feather name={icon} size={18} color={color} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[s.statVal, { color: t.onSurface, fontVariant: ["tabular-nums"] }]}>{value}</Text>
@@ -166,10 +166,10 @@ const s = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginBottom: SPACING.lg },
-  stat: { width: "47.5%", flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: 10, paddingHorizontal: SPACING.sm + 2, borderRadius: RADIUS.lg },
-  statBadge: { width: 33, height: 33, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
-  statVal: { fontSize: 18, fontWeight: "800", lineHeight: 21 },
-  statLbl: { fontSize: 11, fontWeight: "600", marginTop: 1 },
+  stat: { width: "47.5%", flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: 12, paddingHorizontal: SPACING.md, borderRadius: RADIUS.lg },
+  statBadge: { width: 36, height: 36, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+  statVal: { fontSize: 20, fontWeight: "800", lineHeight: 23 },
+  statLbl: { fontSize: 12, fontWeight: "600", marginTop: 1 },
 
   calCard: { padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.lg },
 

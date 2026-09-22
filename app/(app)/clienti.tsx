@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -13,6 +13,7 @@ import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 export default function Clienti() {
   const { t } = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ autoNew?: string; returnTo?: string; _t?: string }>();
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
   const [show, setShow] = React.useState(false);
@@ -21,11 +22,27 @@ export default function Clienti() {
   const load = React.useCallback(async () => setItems(await api.get(`/clienti?q=${encodeURIComponent(q)}`)), [q]);
   React.useEffect(() => { load(); }, [load]);
 
+  // Se si arriva qui dal pulsante "Nuovo cliente" della creazione pratica
+  // (vedi archivio.tsx), apre subito la modale di creazione. Clienti non
+  // viene mai smontata dal cambio tab, quindi basta un ref locale (nessun
+  // bisogno del meccanismo a livello di Archivio usato per l'altro caso).
+  const handledAutoNewRef = React.useRef<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (params.autoNew === "1" && params._t && handledAutoNewRef.current !== params._t) {
+      handledAutoNewRef.current = params._t;
+      setShow(true);
+      router.setParams({ autoNew: "" });
+    }
+  }, [params.autoNew, params._t, router]);
+
   const create = async () => {
     if (!form.nome && !form.ragione_sociale) return;
-    await api.post("/clienti", form);
+    const nuovo = await api.post("/clienti", form);
     setShow(false); setForm({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
     load();
+    if (params.returnTo === "pratica") {
+      router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", selectCliente: nuovo.id, reopenNew: "1", _t: String(Date.now()) } });
+    }
   };
 
   const field = (k: string, l: string, opts: any = {}) => (
@@ -88,7 +105,20 @@ export default function Clienti() {
         <SafeAreaProvider>
         <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header variant="hero" title="Nuovo Cliente" onBack={() => setShow(false)} />
+            <Header
+              variant="hero"
+              title="Nuovo Cliente"
+              onBack={() => {
+                setShow(false);
+                // Se si era arrivati qui dalla creazione di una pratica e si
+                // annulla senza salvare, si torna comunque alla pratica
+                // (che riapre la sua modale) invece di lasciare l'utente
+                // sulla lista Clienti, spaesato rispetto a cio' che stava facendo.
+                if (params.returnTo === "pratica") {
+                  router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", reopenNew: "1", _t: String(Date.now()) } });
+                }
+              }}
+            />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
                 {["persona", "azienda"].map((tp) => (
