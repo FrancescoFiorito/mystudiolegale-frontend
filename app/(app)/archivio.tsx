@@ -9,6 +9,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import SwipeToDelete from "@/src/components/SwipeToDelete";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
 
@@ -182,6 +183,13 @@ function SezionePratiche({
 
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
+  const eliminaPratica = (p: any) => {
+    Alert.alert("Elimina pratica", `Eliminare "${p.oggetto}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/pratiche/${p.id}`); load(); } },
+    ]);
+  };
+
   return (
     <>
       <View style={{ backgroundColor: t.surface, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: t.border }}>
@@ -206,22 +214,24 @@ function SezionePratiche({
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna pratica</Text>
             </View>
           ) : items.map((p) => (
-            <Pressable key={p.id} testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface, alignItems: "flex-start" }, SHADOW.card]}>
-              <View style={[s.cardIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
-              <View style={{ flex: 1 }}>
-                <View style={[s.cardHead, { justifyContent: "space-between" }]}>
-                  <Text style={{ color: t.onSurface, fontSize: 15, fontWeight: "700", flex: 1 }} numberOfLines={1}>{p.oggetto}</Text>
-                  <View style={{ backgroundColor: statoColor(p.stato) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, marginLeft: 8 }}>
-                    <Text style={{ color: statoColor(p.stato), fontSize: 11, fontWeight: "700" }}>{p.stato}</Text>
+            <SwipeToDelete key={p.id} testID={`pratica-${p.id}`} onDelete={() => eliminaPratica(p)}>
+              <Pressable testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface, alignItems: "flex-start" }, SHADOW.card]}>
+                <View style={[s.cardIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
+                <View style={{ flex: 1 }}>
+                  <View style={[s.cardHead, { justifyContent: "space-between" }]}>
+                    <Text style={{ color: t.onSurface, fontSize: 15, fontWeight: "700", flex: 1 }} numberOfLines={1}>{p.oggetto}</Text>
+                    <View style={{ backgroundColor: statoColor(p.stato) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill, marginLeft: 8 }}>
+                      <Text style={{ color: statoColor(p.stato), fontSize: 11, fontWeight: "700" }}>{p.stato}</Text>
+                    </View>
                   </View>
+                  {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, marginTop: 4 }} numberOfLines={1}>👤 {p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
+                  {p.controparte ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>vs {p.controparte}</Text> : null}
+                  {p.tribunale ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{p.tribunale}</Text> : null}
+                  {p.created_at ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 4, fontVariant: ["tabular-nums"] }}>Aperta il {p.created_at.slice(0, 10).split("-").reverse().join("/")}</Text> : null}
                 </View>
-                {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, marginTop: 4 }} numberOfLines={1}>👤 {p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
-                {p.controparte ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>vs {p.controparte}</Text> : null}
-                {p.tribunale ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{p.tribunale}</Text> : null}
-                {p.created_at ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 4, fontVariant: ["tabular-nums"] }}>Aperta il {p.created_at.slice(0, 10).split("-").reverse().join("/")}</Text> : null}
-              </View>
-              <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} style={{ marginTop: 8 }} />
-            </Pressable>
+                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} style={{ marginTop: 8 }} />
+              </Pressable>
+            </SwipeToDelete>
           ))}
       </ScrollView>
 
@@ -415,14 +425,15 @@ function SezioneDocumenti() {
           <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic", marginTop: SPACING.lg, textAlign: "center" }}>Nessun documento</Text>
         ) : null}
         {documentiVisibili.map((d) => (
-          <Pressable key={d.id} onPress={() => apriDocumento(d)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
-            <View style={[s.rowIcon, { backgroundColor: t.surfaceTertiary }]}><Feather name={iconForDoc(d.tipo) as any} size={18} color={t.onSurfaceSecondary} /></View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{d.nome}</Text>
-              <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>{formatSize(d.dimensione)} · {d.created_at?.slice(0, 10)}</Text>
-            </View>
-            <Pressable onPress={() => eliminaDocumento(d)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
-          </Pressable>
+          <SwipeToDelete key={d.id} testID={`doc-${d.id}`} onDelete={() => eliminaDocumento(d)}>
+            <Pressable onPress={() => apriDocumento(d)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+              <View style={[s.rowIcon, { backgroundColor: t.surfaceTertiary }]}><Feather name={iconForDoc(d.tipo) as any} size={18} color={t.onSurfaceSecondary} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{d.nome}</Text>
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>{formatSize(d.dimensione)} · {d.created_at?.slice(0, 10)}</Text>
+              </View>
+            </Pressable>
+          </SwipeToDelete>
         ))}
       </ScrollView>
 
@@ -449,6 +460,13 @@ function SezioneParcelle() {
     Linking.openURL(`${api.base}/api/parcelle/${id}/pdf?access_token=${encodeURIComponent(token)}`);
   };
 
+  const eliminaParcella = (p: any) => {
+    Alert.alert("Elimina parcella", `Eliminare la parcella "${p.numero}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/parcelle/${p.id}`); load(); } },
+    ]);
+  };
+
   return (
     <>
     <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
@@ -458,20 +476,22 @@ function SezioneParcelle() {
           <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna parcella emessa</Text>
         </View>
       ) : emesse.map((p) => (
-        <View key={p.id} testID={`parcella-${p.id}`} style={[s.card, { backgroundColor: t.surface }, SHADOW.card, { alignItems: "flex-start", flexDirection: "column" }]}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
-            <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{p.numero}</Text>
-            <View style={{ backgroundColor: t.success + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
-              <Text style={{ color: t.success, fontSize: 10, fontWeight: "700" }}>EMESSA</Text>
+        <SwipeToDelete key={p.id} testID={`parcella-${p.id}`} onDelete={() => eliminaParcella(p)}>
+          <View testID={`parcella-${p.id}`} style={[s.card, { backgroundColor: t.surface }, SHADOW.card, { alignItems: "flex-start", flexDirection: "column" }]}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
+              <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{p.numero}</Text>
+              <View style={{ backgroundColor: t.success + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
+                <Text style={{ color: t.success, fontSize: 10, fontWeight: "700" }}>EMESSA</Text>
+              </View>
             </View>
+            <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
+            {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
+            <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p.id)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
+              <Feather name="download" size={14} color={t.onBrand} />
+              <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+            </Pressable>
           </View>
-          <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
-          {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
-          <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p.id)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
-            <Feather name="download" size={14} color={t.onBrand} />
-            <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
-          </Pressable>
-        </View>
+        </SwipeToDelete>
       ))}
     </ScrollView>
 

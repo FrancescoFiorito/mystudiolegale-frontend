@@ -1,6 +1,6 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -9,6 +9,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import SwipeToDelete from "@/src/components/SwipeToDelete";
 
 export default function Clienti() {
   const { t } = useTheme();
@@ -45,6 +46,21 @@ export default function Clienti() {
     }
   };
 
+  const eliminaCliente = (c: any) => {
+    const name = c.ragione_sociale || `${c.nome} ${c.cognome || ""}`.trim();
+    Alert.alert("Elimina cliente", `Eliminare "${name}"?`, [
+      { text: "Annulla", style: "cancel" },
+      {
+        text: "Elimina",
+        style: "destructive",
+        onPress: async () => {
+          await api.del(`/clienti/${c.id}`);
+          load();
+        },
+      },
+    ]);
+  };
+
   const field = (k: string, l: string, opts: any = {}) => (
     <View style={{ marginBottom: SPACING.sm }}>
       <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
@@ -59,16 +75,6 @@ export default function Clienti() {
         title="Clienti"
         onBack={() => router.back()}
         backTestID="back-btn"
-        right={
-          <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-            <Pressable testID="cestino-btn" onPress={() => router.push("/(app)/cestino")} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
-              <Feather name="trash-2" size={18} color={t.onSurfaceSecondary} />
-            </Pressable>
-            <Pressable testID="new-cliente-btn" onPress={() => setShow(true)} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.brand }}>
-              <Feather name="plus" size={20} color={t.onBrand} />
-            </Pressable>
-          </View>
-        }
       />
       <View style={{ backgroundColor: t.surface, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
@@ -86,20 +92,26 @@ export default function Clienti() {
           const name = c.ragione_sociale || `${c.nome} ${c.cognome || ""}`.trim();
           const initials = name.slice(0, 2).toUpperCase();
           return (
-            <Pressable key={c.id} testID={`cliente-${c.id}`} onPress={() => router.push({ pathname: "/(app)/cliente/[id]", params: { id: c.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
-              <View style={{ width: 44, height: 44, borderRadius: RADIUS.pill, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: t.brand, fontWeight: "700" }}>{initials}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: t.onSurface, fontWeight: "700" }}>{name}</Text>
-                {c.email ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.email}</Text> : null}
-                {c.telefono ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.telefono}</Text> : null}
-              </View>
-              <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-            </Pressable>
+            <SwipeToDelete key={c.id} testID={`cliente-${c.id}`} onDelete={() => eliminaCliente(c)}>
+              <Pressable testID={`cliente-${c.id}`} onPress={() => router.push({ pathname: "/(app)/cliente/[id]", params: { id: c.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+                <View style={{ width: 44, height: 44, borderRadius: RADIUS.pill, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: t.brand, fontWeight: "700" }}>{initials}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "700" }}>{name}</Text>
+                  {c.email ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.email}</Text> : null}
+                  {c.telefono ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.telefono}</Text> : null}
+                </View>
+                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+              </Pressable>
+            </SwipeToDelete>
           );
         })}
       </ScrollView>
+
+      <Pressable testID="new-cliente-fab" onPress={() => setShow(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+        <Feather name="plus" size={22} color={t.onBrand} />
+      </Pressable>
 
       <Modal visible={show} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShow(false)}>
         <SafeAreaProvider>
@@ -149,4 +161,5 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", gap: SPACING.md, alignItems: "center", padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
   lbl: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
   input: { borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, fontSize: 14 },
+  fab: { position: "absolute", right: SPACING.lg, bottom: 104, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", zIndex: 50, elevation: 12 },
 });

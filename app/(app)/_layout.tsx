@@ -28,7 +28,6 @@ export default function AppLayout() {
       <Tabs.Screen name="calendario" options={{ href: null }} />
       <Tabs.Screen name="profilo" options={{ href: null }} />
       <Tabs.Screen name="impostazioni" options={{ href: null }} />
-      <Tabs.Screen name="cestino" options={{ href: null }} />
       <Tabs.Screen name="notifiche" options={{ href: null }} />
       <Tabs.Screen name="team" options={{ href: null }} />
       <Tabs.Screen name="audit" options={{ href: null }} />
