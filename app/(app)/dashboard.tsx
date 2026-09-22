@@ -62,7 +62,7 @@ export default function Dashboard() {
   const Stat = ({ label, value, icon, color, bg, testID, onPress }: any) => (
     <Pressable testID={testID} onPress={onPress} style={[s.stat, { backgroundColor: t.surface }, SHADOW.card]}>
       <View style={[s.statBadge, { backgroundColor: bg }]}>
-        <Feather name={icon} size={16} color={color} />
+        <Feather name={icon} size={17} color={color} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[s.statVal, { color: t.onSurface, fontVariant: ["tabular-nums"] }]}>{value}</Text>
@@ -75,6 +75,7 @@ export default function Dashboard() {
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
+        centerTitle={false}
         title={user?.nome || user?.email || "Avvocato"}
         subtitle="Bentornato/a"
         avatarInitials={initials(user?.nome)}
@@ -167,7 +168,7 @@ const s = StyleSheet.create({
 
   grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm, marginBottom: SPACING.lg },
   stat: { width: "47.5%", flexDirection: "row", alignItems: "center", gap: SPACING.sm, paddingVertical: 10, paddingHorizontal: SPACING.sm + 2, borderRadius: RADIUS.lg },
-  statBadge: { width: 30, height: 30, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
+  statBadge: { width: 33, height: 33, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   statVal: { fontSize: 18, fontWeight: "800", lineHeight: 21 },
   statLbl: { fontSize: 11, fontWeight: "600", marginTop: 1 },
 

@@ -49,6 +49,25 @@ export default function Archivio() {
     else if (params.tab === "pratiche") setTab("pratiche");
   }, [params.tab, params._t]);
 
+  // BUG FIX: "new=1" nell'URL deve aprire la modale "Nuova pratica" una sola
+  // volta (quando si arriva dal banner Home). SezionePratiche pero' viene
+  // smontata e rimontata ogni volta che si cambia tab (e' resa
+  // condizionalmente qui sotto): se params.new restava "1" nell'URL, ogni
+  // rientro manuale sulla tab "Pratiche" la rimontava leggendo di nuovo
+  // new==="1" e riapriva la modale da sola. Qui, in Archivio (che NON viene
+  // mai smontata dal cambio tab), teniamo un ref del navKey ("_t") gia'
+  // gestito: la modale viene quindi armata una sola volta per ogni vera
+  // navigazione dalla Home, non ad ogni rimontaggio della sezione.
+  const [autoNewKey, setAutoNewKey] = React.useState<string | undefined>(undefined);
+  const handledNewKeyRef = React.useRef<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (params.new === "1" && params._t && handledNewKeyRef.current !== params._t) {
+      handledNewKeyRef.current = params._t;
+      setAutoNewKey(params._t);
+      router.setParams({ new: "" });
+    }
+  }, [params.new, params._t, router]);
+
   return (
     <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Archivio" onBack={() => router.back()} />
@@ -64,7 +83,12 @@ export default function Archivio() {
         </Pressable>
       </View>
       {tab === "pratiche" ? (
-        <SezionePratiche statoIniziale={params.stato} autoNew={params.new === "1"} navKey={params._t} />
+        <SezionePratiche
+          statoIniziale={params.stato}
+          autoNew={!!autoNewKey && autoNewKey === params._t}
+          navKey={params._t}
+          onAutoNewHandled={() => setAutoNewKey(undefined)}
+        />
       ) : tab === "documenti" ? (
         <SezioneDocumenti />
       ) : (
@@ -74,7 +98,7 @@ export default function Archivio() {
   );
 }
 
-function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: string; autoNew?: boolean; navKey?: string }) {
+function SezionePratiche({ statoIniziale, autoNew, navKey, onAutoNewHandled }: { statoIniziale?: string; autoNew?: boolean; navKey?: string; onAutoNewHandled?: () => void }) {
   const { t } = useTheme();
   const router = useRouter();
   const [items, setItems] = React.useState<any[] | null>(null);
@@ -86,9 +110,15 @@ function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: s
   }, [statoIniziale, navKey]);
   const [showNew, setShowNew] = React.useState(!!autoNew);
   React.useEffect(() => {
-    if (autoNew) setShowNew(true);
+    if (autoNew) {
+      setShowNew(true);
+      onAutoNewHandled?.();
+    }
   }, [autoNew, navKey]);
   const [clienti, setClienti] = React.useState<any[]>([]);
+  const [clienteQ, setClienteQ] = React.useState("");
+  const [showNewCliente, setShowNewCliente] = React.useState(false);
+  const [clienteForm, setClienteForm] = React.useState<any>({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona" });
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
 
   const load = React.useCallback(async () => {
@@ -99,11 +129,28 @@ function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: s
   React.useEffect(() => { load(); }, [load]);
   React.useEffect(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
 
+  const clientiFiltrati = React.useMemo(() => {
+    if (!clienteQ.trim()) return clienti;
+    const qq = clienteQ.trim().toLowerCase();
+    return clienti.filter((c) => (c.ragione_sociale || `${c.nome} ${c.cognome || ""}`).toLowerCase().includes(qq));
+  }, [clienti, clienteQ]);
+
+  const creaClienteRapido = async () => {
+    if (!clienteForm.nome && !clienteForm.ragione_sociale) return;
+    const nuovo = await api.post("/clienti", clienteForm);
+    setClienti((prev) => [...prev, nuovo]);
+    setForm((f: any) => ({ ...f, cliente_id: nuovo.id }));
+    setShowNewCliente(false);
+    setClienteQ("");
+    setClienteForm({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona" });
+  };
+
   const create = async () => {
     if (!form.oggetto) return;
     await api.post("/pratiche", { ...form, valore_causa: Number(form.valore_causa) || 0 });
     setShowNew(false);
     setForm({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
+    setClienteQ("");
     load();
   };
 
@@ -160,7 +207,7 @@ function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: s
         <SafeAreaProvider>
         <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header variant="hero" title="Nuova Pratica" onBack={() => setShowNew(false)} backTestID="close-new-pratica" />
+            <Header variant="hero" title="Nuova Pratica" onBack={() => { setShowNew(false); setShowNewCliente(false); setClienteQ(""); }} backTestID="close-new-pratica" />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
               {["oggetto", "controparte", "tribunale"].map((k) => (
                 <View key={k} style={{ marginBottom: SPACING.md }}>
@@ -179,16 +226,77 @@ function SezionePratiche({ statoIniziale, autoNew, navKey }: { statoIniziale?: s
                 <TextInput testID="new-pratica-valore" value={form.valore_causa} onChangeText={(v) => setForm({ ...form, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
               </View>
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Cliente</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.md }} contentContainerStyle={{ gap: 8 }}>
-                <Pressable onPress={() => setForm({ ...form, cliente_id: null })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: form.cliente_id ? t.surfaceSecondary : t.brand, borderWidth: 1, borderColor: t.border }}>
-                  <Text style={{ color: form.cliente_id ? t.onSurfaceSecondary : t.onBrand, fontSize: 12 }}>Nessuno</Text>
-                </Pressable>
-                {clienti.map((c) => (
-                  <Pressable key={c.id} onPress={() => setForm({ ...form, cliente_id: c.id })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: form.cliente_id === c.id ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
-                    <Text style={{ color: form.cliente_id === c.id ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{c.ragione_sociale || `${c.nome} ${c.cognome || ""}`}</Text>
+              {form.cliente_id ? (
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACING.sm, gap: 8 }}>
+                  <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Feather name="user-check" size={14} color={t.brand} />
+                    <Text style={{ color: t.brand, fontSize: 13, fontWeight: "700", flex: 1 }} numberOfLines={1}>
+                      {(clienti.find((c) => c.id === form.cliente_id)?.ragione_sociale) || `${clienti.find((c) => c.id === form.cliente_id)?.nome || ""} ${clienti.find((c) => c.id === form.cliente_id)?.cognome || ""}`.trim()}
+                    </Text>
+                  </View>
+                  <Pressable testID="cliente-deseleziona" onPress={() => setForm({ ...form, cliente_id: null })} style={{ padding: 8 }}>
+                    <Feather name="x" size={16} color={t.onSurfaceTertiary} />
                   </Pressable>
-                ))}
-              </ScrollView>
+                </View>
+              ) : (
+                <>
+                  <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }]}>
+                    <Feather name="search" size={15} color={t.onSurfaceTertiary} />
+                    <TextInput
+                      testID="new-pratica-cliente-search"
+                      value={clienteQ}
+                      onChangeText={setClienteQ}
+                      placeholder="Cerca cliente registrato..."
+                      placeholderTextColor={t.onSurfaceTertiary}
+                      style={{ flex: 1, color: t.onSurface, fontSize: 13 }}
+                    />
+                  </View>
+                  <ScrollView style={{ maxHeight: 150, marginBottom: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {clientiFiltrati.length === 0 ? (
+                      <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessun cliente trovato</Text>
+                    ) : clientiFiltrati.map((c) => (
+                      <Pressable key={c.id} testID={`cliente-opzione-${c.id}`} onPress={() => setForm({ ...form, cliente_id: c.id })} style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
+                          <Text style={{ color: t.brand, fontSize: 11, fontWeight: "700" }}>{(c.ragione_sociale || c.nome || "?").slice(0, 2).toUpperCase()}</Text>
+                        </View>
+                        <Text style={{ color: t.onSurface, fontSize: 13, flex: 1 }} numberOfLines={1}>{c.ragione_sociale || `${c.nome} ${c.cognome || ""}`}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                  {!showNewCliente ? (
+                    <Pressable testID="mostra-nuovo-cliente" onPress={() => setShowNewCliente(true)} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 9, paddingHorizontal: 12, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: t.brand, alignSelf: "flex-start", marginBottom: SPACING.md }}>
+                      <Feather name="user-plus" size={14} color={t.brand} />
+                      <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700" }}>Nuovo cliente</Text>
+                    </Pressable>
+                  ) : (
+                    <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: t.border, backgroundColor: t.surfaceSecondary, marginBottom: SPACING.md }}>
+                      <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.sm }}>
+                        {["persona", "azienda"].map((tp) => (
+                          <Pressable key={tp} onPress={() => setClienteForm({ ...clienteForm, tipo: tp })} style={{ flex: 1, paddingVertical: 8, borderRadius: RADIUS.md, backgroundColor: clienteForm.tipo === tp ? t.brand : t.surface, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
+                            <Text style={{ color: clienteForm.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600", fontSize: 12 }}>{tp}</Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                      {clienteForm.tipo === "persona" ? (
+                        <View style={{ flexDirection: "row", gap: 8 }}>
+                          <TextInput testID="nuovo-cliente-nome" value={clienteForm.nome} onChangeText={(v) => setClienteForm({ ...clienteForm, nome: v })} placeholder="Nome*" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+                          <TextInput testID="nuovo-cliente-cognome" value={clienteForm.cognome} onChangeText={(v) => setClienteForm({ ...clienteForm, cognome: v })} placeholder="Cognome" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+                        </View>
+                      ) : (
+                        <TextInput testID="nuovo-cliente-ragione" value={clienteForm.ragione_sociale} onChangeText={(v) => setClienteForm({ ...clienteForm, ragione_sociale: v })} placeholder="Ragione sociale*" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+                      )}
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm }}>
+                        <Pressable onPress={() => setShowNewCliente(false)} style={{ flex: 1, paddingVertical: 9, borderRadius: RADIUS.md, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
+                          <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }}>Annulla</Text>
+                        </Pressable>
+                        <Pressable testID="salva-nuovo-cliente" onPress={creaClienteRapido} style={{ flex: 1, paddingVertical: 9, borderRadius: RADIUS.md, backgroundColor: t.brand, alignItems: "center" }}>
+                          <Text style={{ color: t.onBrand, fontSize: 12, fontWeight: "700" }}>Salva e seleziona</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Priorità</Text>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.lg }}>
                 {["bassa", "media", "alta"].map((p) => (
