@@ -14,17 +14,12 @@ type HeaderProps = {
   right?: React.ReactNode;
   /** "hero" = pannello colorato brand (Dashboard, Profilo). "flat" = header standard di sezione. */
   variant?: "hero" | "flat";
-  /** Centra titolo/sottotitolo nello spazio centrale tra i due pulsanti laterali.
-   * Di default true: usato da tutte le schermate tranne la Home, che ha un
-   * pulsante a destra di larghezza diversa dal pulsante a sinistra e per cui
-   * centrare il testo lo sposterebbe fuori posto. */
-  centerTitle?: boolean;
 };
 
 // Header condiviso da tutte le schermate, per garantire altezze, colori e
 // tipografia coerenti in tutta l'app. Due varianti: "flat" (la maggior parte
 // delle schermate) e "hero" (Dashboard e Profilo, pannello colorato brand).
-export default function Header({ title, subtitle, onBack, backTestID, avatarInitials, onAvatarPress, right, variant = "flat", centerTitle = true }: HeaderProps) {
+export default function Header({ title, subtitle, onBack, backTestID, avatarInitials, onAvatarPress, right, variant = "flat" }: HeaderProps) {
   const { t } = useTheme();
   const hero = variant === "hero";
   const leftAction = onBack ? (
@@ -52,9 +47,18 @@ export default function Header({ title, subtitle, onBack, backTestID, avatarInit
     >
       <View style={s.row}>
         {leftAction || <View style={s.roundBtn} />}
-        <View style={{ flex: 1, marginHorizontal: SPACING.md, justifyContent: "center", alignItems: centerTitle ? "center" : "flex-start" }}>
-          <Text style={{ color: hero ? t.onBrand : t.onSurfaceTertiary, opacity: hero ? (subtitle ? 0.75 : 0) : subtitle ? 1 : 0, fontSize: 12, lineHeight: 16, height: 16, textAlign: centerTitle ? "center" : "left" }}>{subtitle || " "}</Text>
-          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: 19, lineHeight: 24, fontFamily: FONT.serif, includeFontPadding: false, textAlign: centerTitle ? "center" : "left" }} numberOfLines={1}>{title}</Text>
+        <View style={{ flex: 1, marginLeft: SPACING.md, justifyContent: "center" }}>
+          {/* Riga sottotitolo renderizzata SOLO se c'e' davvero un sottotitolo:
+              prima occupava sempre 16px anche da vuota (spazio " " invisibile),
+              il che spingeva il titolo verso il basso e lo faceva apparire non
+              centrato verticalmente rispetto ai pulsanti tondi ai lati. Ora,
+              nelle schermate con solo il titolo (la maggior parte), il blocco
+              di testo e' alto quanto la sola riga del titolo e viene centrato
+              verticalmente per intero dalla riga (s.row ha alignItems:center). */}
+          {subtitle ? (
+            <Text style={{ color: hero ? t.onBrand : t.onSurfaceTertiary, opacity: hero ? 0.75 : 1, fontSize: 12, lineHeight: 16, height: 16 }}>{subtitle}</Text>
+          ) : null}
+          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: 19, lineHeight: 24, fontFamily: FONT.serif, includeFontPadding: false }} numberOfLines={1}>{title}</Text>
         </View>
         {right || <View style={s.roundBtn} />}
       </View>
