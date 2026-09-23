@@ -25,8 +25,10 @@ function RootNav() {
   useEffect(() => {
     if (loading) return;
     const inAuth = segments[0] === "(auth)";
+    const inVerify = segments[0] === "verify-email";
     if (!user && !inAuth) router.replace("/(auth)/login");
-    else if (user && inAuth) router.replace("/(app)/dashboard");
+    else if (user && !user.email_verified && !inVerify) router.replace("/verify-email");
+    else if (user && user.email_verified && (inAuth || inVerify)) router.replace("/(app)/dashboard");
   }, [user, loading, segments]);
 
   if (loading) {
