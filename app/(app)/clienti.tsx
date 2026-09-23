@@ -19,6 +19,7 @@ export default function Clienti() {
   const [q, setQ] = React.useState("");
   const [show, setShow] = React.useState(false);
   const [form, setForm] = React.useState<any>({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
+  const [saving, setSaving] = React.useState(false);
 
   const load = React.useCallback(async () => setItems(await api.get(`/clienti?q=${encodeURIComponent(q)}`)), [q]);
   React.useEffect(() => { load(); }, [load]);
@@ -38,11 +39,18 @@ export default function Clienti() {
 
   const create = async () => {
     if (!form.nome && !form.ragione_sociale) return;
-    const nuovo = await api.post("/clienti", form);
-    setShow(false); setForm({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
-    load();
-    if (params.returnTo === "pratica") {
-      router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", selectCliente: nuovo.id, reopenNew: "1", _t: String(Date.now()) } });
+    setSaving(true);
+    try {
+      const nuovo = await api.post("/clienti", form);
+      setShow(false); setForm({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
+      load();
+      if (params.returnTo === "pratica") {
+        router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", selectCliente: nuovo.id, reopenNew: "1", _t: String(Date.now()) } });
+      }
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -143,8 +151,8 @@ export default function Clienti() {
               {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address" })}
               {field("telefono", "Telefono", { keyboardType: "phone-pad" })}
               {field("pec", "PEC", { autoCapitalize: "none" })}
-              <Pressable testID="submit-cliente" onPress={create} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" }}>
-                <Text style={{ color: t.onBrand, fontWeight: "700" }}>Salva cliente</Text>
+              <Pressable testID="submit-cliente" onPress={create} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva cliente"}</Text>
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>

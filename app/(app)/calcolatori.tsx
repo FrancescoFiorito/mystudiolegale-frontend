@@ -1,6 +1,6 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
@@ -40,6 +40,7 @@ export default function Calcolatori() {
   // Parcelle
   const [par, setPar] = React.useState<any>({ fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "", fase_esecutiva: "", diritti: "", anticipazioni: "", spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0" });
   const [risPar, setRisPar] = React.useState<any>(null);
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
@@ -58,14 +59,28 @@ export default function Calcolatori() {
 
   const saveScad = async () => {
     if (!risScad?.data_calcolata) return;
-    await api.post("/scadenze", { pratica_id: praticaId, titolo: `Scadenza calcolata (${giorni} ${unita})`, data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria: [1, 7], descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
-    setRisScad({ ...risScad, salvata: true });
+    setSaving(true);
+    try {
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: `Scadenza calcolata (${giorni} ${unita})`, data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria: [1, 7], descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      setRisScad({ ...risScad, salvata: true });
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setSaving(false);
+    }
   };
   const savePar = async () => {
-    const body: any = { tipo: "parcella", pratica_id: praticaId };
-    Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
-    const p = await api.post("/parcelle", body);
-    setRisPar({ ...risPar, salvata: true, id: p.id });
+    setSaving(true);
+    try {
+      const body: any = { tipo: "parcella", pratica_id: praticaId };
+      Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
+      const p = await api.post("/parcelle", body);
+      setRisPar({ ...risPar, salvata: true, id: p.id });
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const PraticaPicker = () => (
@@ -144,8 +159,8 @@ export default function Calcolatori() {
                     {!risScad.salvata ? (
                       <>
                         <PraticaPicker />
-                        <Pressable testID="save-scad" onPress={saveScad} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center" }}>
-                          <Text style={{ color: t.onBrand, fontWeight: "700" }}>Salva come scadenza</Text>
+                        <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                          <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva come scadenza"}</Text>
                         </Pressable>
                       </>
                     ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvata</Text>}
@@ -203,8 +218,8 @@ export default function Calcolatori() {
                 {!risPar.salvata ? (
                   <>
                     <PraticaPicker />
-                    <Pressable testID="save-par" onPress={savePar} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center" }}>
-                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>Salva parcella</Text>
+                    <Pressable testID="save-par" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva parcella"}</Text>
                     </Pressable>
                   </>
                 ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Parcella salvata</Text>}
