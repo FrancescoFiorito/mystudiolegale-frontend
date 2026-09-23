@@ -12,6 +12,7 @@ export type User = {
   studio_id?: string;
   ruolo?: "Amministratore" | "Avvocato" | "Collaboratore" | "Segreteria" | string;
   push_token?: string | null;
+  email_verified?: boolean;
 };
 
 type RegisterData = {
