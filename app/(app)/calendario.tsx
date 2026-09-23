@@ -72,6 +72,13 @@ export default function Calendario() {
     } catch (e: any) { Alert.alert("Errore", e.message); }
   };
 
+  const eliminaEvento = (e: any) => {
+    Alert.alert("Elimina scadenza", `Eliminare "${e.titolo}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${e.id}`); load(); } },
+    ]);
+  };
+
   const EventCard = ({ e }: { e: any }) => (
     <Pressable onLongPress={() => apriSposta(e)} style={[{ flexDirection: "row", borderRadius: RADIUS.lg, marginBottom: SPACING.sm, overflow: "hidden", backgroundColor: t.surface }, SHADOW.card]}>
       <View style={{ width: 4, backgroundColor: priColor(e.priorita) }} />
@@ -82,6 +89,9 @@ export default function Calendario() {
       </View>
       <Pressable onPress={() => apriSposta(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
         <Feather name="move" size={16} color={t.onSurfaceTertiary} />
+      </Pressable>
+      <Pressable onPress={() => eliminaEvento(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+        <Feather name="trash-2" size={16} color={t.error} />
       </Pressable>
     </Pressable>
   );
