@@ -9,6 +9,8 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import PasswordHint from "@/src/components/PasswordHint";
+import { validatePassword } from "@/src/utils/passwordPolicy";
 
 const initials = (name?: string) => {
   if (!name) return "A";
@@ -52,7 +54,8 @@ export default function Profilo() {
   };
 
   const salvaNuovaPassword = async () => {
-    if (pwForm.new_password.length < 6) return Alert.alert("Errore", "La nuova password deve avere almeno 6 caratteri");
+    const pwErr = validatePassword(pwForm.new_password);
+    if (pwErr) return Alert.alert("Errore", pwErr);
     if (pwForm.new_password !== pwForm.new_password2) return Alert.alert("Errore", "Le due password non coincidono");
     setSavingPw(true);
     try {
@@ -130,11 +133,14 @@ export default function Profilo() {
                 onChangeText={(v) => setPwForm({ ...pwForm, current_password: v })}
                 style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, marginBottom: SPACING.md }]}
               />
-              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Nuova password</Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Nuova password</Text>
+                <PasswordHint />
+              </View>
               <TextInput
                 testID="change-pw-new"
                 secureTextEntry
-                placeholder="Almeno 6 caratteri"
+                placeholder="Almeno 8 caratteri, un numero e un simbolo"
                 placeholderTextColor={t.onSurfaceTertiary}
                 value={pwForm.new_password}
                 onChangeText={(v) => setPwForm({ ...pwForm, new_password: v })}
