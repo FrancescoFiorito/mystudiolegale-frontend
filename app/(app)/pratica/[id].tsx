@@ -10,7 +10,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
-import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
+import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -146,8 +146,8 @@ export default function PraticaDetail() {
     }
   };
 
-  const apriDocumento = async (doc: any) => {
-    await apriDocumentoRemoto(`/documenti/${doc.id}/download`, doc.nome || "documento");
+  const apriDocumento = (doc: any) => {
+    scegliAperturaDocumento(`/documenti/${doc.id}/download`, `/documenti/${doc.id}/view-link`, doc.nome || "documento");
   };
 
   const eliminaDocumento = (doc: any) => {
