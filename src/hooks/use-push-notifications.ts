@@ -49,7 +49,10 @@ export function usePushNotifications() {
         }
       } catch (e) {
         // Su simulatore/emulatore o senza projectId le push non sono disponibili: non bloccante.
-        console.log("push registration skipped:", e);
+        if (__DEV__) {
+          // eslint-disable-next-line no-console
+          console.log("push registration skipped:", e);
+        }
       }
     })();
 

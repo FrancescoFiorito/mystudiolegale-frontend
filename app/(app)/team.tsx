@@ -22,6 +22,7 @@ export default function Team() {
   const [email, setEmail] = React.useState("");
   const [ruolo, setRuolo] = React.useState("Collaboratore");
   const [ultimoToken, setUltimoToken] = React.useState("");
+  const [saving, setSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
     try {
@@ -38,6 +39,7 @@ export default function Team() {
 
   const invita = async () => {
     if (!email.trim()) return;
+    setSaving(true);
     try {
       const r = await api.post("/team/invite", { email: email.trim(), ruolo });
       setUltimoToken(r.invite_token);
@@ -45,6 +47,8 @@ export default function Team() {
       load();
     } catch (e: any) {
       Alert.alert("Errore", e.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -150,8 +154,8 @@ export default function Team() {
                 </Text>
               </View>
             ) : null}
-            <Pressable testID="team-invite-submit" onPress={invita} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" }}>
-              <Text style={{ color: t.onBrand, fontWeight: "700" }}>Invia invito</Text>
+            <Pressable testID="team-invite-submit" onPress={invita} disabled={saving} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+              <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Invio..." : "Invia invito"}</Text>
             </Pressable>
           </View>
         </View>

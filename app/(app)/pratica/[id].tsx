@@ -1,6 +1,6 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -33,6 +34,7 @@ export default function PraticaDetail() {
   const [editForm, setEditForm] = React.useState<any>({});
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [savingEdit, setSavingEdit] = React.useState(false);
+  const [savingAdd, setSavingAdd] = React.useState(false);
 
   const load = React.useCallback(async () => {
     if (!id) return;
@@ -75,10 +77,14 @@ export default function PraticaDetail() {
         ...STATI_PRATICA.filter((st) => st !== pratica.stato).map((st) => ({
           text: st,
           onPress: async () => {
-            const aggiornata = { ...pratica, stato: st };
-            delete (aggiornata as any).cliente;
-            await api.put(`/pratiche/${id}`, aggiornata);
-            setPratica({ ...pratica, stato: st });
+            try {
+              const aggiornata = { ...pratica, stato: st };
+              delete (aggiornata as any).cliente;
+              await api.put(`/pratiche/${id}`, aggiornata);
+              setPratica({ ...pratica, stato: st });
+            } catch (e: any) {
+              Alert.alert("Errore", e.message || "Impossibile cambiare lo stato. Riprova.");
+            }
           },
         })),
         { text: "Annulla", style: "cancel" as const },
@@ -100,6 +106,7 @@ export default function PraticaDetail() {
   };
 
   const submitAdd = async () => {
+    setSavingAdd(true);
     try {
       if (tab === "Note") {
         await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
@@ -107,7 +114,11 @@ export default function PraticaDetail() {
         await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria: [1, 7] });
       }
       setShowAdd(false); load();
-    } catch (e: any) { Alert.alert("Errore", e.message || String(e)); }
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || String(e));
+    } finally {
+      setSavingAdd(false);
+    }
   };
 
   const toggleChecklistItem = async (n: any, idx: number) => {
@@ -136,13 +147,7 @@ export default function PraticaDetail() {
   };
 
   const apriDocumento = async (doc: any) => {
-    const headers = await api.authHeader();
-    // Il browser di sistema (Linking.openURL) non puo' allegare l'header
-    // Authorization, quindi passiamo il token come query string: il backend
-    // lo accetta anche cosi' per questo specifico endpoint di download.
-    const token = headers.Authorization ? headers.Authorization.replace("Bearer ", "") : "";
-    const url = `${api.base}/api/documenti/${doc.id}/download?access_token=${encodeURIComponent(token)}`;
-    Linking.openURL(url).catch(() => Alert.alert("Documento", "Impossibile aprire il documento"));
+    await apriDocumentoRemoto(`/documenti/${doc.id}/download`, doc.nome || "documento");
   };
 
   const eliminaDocumento = (doc: any) => {
@@ -152,7 +157,23 @@ export default function PraticaDetail() {
     ]);
   };
 
-  const deletePratica = async () => { await api.del(`/pratiche/${id}`); router.back(); };
+  const deletePratica = () => {
+    Alert.alert("Elimina pratica", "Sei sicuro di voler eliminare questa pratica? L'operazione non è reversibile.", [
+      { text: "Annulla", style: "cancel" },
+      {
+        text: "Elimina",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.del(`/pratiche/${id}`);
+            router.back();
+          } catch (e: any) {
+            Alert.alert("Errore", e.message || "Impossibile eliminare la pratica. Riprova.");
+          }
+        },
+      },
+    ]);
+  };
 
   if (!pratica) return <View style={{ flex: 1, backgroundColor: t.surface, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={t.brand} /></View>;
 
@@ -391,8 +412,8 @@ export default function PraticaDetail() {
                   )}
                 </>
               )}
-              <Pressable testID="submit-add" onPress={submitAdd} style={{ marginTop: SPACING.xl, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" }}>
-                <Text style={{ color: t.onBrand, fontWeight: "700" }}>Salva</Text>
+              <Pressable testID="submit-add" onPress={submitAdd} disabled={savingAdd} style={{ marginTop: SPACING.xl, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingAdd ? 0.6 : 1 }}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingAdd ? "Salvataggio..." : "Salva"}</Text>
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>

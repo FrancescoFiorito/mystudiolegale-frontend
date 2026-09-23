@@ -11,7 +11,9 @@ import { ThemeProvider, useTheme } from "@/src/ThemeContext";
 import { AuthProvider, useAuth } from "@/src/AuthContext";
 import LoadingScreen from "@/src/components/LoadingScreen";
 
-LogBox.ignoreAllLogs(true);
+if (__DEV__) {
+  LogBox.ignoreAllLogs(true);
+}
 SplashScreen.preventAutoHideAsync();
 
 function RootNav() {

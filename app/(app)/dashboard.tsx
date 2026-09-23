@@ -39,8 +39,10 @@ export default function Dashboard() {
   const [prossimi, setProssimi] = React.useState<any[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const [showMenu, setShowMenu] = React.useState(false);
+  const [errore, setErrore] = React.useState(false);
 
   const load = React.useCallback(async () => {
+    setErrore(false);
     try {
       const [d, sc] = await Promise.all([
         api.get<Dash>("/dashboard"),
@@ -49,11 +51,26 @@ export default function Dashboard() {
       setData(d);
       const oggi = new Date().toISOString().slice(0, 10);
       setProssimi((sc || []).filter((s: any) => !s.completata && s.data >= oggi).sort((a: any, b: any) => (a.data + a.ora).localeCompare(b.data + b.ora)).slice(0, 5));
-    } catch {}
+    } catch {
+      setErrore(true);
+    }
   }, []);
 
   React.useEffect(() => { load(); }, [load]);
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+  if (!data && errore) {
+    return (
+      <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface, alignItems: "center", justifyContent: "center", padding: SPACING.lg }}>
+        <Feather name="alert-triangle" size={40} color={t.onSurfaceTertiary} />
+        <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 16, marginTop: SPACING.md, textAlign: "center" }}>Impossibile caricare i dati</Text>
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 13, marginTop: 4, textAlign: "center" }}>Controlla la connessione e riprova.</Text>
+        <Pressable testID="dashboard-retry" onPress={load} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.md }}>
+          <Text style={{ color: t.onBrand, fontWeight: "700" }}>Riprova</Text>
+        </Pressable>
+      </SafeAreaView>
+    );
+  }
 
   if (!data) {
     return <LoadingScreen />;
