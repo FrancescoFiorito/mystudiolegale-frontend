@@ -55,7 +55,7 @@ export default function ForgotPassword() {
                 <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, marginTop: SPACING.sm, textAlign: "center" }}>
                   Se l'indirizzo è registrato, hai ricevuto un codice per reimpostare la password (valido 1 ora).
                 </Text>
-                <Pressable testID="go-reset-password" onPress={() => router.push("/(auth)/reset-password")} style={[s.btn, { backgroundColor: t.brand, marginTop: SPACING.xl }]}>
+                <Pressable testID="go-reset-password" onPress={() => router.push({ pathname: "/(auth)/reset-password", params: { email: email.trim() } })} style={[s.btn, { backgroundColor: t.brand, marginTop: SPACING.xl }]}>
                   <Text style={[s.btnTxt, { color: t.onBrand }]}>Ho il codice, continua</Text>
                 </Pressable>
               </View>
@@ -76,10 +76,10 @@ export default function ForgotPassword() {
                   />
                 </View>
                 {err ? <Text style={[s.err, { color: t.error }]} testID="forgot-error">{err}</Text> : null}
-                <Pressable testID="forgot-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1 }]}>
+                <Pressable testID="forgot-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
                   <Text style={[s.btnTxt, { color: t.onBrand }]}>{loading ? "Invio..." : "Invia codice"}</Text>
                 </Pressable>
-                <Pressable testID="go-reset-password-direct" onPress={() => router.push("/(auth)/reset-password")} style={s.linkBtn}>
+                <Pressable testID="go-reset-password-direct" onPress={() => router.push({ pathname: "/(auth)/reset-password", params: { email: email.trim() } })} style={s.linkBtn}>
                   <Text style={{ color: t.onSurfaceSecondary, textAlign: "center" }}>Hai già un codice? <Text style={{ color: t.brand, fontWeight: "700" }}>Inseriscilo qui</Text></Text>
                 </Pressable>
               </>
