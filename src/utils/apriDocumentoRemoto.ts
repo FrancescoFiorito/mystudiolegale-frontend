@@ -11,7 +11,7 @@
 // nella cache dell'app con expo-file-system e lo apriamo/condividiamo con il
 // foglio di condivisione di sistema (expo-sharing): da lì l'utente può
 // visualizzarlo, salvarlo o inoltrarlo, senza che il token compaia mai in un URL.
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { api } from "@/src/api";
@@ -42,4 +42,30 @@ export async function apriDocumentoRemoto(path: string, nomeFile: string) {
   } catch {
     Alert.alert("Errore", "Impossibile aprire il file");
   }
+}
+
+// Apre nel browser di sistema un link "usa e getta" (5 minuti) generato dal
+// backend apposta per la visualizzazione: non espone mai il token di sessione
+// nell'URL (a differenza di come funzionava in passato), solo un codice
+// casuale a scadenza breve legato a quel singolo file.
+async function apriInBrowser(viewLinkPath: string) {
+  try {
+    const { url } = await api.post<{ url: string }>(viewLinkPath);
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert("Errore", "Impossibile aprire il file nel browser");
+  }
+}
+
+// Chiede all'utente se vuole visualizzare il file nel browser (senza
+// scaricarlo sul dispositivo) oppure scaricarlo/condividerlo (comportamento
+// precedente). `viewLinkPath` e' l'endpoint POST che genera il link
+// temporaneo (es. `/documenti/${id}/view-link`), `downloadPath` quello GET
+// per lo scaricamento vero e proprio (es. `/documenti/${id}/download`).
+export function scegliAperturaDocumento(downloadPath: string, viewLinkPath: string, nomeFile: string) {
+  Alert.alert(nomeFile, "Cosa vuoi fare con questo file?", [
+    { text: "Annulla", style: "cancel" },
+    { text: "Visualizza", onPress: () => apriInBrowser(viewLinkPath) },
+    { text: "Scarica o condividi", onPress: () => apriDocumentoRemoto(downloadPath, nomeFile) },
+  ]);
 }

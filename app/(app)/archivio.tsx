@@ -10,7 +10,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
-import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
+import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
@@ -414,8 +414,8 @@ function SezioneDocumenti() {
     }
   };
 
-  const apriDocumento = async (doc: any) => {
-    await apriDocumentoRemoto(`/documenti/${doc.id}/download`, doc.nome || "documento");
+  const apriDocumento = (doc: any) => {
+    scegliAperturaDocumento(`/documenti/${doc.id}/download`, `/documenti/${doc.id}/view-link`, doc.nome || "documento");
   };
 
   const eliminaDocumento = async (doc: any) => {
@@ -483,8 +483,8 @@ function SezioneParcelle() {
 
   const emesse = (items || []).filter((p) => p.emessa);
 
-  const openPdf = async (p: any) => {
-    await apriDocumentoRemoto(`/parcelle/${p.id}/pdf`, `${p.numero || "parcella"}.pdf`);
+  const openPdf = (p: any) => {
+    scegliAperturaDocumento(`/parcelle/${p.id}/pdf`, `/parcelle/${p.id}/pdf/view-link`, `${p.numero || "parcella"}.pdf`);
   };
 
   const eliminaParcella = (p: any) => {
