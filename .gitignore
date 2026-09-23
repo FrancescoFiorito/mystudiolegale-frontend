@@ -1,6 +1,32 @@
+# Dipendenze
 node_modules/
+
+# Expo
 .expo/
 dist/
 web-build/
-*.log
+expo-env.d.ts
+
+# Build nativi (se mai generati con expo prebuild)
+ios/
+android/
+
+# Variabili d'ambiente / segreti
+.env
+.env.*
+!.env.example
+
+# Log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
 .DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
