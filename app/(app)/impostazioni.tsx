@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Share } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -10,6 +10,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
 
 export default function Impostazioni() {
   const { t, mode, setMode } = useTheme();
@@ -62,15 +63,29 @@ export default function Impostazioni() {
   };
 
   const esportaDatiGdpr = async () => {
+    const nomeFile = `export-gdpr-${new Date().toISOString().slice(0, 10)}.json`;
     try {
-      const url = `${api.base}/api/gdpr/export`;
       if (Platform.OS === "web") {
-        window.open(url, "_blank");
+        // Su web non abbiamo expo-sharing: scarichiamo comunque con fetch +
+        // header Authorization (mai in query string) e avviamo il download
+        // del browser tramite un link temporaneo.
+        const headers = await api.authHeader();
+        const res = await fetch(`${api.base}/api/gdpr/export`, { headers: headers as HeadersInit });
+        if (!res.ok) throw new Error(`Errore ${res.status}`);
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = nomeFile;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
       } else {
-        await Share.share({ message: `Esportazione dati studio (GDPR): apri ${url} dal browser autenticato, oppure richiedi il file al tuo amministratore.` });
+        await apriDocumentoRemoto("/gdpr/export", nomeFile);
       }
     } catch (e: any) {
-      Alert.alert("Errore", e.message);
+      Alert.alert("Errore", e.message || "Impossibile esportare i dati. Riprova.");
     }
   };
 

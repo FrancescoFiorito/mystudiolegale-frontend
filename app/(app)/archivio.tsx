@@ -1,17 +1,16 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
+import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
 
@@ -29,37 +28,6 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-// Scarica il file dall'URL protetto (gia' comprensivo di access_token) in
-// locale nella sandbox dell'app, poi apre il foglio di condivisione di
-// sistema: da li' l'utente puo' salvarlo davvero sul dispositivo (Files su
-// iOS, cartella Download su Android) o inoltrarlo altrove. E' l'equivalente
-// mobile di un "download" del browser, che su iOS/Android non esiste come
-// concetto a se stante.
-async function scaricaFile(url: string, nomeFile: string) {
-  try {
-    const dest = `${FileSystem.documentDirectory}${nomeFile.replace(/[\\/]/g, "_")}`;
-    const { uri } = await FileSystem.downloadAsync(url, dest);
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri);
-    } else {
-      Alert.alert("Scaricato", `File salvato in ${uri}`);
-    }
-  } catch (e) {
-    Alert.alert("Errore", "Impossibile scaricare il file");
-  }
-}
-
-// Mostra la scelta "Visualizza" (apre l'URL nel browser di sistema, senza
-// salvare nulla) oppure "Scarica" (vedi scaricaFile sopra), invece di aprire
-// direttamente il link come si faceva prima.
-function scegliAperturaFile(titolo: string, url: string, nomeFile: string) {
-  Alert.alert(titolo, "Vuoi visualizzarlo o scaricarlo?", [
-    { text: "Annulla", style: "cancel" },
-    { text: "Visualizza", onPress: () => Linking.openURL(url).catch(() => Alert.alert("Errore", "Impossibile aprire il file")) },
-    { text: "Scarica", onPress: () => scaricaFile(url, nomeFile) },
-  ]);
 }
 
 // Archivio: pratiche e documenti riuniti in un'unica schermata, divisa in
@@ -176,6 +144,7 @@ function SezionePratiche({
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [clienteQ, setClienteQ] = React.useState("");
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
+  const [saving, setSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const s = stato === "Tutte" ? "" : stato;
@@ -207,11 +176,18 @@ function SezionePratiche({
 
   const create = async () => {
     if (!form.oggetto) return;
-    await api.post("/pratiche", { ...form, valore_causa: Number(form.valore_causa) || 0 });
-    setShowNew(false);
-    setForm({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
-    setClienteQ("");
-    load();
+    setSaving(true);
+    try {
+      await api.post("/pratiche", { ...form, valore_causa: Number(form.valore_causa) || 0 });
+      setShowNew(false);
+      setForm({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
+      setClienteQ("");
+      load();
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
@@ -362,8 +338,8 @@ function SezionePratiche({
                   </Pressable>
                 ))}
               </View>
-              <Pressable testID="submit-new-pratica" onPress={create} style={[s.submit, { backgroundColor: t.brand }]}>
-                <Text style={{ color: t.onBrand, fontWeight: "700" }}>Crea pratica</Text>
+              <Pressable testID="submit-new-pratica" onPress={create} disabled={saving} style={[s.submit, { backgroundColor: t.brand, opacity: saving ? 0.6 : 1 }]}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Crea pratica"}</Text>
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -416,10 +392,7 @@ function SezioneDocumenti() {
   };
 
   const apriDocumento = async (doc: any) => {
-    const headers = await api.authHeader();
-    const token = headers.Authorization ? headers.Authorization.replace("Bearer ", "") : "";
-    const url = `${api.base}/api/documenti/${doc.id}/download?access_token=${encodeURIComponent(token)}`;
-    scegliAperturaFile(doc.nome, url, doc.nome || "documento");
+    await apriDocumentoRemoto(`/documenti/${doc.id}/download`, doc.nome || "documento");
   };
 
   const eliminaDocumento = async (doc: any) => {
@@ -488,10 +461,7 @@ function SezioneParcelle() {
   const emesse = (items || []).filter((p) => p.emessa);
 
   const openPdf = async (p: any) => {
-    const headers = await api.authHeader();
-    const token = headers.Authorization ? headers.Authorization.replace("Bearer ", "") : "";
-    const url = `${api.base}/api/parcelle/${p.id}/pdf?access_token=${encodeURIComponent(token)}`;
-    scegliAperturaFile(`Parcella ${p.numero || ""}`, url, `${p.numero || "parcella"}.pdf`);
+    await apriDocumentoRemoto(`/parcelle/${p.id}/pdf`, `${p.numero || "parcella"}.pdf`);
   };
 
   const eliminaParcella = (p: any) => {
