@@ -4,6 +4,8 @@ import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -27,6 +29,37 @@ function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Scarica il file dall'URL protetto (gia' comprensivo di access_token) in
+// locale nella sandbox dell'app, poi apre il foglio di condivisione di
+// sistema: da li' l'utente puo' salvarlo davvero sul dispositivo (Files su
+// iOS, cartella Download su Android) o inoltrarlo altrove. E' l'equivalente
+// mobile di un "download" del browser, che su iOS/Android non esiste come
+// concetto a se stante.
+async function scaricaFile(url: string, nomeFile: string) {
+  try {
+    const dest = `${FileSystem.documentDirectory}${nomeFile.replace(/[\\/]/g, "_")}`;
+    const { uri } = await FileSystem.downloadAsync(url, dest);
+    if (await Sharing.isAvailableAsync()) {
+      await Sharing.shareAsync(uri);
+    } else {
+      Alert.alert("Scaricato", `File salvato in ${uri}`);
+    }
+  } catch (e) {
+    Alert.alert("Errore", "Impossibile scaricare il file");
+  }
+}
+
+// Mostra la scelta "Visualizza" (apre l'URL nel browser di sistema, senza
+// salvare nulla) oppure "Scarica" (vedi scaricaFile sopra), invece di aprire
+// direttamente il link come si faceva prima.
+function scegliAperturaFile(titolo: string, url: string, nomeFile: string) {
+  Alert.alert(titolo, "Vuoi visualizzarlo o scaricarlo?", [
+    { text: "Annulla", style: "cancel" },
+    { text: "Visualizza", onPress: () => Linking.openURL(url).catch(() => Alert.alert("Errore", "Impossibile aprire il file")) },
+    { text: "Scarica", onPress: () => scaricaFile(url, nomeFile) },
+  ]);
 }
 
 // Archivio: pratiche e documenti riuniti in un'unica schermata, divisa in
@@ -386,7 +419,7 @@ function SezioneDocumenti() {
     const headers = await api.authHeader();
     const token = headers.Authorization ? headers.Authorization.replace("Bearer ", "") : "";
     const url = `${api.base}/api/documenti/${doc.id}/download?access_token=${encodeURIComponent(token)}`;
-    Linking.openURL(url).catch(() => Alert.alert("Documento", "Impossibile aprire il documento"));
+    scegliAperturaFile(doc.nome, url, doc.nome || "documento");
   };
 
   const eliminaDocumento = async (doc: any) => {
@@ -454,10 +487,11 @@ function SezioneParcelle() {
 
   const emesse = (items || []).filter((p) => p.emessa);
 
-  const openPdf = async (id: string) => {
+  const openPdf = async (p: any) => {
     const headers = await api.authHeader();
     const token = headers.Authorization ? headers.Authorization.replace("Bearer ", "") : "";
-    Linking.openURL(`${api.base}/api/parcelle/${id}/pdf?access_token=${encodeURIComponent(token)}`);
+    const url = `${api.base}/api/parcelle/${p.id}/pdf?access_token=${encodeURIComponent(token)}`;
+    scegliAperturaFile(`Parcella ${p.numero || ""}`, url, `${p.numero || "parcella"}.pdf`);
   };
 
   const eliminaParcella = (p: any) => {
@@ -486,7 +520,7 @@ function SezioneParcelle() {
             </View>
             <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
             {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
-            <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p.id)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
+            <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
               <Feather name="download" size={14} color={t.onBrand} />
               <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
             </Pressable>
