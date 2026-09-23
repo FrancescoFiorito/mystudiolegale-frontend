@@ -7,6 +7,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { SPACING, RADIUS } from "@/src/theme";
+import PasswordHint from "@/src/components/PasswordHint";
+import { validatePassword } from "@/src/utils/passwordPolicy";
 
 export default function Register() {
   const { t } = useTheme();
@@ -22,7 +24,8 @@ export default function Register() {
   const submit = async () => {
     setErr("");
     if (!form.email || !form.password) return setErr("Email e password obbligatorie");
-    if (form.password.length < 6) return setErr("La password deve essere di almeno 6 caratteri");
+    const pwErr = validatePassword(form.password);
+    if (pwErr) return setErr(pwErr);
     if (!consenso) return setErr("Devi accettare l'informativa privacy per proseguire");
     setLoading(true);
     try { await register({ ...form, consenso_privacy: consenso }); }
@@ -59,7 +62,19 @@ export default function Register() {
           <View style={s.form}>
             {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" })}
             <View style={{ height: SPACING.md }} />
-            {field("password", "Password", { secureTextEntry: true, placeholder: "min 6 caratteri" })}
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Password</Text>
+              <PasswordHint />
+            </View>
+            <TextInput
+              testID="register-password-input"
+              style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+              placeholderTextColor={t.onSurfaceTertiary}
+              placeholder="Almeno 8 caratteri, un numero e un simbolo"
+              secureTextEntry
+              value={form.password}
+              onChangeText={(v) => set("password", v)}
+            />
             <View style={{ height: SPACING.md }} />
             {field("nome", "Nome", { placeholder: "Mario" })}
             <View style={{ height: SPACING.md }} />

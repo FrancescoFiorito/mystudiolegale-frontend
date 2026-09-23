@@ -7,6 +7,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
+import PasswordHint from "@/src/components/PasswordHint";
+import { validatePassword } from "@/src/utils/passwordPolicy";
 
 export default function ResetPassword() {
   const { t } = useTheme();
@@ -22,7 +24,8 @@ export default function ResetPassword() {
 
   const submit = async () => {
     setErr("");
-    if (pw.length < 10) return setErr("La nuova password deve avere almeno 10 caratteri");
+    const pwErr = validatePassword(pw);
+    if (pwErr) return setErr(pwErr);
     if (pw !== pw2) return setErr("Le due password non coincidono");
     setLoading(true);
     try {
@@ -53,13 +56,16 @@ export default function ResetPassword() {
           </View>
 
           <View style={[s.card, { backgroundColor: t.surface }, SHADOW.floating]}>
-            <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Nuova password</Text>
-            <View style={[s.inputWrap, { backgroundColor: t.surfaceSecondary, borderColor: t.border }]}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Text style={[s.label, { color: t.onSurfaceSecondary, marginBottom: 0 }]}>Nuova password</Text>
+              <PasswordHint />
+            </View>
+            <View style={[s.inputWrap, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginTop: SPACING.xs }]}>
               <Feather name="lock" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="reset-newpw-input"
                 style={[s.input, { color: t.onSurface }]}
-                placeholder="Almeno 10 caratteri"
+                placeholder="Almeno 8 caratteri, un numero e un simbolo"
                 placeholderTextColor={t.onSurfaceTertiary}
                 secureTextEntry={!showPw}
                 autoFocus
