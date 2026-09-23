@@ -157,6 +157,13 @@ export default function PraticaDetail() {
     ]);
   };
 
+  const eliminaScadenza = (sc: any) => {
+    Alert.alert("Elimina scadenza", `Eliminare "${sc.titolo}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${sc.id}`); load(); } },
+    ]);
+  };
+
   const deletePratica = () => {
     Alert.alert("Elimina pratica", "Sei sicuro di voler eliminare questa pratica? L'operazione non è reversibile.", [
       { text: "Annulla", style: "cancel" },
@@ -268,6 +275,9 @@ export default function PraticaDetail() {
                     <Feather name="check" size={18} color={t.success} />
                   </Pressable>
                 ) : null}
+                <Pressable onPress={() => eliminaScadenza(sc)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+                  <Feather name="trash-2" size={18} color={t.error} />
+                </Pressable>
               </View>
             ))
           )}
