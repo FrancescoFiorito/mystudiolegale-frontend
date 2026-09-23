@@ -11,6 +11,7 @@ import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
+import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
 
@@ -129,6 +130,7 @@ function SezionePratiche({
   const router = useRouter();
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
+  const debouncedQ = useDebouncedValue(q, 300);
   const [stato, setStato] = React.useState(statoIniziale && STATI.includes(statoIniziale) ? statoIniziale : "Tutte");
 
   React.useEffect(() => {
@@ -146,12 +148,22 @@ function SezionePratiche({
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
   const [saving, setSaving] = React.useState(false);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (signal?: AbortSignal) => {
     const s = stato === "Tutte" ? "" : stato;
-    setItems(await api.get(`/pratiche?q=${encodeURIComponent(q)}&stato=${encodeURIComponent(s)}`));
-  }, [q, stato]);
+    try {
+      setItems(await api.get(`/pratiche?q=${encodeURIComponent(debouncedQ)}&stato=${encodeURIComponent(s)}`, { signal }));
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+    }
+  }, [debouncedQ, stato]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // Annulla la richiesta precedente se q o stato cambiano prima che risponda,
+  // cosi' una risposta "vecchia" in ritardo non sovrascrive quella giusta.
+  React.useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
   const loadClienti = React.useCallback(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
   React.useEffect(() => { loadClienti(); }, [loadClienti]);
 
@@ -356,18 +368,29 @@ function SezioneDocumenti() {
   const [documenti, setDocumenti] = React.useState<any[]>([]);
   const [cartellaCorrente, setCartellaCorrente] = React.useState<string | null>(null);
   const [q, setQ] = React.useState("");
+  const debouncedQ = useDebouncedValue(q, 300);
   const [uploading, setUploading] = React.useState(false);
 
-  const load = React.useCallback(async () => {
-    const [c, d] = await Promise.all([
-      api.get("/cartelle"),
-      api.get(`/documenti${q ? `?q=${encodeURIComponent(q)}` : ""}`),
-    ]);
-    setCartelle(c);
-    setDocumenti(d);
-  }, [q]);
+  const load = React.useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [c, d] = await Promise.all([
+        api.get("/cartelle", { signal }),
+        api.get(`/documenti${debouncedQ ? `?q=${encodeURIComponent(debouncedQ)}` : ""}`, { signal }),
+      ]);
+      setCartelle(c);
+      setDocumenti(d);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+    }
+  }, [debouncedQ]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // Annulla la richiesta precedente se la ricerca cambia prima che risponda,
+  // cosi' una risposta "vecchia" in ritardo non sovrascrive quella giusta.
+  React.useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   const cartelleVisibili = cartelle.filter((c) => (c.parent_id || null) === cartellaCorrente);
   const documentiVisibili = q ? documenti : documenti.filter((d) => (d.cartella_id || null) === cartellaCorrente);

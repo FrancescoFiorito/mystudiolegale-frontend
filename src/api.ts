@@ -40,7 +40,10 @@ async function upload<T = any>(path: string, form: FormData): Promise<T> {
 }
 
 export const api = {
-  get: <T = any>(p: string) => req<T>(p),
+  // `opts` e' opzionale e retrocompatibile: serve principalmente a passare
+  // un AbortSignal (es. `{ signal }`) per annullare una ricerca superata da
+  // una piu' recente, senza rompere le chiamate esistenti che non lo usano.
+  get: <T = any>(p: string, opts?: RequestInit) => req<T>(p, opts),
   post: <T = any>(p: string, body?: any) => req<T>(p, { method: "POST", body: JSON.stringify(body || {}) }),
   put: <T = any>(p: string, body?: any) => req<T>(p, { method: "PUT", body: JSON.stringify(body || {}) }),
   patch: <T = any>(p: string, body?: any) => req<T>(p, { method: "PATCH", body: JSON.stringify(body || {}) }),

@@ -10,6 +10,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
+import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
 export default function Clienti() {
   const { t } = useTheme();
@@ -17,12 +18,28 @@ export default function Clienti() {
   const params = useLocalSearchParams<{ autoNew?: string; returnTo?: string; _t?: string }>();
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
+  const debouncedQ = useDebouncedValue(q, 300);
   const [show, setShow] = React.useState(false);
   const [form, setForm] = React.useState<any>({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
   const [saving, setSaving] = React.useState(false);
 
-  const load = React.useCallback(async () => setItems(await api.get(`/clienti?q=${encodeURIComponent(q)}`)), [q]);
-  React.useEffect(() => { load(); }, [load]);
+  const load = React.useCallback(async (signal?: AbortSignal) => {
+    try {
+      setItems(await api.get(`/clienti?q=${encodeURIComponent(debouncedQ)}`, { signal }));
+    } catch (e: any) {
+      if (e?.name === "AbortError") return;
+    }
+  }, [debouncedQ]);
+
+  // La ricerca e' gia' debounced (debouncedQ sopra); qui in piu' annulliamo
+  // la richiesta precedente se una piu' recente parte prima che risponda,
+  // cosi' una risposta "vecchia" arrivata in ritardo non sovrascrive quella
+  // giusta (race condition).
+  React.useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
   // Se si arriva qui dal pulsante "Nuovo cliente" della creazione pratica
   // (vedi archivio.tsx), apre subito la modale di creazione. Clienti non
