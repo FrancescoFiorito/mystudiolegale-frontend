@@ -11,6 +11,7 @@ import Header from "@/src/components/Header";
 import LoadingScreen from "@/src/components/LoadingScreen";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
+import { useDisableTabSwipeWhile } from "@/src/context/TabSwipeContext";
 
 type Dash = {
   pratiche_aperte: number;
@@ -55,6 +56,7 @@ export default function Dashboard() {
   const [praticaClienteQ, setPraticaClienteQ] = React.useState("");
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [savingPratica, setSavingPratica] = React.useState(false);
+  useDisableTabSwipeWhile(showNewPratica);
 
   const loadClientiPerPratica = React.useCallback(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
 

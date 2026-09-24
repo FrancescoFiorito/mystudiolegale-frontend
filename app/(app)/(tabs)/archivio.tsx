@@ -11,6 +11,7 @@ import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
+import { useDisableTabSwipeWhile } from "@/src/context/TabSwipeContext";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
@@ -117,6 +118,7 @@ function SezionePratiche({
     if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
   }, [statoIniziale, navKey]);
   const [showNew, setShowNew] = React.useState(false);
+  useDisableTabSwipeWhile(showNew);
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [clienteQ, setClienteQ] = React.useState("");
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
