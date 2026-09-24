@@ -17,7 +17,16 @@ import { SHADOW, RADIUS } from "@/src/theme";
 // state.index (il cambio di tab a fine gesto), la pillola segue il dito
 // durante lo swipe esattamente come la pagina sotto, invece di restare
 // ferma e rincorrerla con uno spring solo a swipe concluso.
-export default function AnimatedTabBar({ state, descriptors, navigation, position }: any) {
+//
+// Il tocco su un'icona deve muovere il pager chiamando "jumpTo" (l'altra
+// funzione fornita dal pager insieme a position, pensata apposta per le
+// tabBar custom come questa — e' quello che usa anche la TabBar di
+// default di react-native-tab-view). Prima veniva chiamato
+// navigation.navigate: cambiava lo stato di React Navigation (da cui
+// l'icona prende il colore, per questo sembrava funzionare) ma senza
+// passare dal pager, "position" non si aggiornava e la pillola restava
+// ferma sull'icona precedente.
+export default function AnimatedTabBar({ state, descriptors, navigation, position, jumpTo }: any) {
   const { t } = useTheme();
   const routes = state.routes.filter((r: any) => !!descriptors[r.key]?.options?.tabBarIconName);
   const activeRouteKey = state.routes[state.index]?.key;
@@ -55,7 +64,7 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
 
         const onPress = () => {
           const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-          if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name);
+          if (!isFocused && !event.defaultPrevented) jumpTo(route.key);
         };
 
         return (
