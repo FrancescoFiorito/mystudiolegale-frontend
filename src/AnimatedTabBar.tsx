@@ -5,32 +5,43 @@ import { useTheme } from "@/src/ThemeContext";
 import { SHADOW, RADIUS } from "@/src/theme";
 
 // Barra di navigazione flottante con un indicatore (pillola) che scorre
-// animato dietro l'icona attiva quando si cambia tab. La posizione
-// dell'indicatore viene misurata direttamente dal layout reale di ogni
-// pulsante (onLayout), non ricalcolata a mano: così resta sempre
-// perfettamente centrata, indipendentemente da padding/arrotondamenti.
-export default function AnimatedTabBar({ state, descriptors, navigation }: any) {
+// dietro l'icona attiva. La posizione dell'indicatore viene misurata
+// direttamente dal layout reale di ogni pulsante (onLayout), non
+// ricalcolata a mano: così resta sempre perfettamente centrata,
+// indipendentemente da padding/arrotondamenti.
+//
+// "position" arriva dal pager (material-top-tabs/react-native-tab-view):
+// e' un valore continuo (0, 1, 2, ma anche 1.35 mentre si sta trascinando
+// a meta' fra la tab 1 e la 2), aggiornato in tempo reale durante lo swipe.
+// Interpolandoci sopra invece di animare "a scatti" ogni volta che cambia
+// state.index (il cambio di tab a fine gesto), la pillola segue il dito
+// durante lo swipe esattamente come la pagina sotto, invece di restare
+// ferma e rincorrerla con uno spring solo a swipe concluso.
+export default function AnimatedTabBar({ state, descriptors, navigation, position }: any) {
   const { t } = useTheme();
   const routes = state.routes.filter((r: any) => !!descriptors[r.key]?.options?.tabBarIconName);
   const activeRouteKey = state.routes[state.index]?.key;
-  const activeIndexRaw = routes.findIndex((r: any) => r.key === activeRouteKey);
-  const activeIndex = activeIndexRaw >= 0 ? activeIndexRaw : 0;
 
   const [layouts, setLayouts] = React.useState<Record<number, { x: number; width: number }>>({});
-  const animX = React.useRef(new Animated.Value(0)).current;
-  const animW = React.useRef(new Animated.Value(0)).current;
-  const measured = layouts[activeIndex];
+  const tuttiMisurati = routes.length > 0 && routes.every((_: any, i: number) => !!layouts[i]);
 
-  React.useEffect(() => {
-    if (!measured) return;
-    const inset = 8;
-    Animated.spring(animX, { toValue: measured.x + inset, useNativeDriver: false, friction: 9, tension: 70 }).start();
-    Animated.spring(animW, { toValue: measured.width - inset * 2, useNativeDriver: false, friction: 9, tension: 70 }).start();
-  }, [activeIndex, measured?.x, measured?.width]);
+  const inset = 8;
+  const animX = tuttiMisurati
+    ? position.interpolate({
+        inputRange: routes.map((_: any, i: number) => i),
+        outputRange: routes.map((_: any, i: number) => layouts[i].x + inset),
+      })
+    : 0;
+  const animW = tuttiMisurati
+    ? position.interpolate({
+        inputRange: routes.map((_: any, i: number) => i),
+        outputRange: routes.map((_: any, i: number) => layouts[i].width - inset * 2),
+      })
+    : 0;
 
   return (
     <View style={[s.bar, { backgroundColor: t.surface }, SHADOW.floating]}>
-      {measured ? (
+      {tuttiMisurati ? (
         <Animated.View
           pointerEvents="none"
           style={[s.indicator, { backgroundColor: t.brandSecondary, left: animX, width: animW }]}
