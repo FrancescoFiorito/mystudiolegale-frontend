@@ -88,7 +88,7 @@ export const useAuth = () => useContext(AuthCtx);
 // Usati solo per nascondere/mostrare voci di UI: il backend applica comunque
 // il controllo reale sugli endpoint, quindi questa lista non è una fonte di verità di sicurezza.
 const PERMISSIONS: Record<string, Set<string>> = {
-  Amministratore: new Set(["manage_team", "view_audit", "backup", "gdpr_admin", "billing", "delete_pratiche", "edit_pratiche"]),
+  Amministratore: new Set(["manage_team", "view_audit", "gdpr_admin", "billing", "delete_pratiche", "edit_pratiche"]),
   Avvocato: new Set(["manage_team", "view_audit", "billing", "delete_pratiche", "edit_pratiche"]),
   Collaboratore: new Set(["edit_pratiche"]),
   Segreteria: new Set([]),
