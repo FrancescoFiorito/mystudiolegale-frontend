@@ -21,7 +21,6 @@ type RegisterData = {
   nome?: string;
   cognome?: string;
   studio?: string;
-  invite_token?: string;
   consenso_privacy: boolean;
 };
 

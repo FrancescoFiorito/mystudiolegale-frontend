@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { SPACING, RADIUS } from "@/src/theme";
@@ -14,8 +14,7 @@ export default function Register() {
   const { t } = useTheme();
   const { register } = useAuth();
   const router = useRouter();
-  const params = useLocalSearchParams<{ invite?: string }>();
-  const [form, setForm] = useState({ email: "", password: "", nome: "", cognome: "", studio: "", invite_token: params.invite || "" });
+  const [form, setForm] = useState({ email: "", password: "", nome: "", cognome: "", studio: "" });
   const [password2, setPassword2] = useState("");
   const [consenso, setConsenso] = useState(false);
   const [err, setErr] = useState("");
@@ -56,10 +55,7 @@ export default function Register() {
           <Pressable testID="back-to-login" onPress={() => router.back()} style={[s.back, { backgroundColor: t.surfaceSecondary }]}>
             <Feather name="arrow-left" size={20} color={t.onSurface} />
           </Pressable>
-          <Text style={[s.title, { color: t.onSurface }, !form.invite_token && { marginBottom: SPACING.lg }]}>Crea account</Text>
-          {form.invite_token ? (
-            <Text style={[s.subtitle, { color: t.onSurfaceSecondary }]}>Completa la registrazione per unirti al tuo studio</Text>
-          ) : null}
+          <Text style={[s.title, { color: t.onSurface, marginBottom: SPACING.lg }]}>Crea account</Text>
 
           <View style={s.form}>
             {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" })}
@@ -90,9 +86,7 @@ export default function Register() {
             <View style={{ height: SPACING.md }} />
             {field("cognome", "Cognome", { placeholder: "Rossi" })}
             <View style={{ height: SPACING.md }} />
-            {!form.invite_token ? field("studio", "Studio legale", { placeholder: "Studio Rossi & Associati" }) : null}
-            <View style={{ height: SPACING.md }} />
-            {field("invite_token", "Codice invito (opzionale)", { placeholder: "Se sei stato invitato da un collega" })}
+            {field("studio", "Studio legale", { placeholder: "Studio Rossi & Associati" })}
 
             <Pressable testID="consenso-privacy" onPress={() => setConsenso(!consenso)} style={s.consensoRow}>
               <View style={[s.checkbox, { borderColor: t.border, backgroundColor: consenso ? t.brand : "transparent" }]}>
@@ -124,7 +118,6 @@ const s = StyleSheet.create({
   content: { padding: SPACING.xl, paddingTop: SPACING.lg, paddingBottom: SPACING.xxxl },
   back: { width: 40, height: 40, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", marginBottom: SPACING.md, marginLeft: -SPACING.xs },
   title: { fontSize: 28, fontWeight: "800", letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, marginTop: SPACING.xs, marginBottom: SPACING.lg },
   form: { marginTop: SPACING.md },
   label: { fontSize: 12, fontWeight: "600", marginBottom: SPACING.xs, textTransform: "uppercase", letterSpacing: 0.5 },
   input: { borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, fontSize: 15 },
