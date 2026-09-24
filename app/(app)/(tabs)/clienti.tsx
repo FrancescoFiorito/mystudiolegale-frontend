@@ -14,7 +14,7 @@ import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 export default function Clienti() {
   const { t } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ autoNew?: string; returnTo?: string; _t?: string }>();
+  const params = useLocalSearchParams<{ autoNew?: string; returnTo?: string; returnScreen?: string; _t?: string }>();
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
   const debouncedQ = useDebouncedValue(q, 300);
@@ -53,6 +53,14 @@ export default function Clienti() {
     }
   }, [params.autoNew, params._t, router]);
 
+  // "Nuova pratica" puo' essere aperta sia dalla Home sia da Archivio (vedi
+  // dashboard.tsx e archivio.tsx): il ritorno dopo aver creato/annullato il
+  // cliente deve riportare a quella stessa schermata, non sempre Archivio.
+  const returnToPratica = (selectClienteId?: string) => {
+    const dest = params.returnScreen === "dashboard" ? "/(app)/dashboard" : "/(app)/archivio";
+    router.push({ pathname: dest, params: { tab: "pratiche", selectCliente: selectClienteId || "", reopenNew: "1", _t: String(Date.now()) } });
+  };
+
   const create = async () => {
     if (!form.nome && !form.ragione_sociale) return;
     setSaving(true);
@@ -61,7 +69,7 @@ export default function Clienti() {
       setShow(false); setForm({ nome: "", cognome: "", ragione_sociale: "", tipo: "persona", codice_fiscale: "", partita_iva: "", pec: "", email: "", telefono: "" });
       load();
       if (params.returnTo === "pratica") {
-        router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", selectCliente: nuovo.id, reopenNew: "1", _t: String(Date.now()) } });
+        returnToPratica(nuovo.id);
       }
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
@@ -146,7 +154,7 @@ export default function Clienti() {
                 // (che riapre la sua modale) invece di lasciare l'utente
                 // sulla lista Clienti, spaesato rispetto a cio' che stava facendo.
                 if (params.returnTo === "pratica") {
-                  router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", reopenNew: "1", _t: String(Date.now()) } });
+                  returnToPratica();
                 }
               }}
             />
