@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -28,13 +28,18 @@ export default function Impostazioni() {
   }, []);
   React.useEffect(() => { loadIntegrazioni(); }, [loadIntegrazioni]);
 
-  const Item = ({ icon, label, onPress, testID, right }: any) => (
-    <Pressable testID={testID} onPress={onPress} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+  // La freccetta a destra indica che il pulsante apre un'altra schermata
+  // (navigazione, es. Team & Ruoli): va mostrata solo li', passando
+  // esplicitamente navigates. Le voci che compiono direttamente un'azione
+  // (backup, export, collegamento calendario, ecc.) non ce l'hanno.
+  const Item = ({ icon, label, onPress, testID, right, navigates, disabled }: any) => (
+    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={[s.item, { backgroundColor: t.surface, opacity: disabled ? 0.6 : 1 }, SHADOW.card]}>
       <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
         <Feather name={icon} size={16} color={t.brand} />
       </View>
       <Text style={{ flex: 1, color: t.onSurface, fontSize: 14, fontWeight: "600" }}>{label}</Text>
-      {right || <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />}
+      {right}
+      {navigates ? <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} /> : null}
     </Pressable>
   );
 
@@ -106,12 +111,17 @@ export default function Impostazioni() {
     );
   };
 
+  const [backupInCorso, setBackupInCorso] = React.useState(false);
+
   const eseguiBackupOra = async () => {
+    setBackupInCorso(true);
     try {
       const r = await api.post("/admin/backup");
       Alert.alert("Backup completato", `Salvato in: ${r.backup_path}`);
     } catch (e: any) {
       Alert.alert("Errore", e.message);
+    } finally {
+      setBackupInCorso(false);
     }
   };
 
@@ -121,11 +131,18 @@ export default function Impostazioni() {
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         <Text style={[s.section, { color: t.onSurfaceSecondary, marginTop: 0 }]}>STUDIO</Text>
         {canManageTeam ? (
-          <Item testID="menu-team" icon="user-plus" label="Team & Ruoli" onPress={() => router.push("/(app)/team")} />
+          <Item testID="menu-team" icon="user-plus" label="Team & Ruoli" onPress={() => router.push("/(app)/team")} navigates />
         ) : null}
-        {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} /> : null}
+        {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} navigates /> : null}
         {canBackup ? (
-          <Item testID="menu-backup" icon="database" label="Backup manuale ora" onPress={eseguiBackupOra} right={<Feather name="download" size={16} color={t.onSurfaceTertiary} />} />
+          <Item
+            testID="menu-backup"
+            icon="database"
+            label="Esegui backup adesso"
+            onPress={eseguiBackupOra}
+            disabled={backupInCorso}
+            right={backupInCorso ? <ActivityIndicator size="small" color={t.onSurfaceTertiary} /> : null}
+          />
         ) : null}
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO ESTERNO</Text>
