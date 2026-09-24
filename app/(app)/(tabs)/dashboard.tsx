@@ -1,14 +1,16 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import LoadingScreen from "@/src/components/LoadingScreen";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
 
 type Dash = {
   pratiche_aperte: number;
@@ -31,15 +33,80 @@ const giornoBreve = (iso: string) => {
   }
 };
 
+const FORM_VUOTO = { oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" };
+
 export default function Dashboard() {
   const { t } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const params = useLocalSearchParams<{ selectCliente?: string; reopenNew?: string; _t?: string }>();
   const [data, setData] = React.useState<Dash | null>(null);
   const [prossimi, setProssimi] = React.useState<any[]>([]);
   const [refreshing, setRefreshing] = React.useState(false);
   const [showMenu, setShowMenu] = React.useState(false);
   const [errore, setErrore] = React.useState(false);
+
+  // La modale "Nuova pratica" vive qui (non su Archivio, dove si "switchava"
+  // tab per ospitarla): cosi' lo swipe per chiuderla rivela davvero la Home,
+  // che e' quello che c'e' realmente dietro, invece di mostrare per un
+  // istante Archivio e solo dopo saltare sulla Home.
+  const [showNewPratica, setShowNewPratica] = React.useState(false);
+  const [praticaForm, setPraticaForm] = React.useState<any>(FORM_VUOTO);
+  const [praticaClienteQ, setPraticaClienteQ] = React.useState("");
+  const [clienti, setClienti] = React.useState<any[]>([]);
+  const [savingPratica, setSavingPratica] = React.useState(false);
+
+  const loadClientiPerPratica = React.useCallback(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
+
+  // Ritorno dalla creazione di un cliente fatta "al volo" da qui (vedi
+  // "Nuovo cliente" in NuovaPraticaForm): stesso schema usato in Archivio
+  // per lo stesso caso. Riapre la modale e seleziona il cliente appena
+  // creato, senza perdere gli altri campi gia' compilati (la Home non viene
+  // mai smontata passando dalla tab Clienti).
+  const handledSelectRef = React.useRef<string | undefined>(undefined);
+  React.useEffect(() => {
+    if (params.reopenNew === "1" && params._t && handledSelectRef.current !== params._t) {
+      handledSelectRef.current = params._t;
+      loadClientiPerPratica();
+      if (params.selectCliente) setPraticaForm((f: any) => ({ ...f, cliente_id: params.selectCliente }));
+      setShowNewPratica(true);
+      router.setParams({ reopenNew: "", selectCliente: "" });
+    }
+  }, [params.reopenNew, params.selectCliente, params._t, router, loadClientiPerPratica]);
+
+  const apriNuovaPratica = () => {
+    loadClientiPerPratica();
+    setShowNewPratica(true);
+  };
+
+  const chiudiNuovaPratica = () => {
+    setShowNewPratica(false);
+    setPraticaClienteQ("");
+  };
+
+  const vaiNuovoCliente = () => {
+    setShowNewPratica(false);
+    router.push({ pathname: "/(app)/clienti", params: { autoNew: "1", returnTo: "pratica", returnScreen: "dashboard", _t: String(Date.now()) } });
+  };
+
+  const creaPratica = async () => {
+    if (!praticaForm.oggetto) return;
+    setSavingPratica(true);
+    try {
+      await api.post("/pratiche", { ...praticaForm, valore_causa: Number(praticaForm.valore_causa) || 0 });
+      setShowNewPratica(false);
+      setPraticaForm(FORM_VUOTO);
+      setPraticaClienteQ("");
+      // Naviga verso Archivio per mostrare la pratica appena creata: e' una
+      // navigazione "in avanti", non un ritorno, quindi non c'e' alcun
+      // problema di swipe/back da gestire qui.
+      router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", _t: String(Date.now()) } });
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setSavingPratica(false);
+    }
+  };
 
   const load = React.useCallback(async () => {
     setErrore(false);
@@ -156,7 +223,7 @@ export default function Dashboard() {
           )}
         </Pressable>
 
-        <Pressable testID="nuova-pratica-btn" onPress={() => router.push({ pathname: "/(app)/archivio", params: { tab: "pratiche", new: "1", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.brand }]}>
+        <Pressable testID="nuova-pratica-btn" onPress={apriNuovaPratica} style={[s.banner, { backgroundColor: t.brand }]}>
           <View style={s.bannerIcon}><Feather name="folder-plus" size={22} color={t.onBrand} /></View>
           <Text style={[s.bannerTitle, { color: t.onBrand }]}>Nuova pratica</Text>
           <Feather name="chevron-right" size={20} color={t.onBrand} />
@@ -175,6 +242,24 @@ export default function Dashboard() {
         </Pressable>
 
       </ScrollView>
+
+      {showNewPratica ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={chiudiNuovaPratica}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <Header variant="hero" title="Nuova Pratica" onBack={chiudiNuovaPratica} backTestID="close-new-pratica" />
+            <NuovaPraticaForm
+              form={praticaForm}
+              setForm={setPraticaForm}
+              clienti={clienti}
+              clienteQ={praticaClienteQ}
+              setClienteQ={setPraticaClienteQ}
+              saving={savingPratica}
+              onSubmit={creaPratica}
+              onNuovoCliente={vaiNuovoCliente}
+            />
+          </KeyboardAvoidingView>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }

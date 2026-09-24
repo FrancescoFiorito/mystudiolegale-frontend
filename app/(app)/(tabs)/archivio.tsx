@@ -9,6 +9,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
@@ -36,7 +37,7 @@ function formatSize(bytes: number) {
 export default function Archivio() {
   const { t } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ tab?: string; stato?: string; new?: string; selectCliente?: string; reopenNew?: string; _t?: string }>();
+  const params = useLocalSearchParams<{ tab?: string; stato?: string; selectCliente?: string; reopenNew?: string; _t?: string }>();
   const [tab, setTab] = React.useState<"pratiche" | "documenti" | "parcelle">(params.tab === "documenti" ? "documenti" : params.tab === "parcelle" ? "parcelle" : "pratiche");
 
   // La schermata resta montata quando si cambia tab (e' una delle 3 tab
@@ -51,25 +52,6 @@ export default function Archivio() {
     else if (params.tab === "parcelle") setTab("parcelle");
     else if (params.tab === "pratiche") setTab("pratiche");
   }, [params.tab, params._t]);
-
-  // BUG FIX: "new=1" nell'URL deve aprire la modale "Nuova pratica" una sola
-  // volta (quando si arriva dal banner Home). SezionePratiche pero' viene
-  // smontata e rimontata ogni volta che si cambia tab (e' resa
-  // condizionalmente qui sotto): se params.new restava "1" nell'URL, ogni
-  // rientro manuale sulla tab "Pratiche" la rimontava leggendo di nuovo
-  // new==="1" e riapriva la modale da sola. Qui, in Archivio (che NON viene
-  // mai smontata dal cambio tab), teniamo un ref del navKey ("_t") gia'
-  // gestito: la modale viene quindi armata una sola volta per ogni vera
-  // navigazione dalla Home, non ad ogni rimontaggio della sezione.
-  const [autoNewKey, setAutoNewKey] = React.useState<string | undefined>(undefined);
-  const handledNewKeyRef = React.useRef<string | undefined>(undefined);
-  React.useEffect(() => {
-    if (params.new === "1" && params._t && handledNewKeyRef.current !== params._t) {
-      handledNewKeyRef.current = params._t;
-      setAutoNewKey(params._t);
-      router.setParams({ new: "" });
-    }
-  }, [params.new, params._t, router]);
 
   // Ritorno dalla schermata Clienti dopo aver creato un nuovo cliente mentre
   // si stava compilando una pratica (vedi "Nuovo cliente" in SezionePratiche):
@@ -105,9 +87,7 @@ export default function Archivio() {
       {tab === "pratiche" ? (
         <SezionePratiche
           statoIniziale={params.stato}
-          autoNew={!!autoNewKey && autoNewKey === params._t}
           navKey={params._t}
-          onAutoNewHandled={() => setAutoNewKey(undefined)}
           pendingCliente={pendingCliente}
           onPendingClienteHandled={() => setPendingCliente(undefined)}
         />
@@ -121,9 +101,9 @@ export default function Archivio() {
 }
 
 function SezionePratiche({
-  statoIniziale, autoNew, navKey, onAutoNewHandled, pendingCliente, onPendingClienteHandled,
+  statoIniziale, navKey, pendingCliente, onPendingClienteHandled,
 }: {
-  statoIniziale?: string; autoNew?: boolean; navKey?: string; onAutoNewHandled?: () => void;
+  statoIniziale?: string; navKey?: string;
   pendingCliente?: { id: string; key: string }; onPendingClienteHandled?: () => void;
 }) {
   const { t } = useTheme();
@@ -136,20 +116,7 @@ function SezionePratiche({
   React.useEffect(() => {
     if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
   }, [statoIniziale, navKey]);
-  const [showNew, setShowNew] = React.useState(!!autoNew);
-  // Se la modale e' stata aperta dalla scorciatoia "Nuova pratica" della
-  // Home (autoNew), tornare indietro deve riportare alla Home e non
-  // lasciare l'utente su Archivio, dove non era mai stato diretto. Se invece
-  // e' stata aperta dal pulsante "+" locale, tornare indietro deve
-  // semplicemente chiudere la modale restando su Archivio.
-  const [fromHome, setFromHome] = React.useState(false);
-  React.useEffect(() => {
-    if (autoNew) {
-      setShowNew(true);
-      setFromHome(true);
-      onAutoNewHandled?.();
-    }
-  }, [autoNew, navKey]);
+  const [showNew, setShowNew] = React.useState(false);
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [clienteQ, setClienteQ] = React.useState("");
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
@@ -187,12 +154,6 @@ function SezionePratiche({
     }
   }, [pendingCliente, loadClienti]);
 
-  const clientiFiltrati = React.useMemo(() => {
-    if (!clienteQ.trim()) return [];
-    const qq = clienteQ.trim().toLowerCase();
-    return clienti.filter((c) => (c.ragione_sociale || `${c.nome} ${c.cognome || ""}`).toLowerCase().includes(qq));
-  }, [clienti, clienteQ]);
-
   const create = async () => {
     if (!form.oggetto) return;
     setSaving(true);
@@ -212,10 +173,17 @@ function SezionePratiche({
   const chiudiNuovaPratica = () => {
     setShowNew(false);
     setClienteQ("");
-    if (fromHome) {
-      setFromHome(false);
-      router.push("/(app)/dashboard");
-    }
+  };
+
+  const vaiNuovoCliente = () => {
+    // Chiude la modale "Nuova pratica" prima di navigare via (evita di avere
+    // due schermate fullscreen sovrapposte) e passa alla vera schermata di
+    // creazione cliente in Clienti, cosi' le due sezioni condividono un
+    // unico form invece di duplicarlo qui. Al salvataggio, Clienti torna
+    // qui e riapre la modale con il cliente selezionato (vedi pendingCliente
+    // sopra).
+    setShowNew(false);
+    router.push({ pathname: "/(app)/clienti", params: { autoNew: "1", returnTo: "pratica", _t: String(Date.now()) } });
   };
 
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
@@ -272,103 +240,24 @@ function SezionePratiche({
           ))}
       </ScrollView>
 
-      <Pressable testID="new-pratica-fab" onPress={() => { setFromHome(false); setShowNew(true); }} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+      <Pressable testID="new-pratica-fab" onPress={() => setShowNew(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
         <Feather name="plus" size={22} color={t.onBrand} />
       </Pressable>
 
       {showNew ? (
-        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={chiudiNuovaPratica} dismissImmediately={fromHome}>
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={chiudiNuovaPratica}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title="Nuova Pratica" onBack={chiudiNuovaPratica} backTestID="close-new-pratica" />
-            <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
-              {["oggetto", "controparte", "tribunale"].map((k) => (
-                <View key={k} style={{ marginBottom: SPACING.md }}>
-                  <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{k}</Text>
-                  <TextInput
-                    testID={`new-pratica-${k}`}
-                    value={form[k]}
-                    onChangeText={(v) => setForm({ ...form, [k]: v })}
-                    style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
-                    placeholderTextColor={t.onSurfaceTertiary}
-                  />
-                </View>
-              ))}
-              <View style={{ marginBottom: SPACING.md }}>
-                <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Valore causa €</Text>
-                <TextInput testID="new-pratica-valore" value={form.valore_causa} onChangeText={(v) => setForm({ ...form, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-              </View>
-              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Cliente</Text>
-              {form.cliente_id ? (
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: SPACING.sm, gap: 8 }}>
-                  <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Feather name="user-check" size={14} color={t.brand} />
-                    <Text style={{ color: t.brand, fontSize: 13, fontWeight: "700", flex: 1 }} numberOfLines={1}>
-                      {(clienti.find((c) => c.id === form.cliente_id)?.ragione_sociale) || `${clienti.find((c) => c.id === form.cliente_id)?.nome || ""} ${clienti.find((c) => c.id === form.cliente_id)?.cognome || ""}`.trim()}
-                    </Text>
-                  </View>
-                  <Pressable testID="cliente-deseleziona" onPress={() => setForm({ ...form, cliente_id: null })} style={{ padding: 8 }}>
-                    <Feather name="x" size={16} color={t.onSurfaceTertiary} />
-                  </Pressable>
-                </View>
-              ) : (
-                <>
-                  <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }]}>
-                    <Feather name="search" size={15} color={t.onSurfaceTertiary} />
-                    <TextInput
-                      testID="new-pratica-cliente-search"
-                      value={clienteQ}
-                      onChangeText={setClienteQ}
-                      placeholder="Cerca cliente registrato..."
-                      placeholderTextColor={t.onSurfaceTertiary}
-                      style={{ flex: 1, color: t.onSurface, fontSize: 13 }}
-                    />
-                  </View>
-                  {clienteQ.trim() ? (
-                    <ScrollView style={{ maxHeight: 150, marginBottom: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
-                      {clientiFiltrati.length === 0 ? (
-                        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessun cliente trovato</Text>
-                      ) : clientiFiltrati.map((c) => (
-                        <Pressable key={c.id} testID={`cliente-opzione-${c.id}`} onPress={() => { setForm({ ...form, cliente_id: c.id }); setClienteQ(""); }} style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
-                            <Text style={{ color: t.brand, fontSize: 11, fontWeight: "700" }}>{(c.ragione_sociale || c.nome || "?").slice(0, 2).toUpperCase()}</Text>
-                          </View>
-                          <Text style={{ color: t.onSurface, fontSize: 13, flex: 1 }} numberOfLines={1}>{c.ragione_sociale || `${c.nome} ${c.cognome || ""}`}</Text>
-                        </Pressable>
-                      ))}
-                    </ScrollView>
-                  ) : null}
-                  <Pressable
-                    testID="vai-nuovo-cliente"
-                    onPress={() => {
-                      // Chiude la modale "Nuova pratica" prima di navigare via
-                      // (evita di avere due schermate fullscreen sovrapposte)
-                      // e passa alla vera schermata di creazione cliente in
-                      // Clienti, cosi' le due sezioni condividono un unico
-                      // form invece di duplicarlo qui. Al salvataggio, Clienti
-                      // torna qui e riapre la modale con il cliente selezionato
-                      // (vedi pendingCliente sopra).
-                      setShowNew(false);
-                      router.push({ pathname: "/(app)/clienti", params: { autoNew: "1", returnTo: "pratica", _t: String(Date.now()) } });
-                    }}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 9, paddingHorizontal: 12, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: t.brand, alignSelf: "flex-start", marginBottom: SPACING.md }}
-                  >
-                    <Feather name="user-plus" size={14} color={t.brand} />
-                    <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700" }}>Nuovo cliente</Text>
-                  </Pressable>
-                </>
-              )}
-              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Priorità</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.lg }}>
-                {["bassa", "media", "alta"].map((p) => (
-                  <Pressable key={p} testID={`priorita-${p}`} onPress={() => setForm({ ...form, priorita: p })} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: form.priorita === p ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
-                    <Text style={{ color: form.priorita === p ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "600", textTransform: "capitalize" }}>{p}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <Pressable testID="submit-new-pratica" onPress={create} disabled={saving} style={[s.submit, { backgroundColor: t.brand, opacity: saving ? 0.6 : 1 }]}>
-                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Crea pratica"}</Text>
-              </Pressable>
-            </ScrollView>
+            <NuovaPraticaForm
+              form={form}
+              setForm={setForm}
+              clienti={clienti}
+              clienteQ={clienteQ}
+              setClienteQ={setClienteQ}
+              saving={saving}
+              onSubmit={create}
+              onNuovoCliente={vaiNuovoCliente}
+            />
           </KeyboardAvoidingView>
         </SwipeBackScreen>
       ) : null}
@@ -549,7 +438,6 @@ function SezioneParcelle() {
 
 const s = StyleSheet.create({
   searchBox: { flexDirection: "row", alignItems: "center", borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10 },
-  input: { borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: 14 },
   smallBtn: { paddingHorizontal: SPACING.lg, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   emptyBox: { alignItems: "center", paddingVertical: SPACING.xxl },
   card: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
@@ -558,6 +446,4 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
   rowIcon: { width: 40, height: 40, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   fab: { position: "absolute", right: SPACING.lg, bottom: 104, width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", zIndex: 50, elevation: 12 },
-  lbl: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: SPACING.xs },
-  submit: { marginTop: SPACING.sm, paddingVertical: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
 });
