@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -18,7 +18,6 @@ export default function Impostazioni() {
   const router = useRouter();
   const canManageTeam = useHasPerm("manage_team");
   const canViewAudit = useHasPerm("view_audit");
-  const canBackup = useHasPerm("backup");
   const canGdprAdmin = useHasPerm("gdpr_admin");
 
   const [integrazioni, setIntegrazioni] = React.useState<{ google?: any; outlook?: any }>({});
@@ -31,7 +30,7 @@ export default function Impostazioni() {
   // La freccetta a destra indica che il pulsante apre un'altra schermata
   // (navigazione, es. Team & Ruoli): va mostrata solo li', passando
   // esplicitamente navigates. Le voci che compiono direttamente un'azione
-  // (backup, export, collegamento calendario, ecc.) non ce l'hanno.
+  // (export, collegamento calendario, ecc.) non ce l'hanno.
   const Item = ({ icon, label, onPress, testID, right, navigates, disabled }: any) => (
     <Pressable testID={testID} onPress={onPress} disabled={disabled} style={[s.item, { backgroundColor: t.surface, opacity: disabled ? 0.6 : 1 }, SHADOW.card]}>
       <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
@@ -111,20 +110,6 @@ export default function Impostazioni() {
     );
   };
 
-  const [backupInCorso, setBackupInCorso] = React.useState(false);
-
-  const eseguiBackupOra = async () => {
-    setBackupInCorso(true);
-    try {
-      const r = await api.post("/admin/backup");
-      Alert.alert("Backup completato", `Salvato in: ${r.backup_path}`);
-    } catch (e: any) {
-      Alert.alert("Errore", e.message);
-    } finally {
-      setBackupInCorso(false);
-    }
-  };
-
   return (
     <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Impostazioni" onBack={() => router.back()} />
@@ -134,16 +119,6 @@ export default function Impostazioni() {
           <Item testID="menu-team" icon="user-plus" label="Team & Ruoli" onPress={() => router.push("/(app)/team")} navigates />
         ) : null}
         {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} navigates /> : null}
-        {canBackup ? (
-          <Item
-            testID="menu-backup"
-            icon="database"
-            label="Esegui backup adesso"
-            onPress={eseguiBackupOra}
-            disabled={backupInCorso}
-            right={backupInCorso ? <ActivityIndicator size="small" color={t.onSurfaceTertiary} /> : null}
-          />
-        ) : null}
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO ESTERNO</Text>
         <Item
