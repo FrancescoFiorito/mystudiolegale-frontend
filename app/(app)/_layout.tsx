@@ -15,6 +15,20 @@ export default function AppLayout() {
       // Team & Ruoli, e "indietro" atterrava su Home invece che su
       // Impostazioni. "history" torna davvero all'ultima schermata visitata.
       backBehavior="history"
+      // Per risparmiare memoria, le schermate dei Tabs non a fuoco vengono
+      // "congelate" e staccate dalla resa nativa (react-native-screens) non
+      // appena non sono piu' quella attiva, ma solo ri-agganciate quando
+      // React Navigation esegue lui stesso una transizione. Il nostro swipe
+      // (SwipeBackScreen) anima invece la schermata "a mano" con reanimated
+      // e chiama router.back() solo alla fine del gesto: durante il
+      // trascinamento React Navigation non sa che e' in corso una
+      // transizione, quindi la schermata sotto resta congelata (appare
+      // bianca) fino al rilascio, e lo scambio nativo attacca/stacca in
+      // conflitto con l'animazione causa un'oscillazione quando si annulla
+      // lo swipe a meta'. Disattivato cosi' le schermate restano sempre
+      // renderizzate: leggermente piu' costoso in memoria, ma qui il numero
+      // di schermate e' contenuto e lo swipe deve restare fluido.
+      detachInactiveScreens={false}
     >
       <Tabs.Screen
         name="dashboard"
