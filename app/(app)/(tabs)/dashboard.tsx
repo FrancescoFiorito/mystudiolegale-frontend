@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -11,7 +11,6 @@ import Header from "@/src/components/Header";
 import LoadingScreen from "@/src/components/LoadingScreen";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
-import { useDisableTabSwipeWhile } from "@/src/context/TabSwipeContext";
 
 type Dash = {
   pratiche_aperte: number;
@@ -40,6 +39,7 @@ export default function Dashboard() {
   const { t } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ selectCliente?: string; reopenNew?: string; _t?: string }>();
   const [data, setData] = React.useState<Dash | null>(null);
   const [prossimi, setProssimi] = React.useState<any[]>([]);
@@ -56,7 +56,14 @@ export default function Dashboard() {
   const [praticaClienteQ, setPraticaClienteQ] = React.useState("");
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [savingPratica, setSavingPratica] = React.useState(false);
-  useDisableTabSwipeWhile(showNewPratica);
+
+  // Mentre la modale "Nuova pratica" e' aperta, disattiva lo swipe fra le
+  // tab: ha un proprio gesto di swipe per chiudersi (SwipeBackScreen) che
+  // altrimenti si scontrerebbe con quello del pager (stesso schema usato in
+  // profilo.tsx per gli overlay locali).
+  React.useEffect(() => {
+    navigation.setOptions({ swipeEnabled: !showNewPratica });
+  }, [showNewPratica, navigation]);
 
   const loadClientiPerPratica = React.useCallback(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
 

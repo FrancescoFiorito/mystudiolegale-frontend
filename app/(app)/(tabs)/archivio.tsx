@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
@@ -11,7 +11,6 @@ import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
-import { useDisableTabSwipeWhile } from "@/src/context/TabSwipeContext";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
@@ -109,6 +108,7 @@ function SezionePratiche({
 }) {
   const { t } = useTheme();
   const router = useRouter();
+  const navigation = useNavigation();
   const [items, setItems] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
   const debouncedQ = useDebouncedValue(q, 300);
@@ -118,7 +118,14 @@ function SezionePratiche({
     if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
   }, [statoIniziale, navKey]);
   const [showNew, setShowNew] = React.useState(false);
-  useDisableTabSwipeWhile(showNew);
+
+  // Mentre la modale "Nuova pratica" e' aperta, disattiva lo swipe fra le
+  // tab: ha un proprio gesto di swipe per chiudersi (SwipeBackScreen) che
+  // altrimenti si scontrerebbe con quello del pager (stesso schema usato in
+  // profilo.tsx per gli overlay locali).
+  React.useEffect(() => {
+    navigation.setOptions({ swipeEnabled: !showNew });
+  }, [showNew, navigation]);
   const [clienti, setClienti] = React.useState<any[]>([]);
   const [clienteQ, setClienteQ] = React.useState("");
   const [form, setForm] = React.useState<any>({ oggetto: "", controparte: "", tribunale: "", tipo_procedimento: "Civile", priorita: "media", cliente_id: null, valore_causa: "" });
