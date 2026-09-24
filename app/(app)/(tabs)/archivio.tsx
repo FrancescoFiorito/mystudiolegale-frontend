@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
@@ -8,6 +8,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
@@ -136,9 +137,16 @@ function SezionePratiche({
     if (statoIniziale && STATI.includes(statoIniziale)) setStato(statoIniziale);
   }, [statoIniziale, navKey]);
   const [showNew, setShowNew] = React.useState(!!autoNew);
+  // Se la modale e' stata aperta dalla scorciatoia "Nuova pratica" della
+  // Home (autoNew), tornare indietro deve riportare alla Home e non
+  // lasciare l'utente su Archivio, dove non era mai stato diretto. Se invece
+  // e' stata aperta dal pulsante "+" locale, tornare indietro deve
+  // semplicemente chiudere la modale restando su Archivio.
+  const [fromHome, setFromHome] = React.useState(false);
   React.useEffect(() => {
     if (autoNew) {
       setShowNew(true);
+      setFromHome(true);
       onAutoNewHandled?.();
     }
   }, [autoNew, navKey]);
@@ -201,6 +209,15 @@ function SezionePratiche({
     }
   };
 
+  const chiudiNuovaPratica = () => {
+    setShowNew(false);
+    setClienteQ("");
+    if (fromHome) {
+      setFromHome(false);
+      router.push("/(app)/dashboard");
+    }
+  };
+
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
   const eliminaPratica = (p: any) => {
@@ -255,15 +272,14 @@ function SezionePratiche({
           ))}
       </ScrollView>
 
-      <Pressable testID="new-pratica-fab" onPress={() => setShowNew(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+      <Pressable testID="new-pratica-fab" onPress={() => { setFromHome(false); setShowNew(true); }} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
         <Feather name="plus" size={22} color={t.onBrand} />
       </Pressable>
 
-      <Modal visible={showNew} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowNew(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {showNew ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={chiudiNuovaPratica}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header variant="hero" title="Nuova Pratica" onBack={() => { setShowNew(false); setClienteQ(""); }} backTestID="close-new-pratica" />
+            <Header variant="hero" title="Nuova Pratica" onBack={chiudiNuovaPratica} backTestID="close-new-pratica" />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
               {["oggetto", "controparte", "tribunale"].map((k) => (
                 <View key={k} style={{ marginBottom: SPACING.md }}>
@@ -354,9 +370,8 @@ function SezionePratiche({
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
     </>
   );
 }
