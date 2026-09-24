@@ -27,7 +27,7 @@ export default function PasswordHint({ style }: { style?: StyleProp<ViewStyle> }
         style,
       ]}
     >
-      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", lineHeight: 14 }}>?</Text>
+      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", lineHeight: 14, includeFontPadding: false, textAlignVertical: "center" }}>?</Text>
     </Pressable>
   );
 }
