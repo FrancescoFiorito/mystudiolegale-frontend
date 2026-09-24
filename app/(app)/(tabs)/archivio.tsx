@@ -89,7 +89,7 @@ export default function Archivio() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
-      <Header variant="hero" title="Archivio" onBack={() => router.back()} />
+      <Header variant="hero" title="Archivio" />
       <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <Pressable testID="archivio-tab-pratiche" onPress={() => setTab("pratiche")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "pratiche" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "pratiche" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Pratiche</Text>
