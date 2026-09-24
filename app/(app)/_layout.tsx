@@ -9,6 +9,12 @@ export default function AppLayout() {
     <Tabs
       tabBar={(props) => <AnimatedTabBar {...props} />}
       screenOptions={{ headerShown: false }}
+      // Il default di questo router ("firstRoute") fa tornare "indietro"
+      // sempre alla prima schermata dichiarata (dashboard/Home), qualunque
+      // sia la schermata da cui si e' arrivati: es. da Impostazioni si apre
+      // Team & Ruoli, e "indietro" atterrava su Home invece che su
+      // Impostazioni. "history" torna davvero all'ultima schermata visitata.
+      backBehavior="history"
     >
       <Tabs.Screen
         name="dashboard"
