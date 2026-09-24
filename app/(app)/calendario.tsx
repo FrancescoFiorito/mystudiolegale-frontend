@@ -7,7 +7,6 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const MONTHS = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const DOW = ["L","M","M","G","V","S","D"];
@@ -116,7 +115,7 @@ export default function Calendario() {
   const weekDays = React.useMemo(() => { const s0 = startOfWeek(cursor); return Array.from({ length: 7 }, (_, i) => addDays(s0, i)); }, [cursor]);
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calendario" onBack={() => router.back()} />
 
       <View style={{ flexDirection: "row", backgroundColor: t.surface, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
@@ -234,7 +233,7 @@ export default function Calendario() {
           </View>
         </View>
       </Modal>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

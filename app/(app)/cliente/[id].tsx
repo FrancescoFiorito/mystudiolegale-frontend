@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
@@ -40,7 +39,7 @@ export default function ClienteDettaglio() {
   const nome = cliente.ragione_sociale || `${cliente.nome} ${cliente.cognome || ""}`.trim();
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title={nome} subtitle={cliente.tipo === "azienda" ? "Azienda" : "Persona fisica"} onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
         <View style={[s.infoCard, { backgroundColor: t.surface }, SHADOW.card]}>
@@ -70,7 +69,7 @@ export default function ClienteDettaglio() {
           </Pressable>
         ))}
       </ScrollView>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

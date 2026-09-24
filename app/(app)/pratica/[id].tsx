@@ -9,7 +9,6 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
@@ -188,7 +187,7 @@ export default function PraticaDetail() {
   const statoColor = (st: string) => st === "Aperta" ? t.success : st === "Chiusa" ? t.error : t.onSurfaceTertiary;
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title="Pratica"
@@ -430,7 +429,7 @@ export default function PraticaDetail() {
         </SafeAreaView>
         </SafeAreaProvider>
       </Modal>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

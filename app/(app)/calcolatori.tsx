@@ -8,7 +8,6 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 export default function Calcolatori() {
   const { t } = useTheme();
@@ -101,7 +100,7 @@ export default function Calcolatori() {
   );
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title={headerTitle} onBack={() => router.back()} />
       {!locked && (
         <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
@@ -229,7 +228,7 @@ export default function Calcolatori() {
         )}
       </ScrollView>
       </KeyboardAvoidingView>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

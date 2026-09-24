@@ -8,7 +8,6 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
@@ -89,7 +88,7 @@ export default function Archivio() {
   }, [params.reopenNew, params.selectCliente, params._t, router]);
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Archivio" onBack={() => router.back()} />
       <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <Pressable testID="archivio-tab-pratiche" onPress={() => setTab("pratiche")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "pratiche" ? t.brand : t.surfaceSecondary }}>
@@ -116,7 +115,7 @@ export default function Archivio() {
       ) : (
         <SezioneParcelle />
       )}
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

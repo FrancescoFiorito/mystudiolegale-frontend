@@ -8,7 +8,6 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
@@ -94,7 +93,7 @@ export default function Clienti() {
   );
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title="Clienti"
@@ -176,7 +175,7 @@ export default function Clienti() {
         </SafeAreaView>
         </SafeAreaProvider>
       </Modal>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 
