@@ -9,7 +9,6 @@ import { useAuth, useHasPerm } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
 
 export default function Impostazioni() {
@@ -111,7 +110,7 @@ export default function Impostazioni() {
   };
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Impostazioni" onBack={() => router.back()} />
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         <Text style={[s.section, { color: t.onSurfaceSecondary, marginTop: 0 }]}>STUDIO</Text>
@@ -156,7 +155,7 @@ export default function Impostazioni() {
           </View>
         </View>
       </ScrollView>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

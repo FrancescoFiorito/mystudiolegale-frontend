@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
@@ -7,7 +8,6 @@ import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 const RUOLI = ["Amministratore", "Avvocato", "Collaboratore", "Segreteria"];
 
@@ -42,7 +42,7 @@ export default function Team() {
   };
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Team & Ruoli" onBack={() => router.back()} />
 
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
@@ -75,7 +75,7 @@ export default function Team() {
           </View>
         ))}
       </ScrollView>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

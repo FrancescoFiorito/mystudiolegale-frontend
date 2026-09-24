@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, TextInput, KeyboardAvoidingView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -21,6 +22,7 @@ export default function Profilo() {
   const { t } = useTheme();
   const { user, logout } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
 
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [profileForm, setProfileForm] = React.useState({ nome: user?.nome || "", cognome: user?.cognome || "", studio: user?.studio || "" });
@@ -28,6 +30,15 @@ export default function Profilo() {
   const [pwForm, setPwForm] = React.useState({ current_password: "", new_password: "", new_password2: "" });
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [savingPw, setSavingPw] = React.useState(false);
+
+  // Con lo Stack nativo, tenere attivo lo swipe-indietro della schermata
+  // Profilo mentre uno dei due overlay qui sotto e' aperto creerebbe un
+  // piccolo conflitto sul bordo sinistro (il gesto nativo di pop e quello
+  // dell'overlay potrebbero attivarsi entrambi): disattivato finche' un
+  // overlay e' visibile.
+  React.useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !(showEditProfile || showChangePw) });
+  }, [showEditProfile, showChangePw, navigation]);
 
   const Item = ({ icon, label, onPress, testID, right }: any) => (
     <Pressable testID={testID} onPress={onPress} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
@@ -70,7 +81,7 @@ export default function Profilo() {
   };
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }} disabled={showEditProfile || showChangePw}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header
         variant="hero"
         title={user?.nome ? `${user.nome} ${user.cognome || ""}`.trim() : user?.email || "Profilo"}
@@ -154,7 +165,7 @@ export default function Profilo() {
           </KeyboardAvoidingView>
         </SwipeBackScreen>
       ) : null}
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 

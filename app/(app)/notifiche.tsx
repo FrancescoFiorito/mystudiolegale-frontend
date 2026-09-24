@@ -8,7 +8,6 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
-import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 
 export default function Notifiche() {
   const { t } = useTheme();
@@ -23,7 +22,7 @@ export default function Notifiche() {
   const markRead = async (id: string) => { await api.patch(`/notifiche/${id}/read`); load(); };
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Notifiche" onBack={() => router.back()} backTestID="back-btn" />
       <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
         {!items ? <ActivityIndicator color={t.brand} /> : items.length === 0 ? (
@@ -42,7 +41,7 @@ export default function Notifiche() {
           </Pressable>
         ))}
       </ScrollView>
-    </SwipeBackScreen>
+    </SafeAreaView>
   );
 }
 
