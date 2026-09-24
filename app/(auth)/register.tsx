@@ -23,7 +23,7 @@ export default function Register() {
 
   const submit = async () => {
     setErr("");
-    if (!form.email || !form.password) return setErr("Email e password obbligatorie");
+    if (!form.email || !form.password || !form.nome.trim()) return setErr("Email, password e nome sono obbligatori");
     const pwErr = validatePassword(form.password);
     if (pwErr) return setErr(pwErr);
     if (form.password !== password2) return setErr("Le due password non coincidono");
@@ -34,9 +34,11 @@ export default function Register() {
     finally { setLoading(false); }
   };
 
-  const field = (k: keyof typeof form, label: string, opts: any = {}) => (
+  const field = (k: keyof typeof form, label: string, opts: any = {}, required = false) => (
     <>
-      <Text style={[s.label, { color: t.onSurfaceSecondary }]}>{label}</Text>
+      <Text style={[s.label, { color: t.onSurfaceSecondary }]}>
+        {label}{required ? <Text style={{ color: t.error }}> *</Text> : null}
+      </Text>
       <TextInput
         testID={`register-${k}-input`}
         style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -58,9 +60,9 @@ export default function Register() {
           <Text style={[s.title, { color: t.onSurface, marginBottom: SPACING.lg }]}>Crea account</Text>
 
           <View style={s.form}>
-            {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" })}
+            {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" }, true)}
             <View style={{ height: SPACING.md }} />
-            <PasswordFieldLabel label="Password" style={[s.label, { color: t.onSurfaceSecondary }]} />
+            <PasswordFieldLabel label="Password" required style={[s.label, { color: t.onSurfaceSecondary }]} />
             <TextInput
               testID="register-password-input"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -71,7 +73,7 @@ export default function Register() {
               onChangeText={(v) => set("password", v)}
             />
             <View style={{ height: SPACING.md }} />
-            <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Conferma password</Text>
+            <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Conferma password<Text style={{ color: t.error }}> *</Text></Text>
             <TextInput
               testID="register-password2-input"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -82,11 +84,12 @@ export default function Register() {
               onChangeText={setPassword2}
             />
             <View style={{ height: SPACING.md }} />
-            {field("nome", "Nome", { placeholder: "Mario" })}
+            {field("nome", "Nome", { placeholder: "Mario" }, true)}
             <View style={{ height: SPACING.md }} />
             {field("cognome", "Cognome", { placeholder: "Rossi" })}
             <View style={{ height: SPACING.md }} />
             {field("studio", "Studio legale", { placeholder: "Studio Rossi & Associati" })}
+            <Text style={[s.hint, { color: t.onSurfaceTertiary }]}>* campi obbligatori</Text>
 
             <Pressable testID="consenso-privacy" onPress={() => setConsenso(!consenso)} style={s.consensoRow}>
               <View style={[s.checkbox, { borderColor: t.border, backgroundColor: consenso ? t.brand : "transparent" }]}>
@@ -124,6 +127,7 @@ const s = StyleSheet.create({
   btn: { marginTop: SPACING.xl, paddingVertical: SPACING.md + 2, borderRadius: RADIUS.md, alignItems: "center" },
   btnTxt: { fontSize: 16, fontWeight: "700" },
   err: { marginTop: SPACING.md, fontSize: 13 },
+  hint: { fontSize: 11, marginTop: SPACING.xs },
   consensoRow: { flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.lg, alignItems: "flex-start" },
   checkbox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, alignItems: "center", justifyContent: "center", marginTop: 1 },
 });
