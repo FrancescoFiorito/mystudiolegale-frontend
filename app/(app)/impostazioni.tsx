@@ -147,6 +147,7 @@ export default function Impostazioni() {
         />
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>PRIVACY (GDPR)</Text>
+        <Item icon="file-text" label="Informativa sulla privacy" onPress={() => WebBrowser.openBrowserAsync(`${api.base}/static/privacy.html`)} />
         {canGdprAdmin ? <Item icon="download-cloud" label="Esporta tutti i dati dello studio" onPress={esportaDatiGdpr} /> : null}
         <Item icon="user-x" label="Richiedi cancellazione account" onPress={richiediCancellazioneAccount} />
 
