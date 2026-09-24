@@ -25,12 +25,20 @@ import { useRouter } from "expo-router";
 // gesture sarebbero annidate e potrebbero scattare entrambe sulla stessa
 // swipe (chiusura dell'overlay + back della schermata sotto). In quel caso
 // passa disabled sulla SwipeBackScreen esterna finche' l'overlay e' aperto.
-type Props = SafeAreaViewProps & { onDismiss?: () => void; disabled?: boolean };
+//
+// Se onDismiss oltre a chiudere l'overlay naviga anche altrove (es. cambia
+// tab), aspettare la fine dei 220ms di animazione di uscita prima di
+// richiamarlo mostra per un istante il contenuto vero della schermata
+// sottostante (gia' rivelato dall'animazione) prima che la navigazione
+// abbia effetto: un vistoso lampeggio. In quel caso passa
+// dismissImmediately, cosi' onDismiss viene richiamato subito al rilascio
+// del dito invece che a fine animazione.
+type Props = SafeAreaViewProps & { onDismiss?: () => void; disabled?: boolean; dismissImmediately?: boolean };
 
 const COMMIT_DISTANCE = 80;
 const COMMIT_VELOCITY = 800;
 
-export default function SwipeBackScreen({ onDismiss, disabled, ...props }: Props) {
+export default function SwipeBackScreen({ onDismiss, disabled, dismissImmediately, ...props }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const translateX = useSharedValue(0);
@@ -50,7 +58,9 @@ export default function SwipeBackScreen({ onDismiss, disabled, ...props }: Props
     })
     .onEnd((e) => {
       const commit = e.translationX > COMMIT_DISTANCE || e.velocityX > COMMIT_VELOCITY;
-      if (commit) {
+      if (commit && dismissImmediately) {
+        runOnJS(dismiss)();
+      } else if (commit) {
         translateX.value = withTiming(width, { duration: 220 }, (finished) => {
           if (finished) runOnJS(finish)();
         });
