@@ -4,8 +4,10 @@ import { View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView, Pla
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
+import { api } from "@/src/api";
 import { SPACING, RADIUS } from "@/src/theme";
 import PasswordFieldLabel from "@/src/components/PasswordFieldLabel";
 import { validatePassword } from "@/src/utils/passwordPolicy";
@@ -96,7 +98,11 @@ export default function Register() {
                 {consenso ? <Feather name="check" size={14} color={t.onBrand} /> : null}
               </View>
               <Text style={{ flex: 1, color: t.onSurfaceSecondary, fontSize: 12, lineHeight: 18 }}>
-                Accetto l'informativa sul trattamento dei dati personali (GDPR) e confermo di avere il diritto di trattare i dati dei miei clienti su questa piattaforma.
+                Accetto l'
+                <Text style={{ color: t.brand, fontWeight: "700" }} onPress={() => WebBrowser.openBrowserAsync(`${api.base}/static/privacy.html`)}>
+                  informativa sul trattamento dei dati personali
+                </Text>
+                {" "}(GDPR) e confermo di avere il diritto di trattare i dati dei miei clienti su questa piattaforma.
               </Text>
             </Pressable>
 
