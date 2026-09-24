@@ -1,7 +1,7 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { StyleSheet, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, runOnJS, Easing } from "react-native-reanimated";
 import { SafeAreaView, SafeAreaViewProps } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
@@ -33,8 +33,18 @@ const COMMIT_VELOCITY = 800;
 export default function SwipeBackScreen({ onDismiss, disabled, ...props }: Props) {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const translateX = useSharedValue(0);
+  const translateX = useSharedValue(width);
   const dismiss = onDismiss ?? (() => router.back());
+
+  // Entrata: scorre da destra verso sinistra all'apertura, come la
+  // transizione nativa di push dello Stack. Senza questo, questi overlay
+  // (usati per schermate locali come "Nuova pratica" o "Modifica profilo")
+  // comparivano di colpo, mentre le vere Stack.Screen dell'app arrivano
+  // sempre scorrendo da destra: risultava incoerente.
+  useEffect(() => {
+    translateX.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const finish = useCallback(() => {
     dismiss();
