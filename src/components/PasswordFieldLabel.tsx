@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleProp, TextStyle, StyleSheet } from "react-native";
+import { useTheme } from "@/src/ThemeContext";
 import PasswordHint from "@/src/components/PasswordHint";
 
 // Etichetta di un campo password con il pulsante "?" dei requisiti sulla
@@ -16,11 +17,14 @@ import PasswordHint from "@/src/components/PasswordHint";
 //    centra ciascuno nel proprio riquadro — spingendo il pallino più in
 //    basso rispetto al testo. Va quindi spostato sulla riga nel suo
 //    complesso, non lasciato sul testo.
-export default function PasswordFieldLabel({ label, style }: { label: string; style?: StyleProp<TextStyle> }) {
+export default function PasswordFieldLabel({ label, style, required = false }: { label: string; style?: StyleProp<TextStyle>; required?: boolean }) {
+  const { t } = useTheme();
   const { marginBottom, ...textStyle } = StyleSheet.flatten(style) || {};
   return (
     <View style={{ flexDirection: "row", alignItems: "center", marginBottom: marginBottom ?? 0 }}>
-      <Text style={[textStyle, { lineHeight: 18, includeFontPadding: false, textAlignVertical: "center", marginBottom: 0 }]}>{label}</Text>
+      <Text style={[textStyle, { lineHeight: 18, includeFontPadding: false, textAlignVertical: "center", marginBottom: 0 }]}>
+        {label}{required ? <Text style={{ color: t.error }}> *</Text> : null}
+      </Text>
       <PasswordHint />
     </View>
   );
