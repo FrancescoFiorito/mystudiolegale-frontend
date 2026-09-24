@@ -1,6 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, Modal, TextInput, KeyboardAvoidingView } from "react-native";
-import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, TextInput, KeyboardAvoidingView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
@@ -71,7 +70,7 @@ export default function Profilo() {
   };
 
   return (
-    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
+    <SwipeBackScreen edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }} disabled={showEditProfile || showChangePw}>
       <Header
         variant="hero"
         title={user?.nome ? `${user.nome} ${user.cognome || ""}`.trim() : user?.email || "Profilo"}
@@ -92,9 +91,8 @@ export default function Profilo() {
         </Pressable>
       </ScrollView>
 
-      <Modal visible={showEditProfile} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowEditProfile(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {showEditProfile ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowEditProfile(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title="Modifica profilo" onBack={() => setShowEditProfile(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
@@ -115,13 +113,11 @@ export default function Profilo() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
 
-      <Modal visible={showChangePw} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowChangePw(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {showChangePw ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowChangePw(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title="Cambia password" onBack={() => setShowChangePw(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
@@ -156,9 +152,8 @@ export default function Profilo() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
     </SwipeBackScreen>
   );
 }
