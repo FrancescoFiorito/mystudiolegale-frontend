@@ -56,10 +56,10 @@ export default function Register() {
           <Pressable testID="back-to-login" onPress={() => router.back()} style={[s.back, { backgroundColor: t.surfaceSecondary }]}>
             <Feather name="arrow-left" size={20} color={t.onSurface} />
           </Pressable>
-          <Text style={[s.title, { color: t.onSurface }]}>Crea account</Text>
-          <Text style={[s.subtitle, { color: t.onSurfaceSecondary }]}>
-            {form.invite_token ? "Completa la registrazione per unirti al tuo studio" : "Registrati come Avvocato"}
-          </Text>
+          <Text style={[s.title, { color: t.onSurface }, !form.invite_token && { marginBottom: SPACING.lg }]}>Crea account</Text>
+          {form.invite_token ? (
+            <Text style={[s.subtitle, { color: t.onSurfaceSecondary }]}>Completa la registrazione per unirti al tuo studio</Text>
+          ) : null}
 
           <View style={s.form}>
             {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" })}
@@ -69,7 +69,7 @@ export default function Register() {
               testID="register-password-input"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
               placeholderTextColor={t.onSurfaceTertiary}
-              placeholder="Almeno 8 caratteri, un numero e un simbolo"
+              placeholder="Inserisci password"
               secureTextEntry
               value={form.password}
               onChangeText={(v) => set("password", v)}
