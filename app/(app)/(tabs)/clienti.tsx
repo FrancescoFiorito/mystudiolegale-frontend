@@ -94,12 +94,7 @@ export default function Clienti() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
-      <Header
-        variant="hero"
-        title="Clienti"
-        onBack={() => router.back()}
-        backTestID="back-btn"
-      />
+      <Header variant="hero" title="Clienti" />
       <View style={{ backgroundColor: t.surface, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
           <Feather name="search" size={16} color={t.onSurfaceTertiary} />
