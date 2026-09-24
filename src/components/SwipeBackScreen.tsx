@@ -55,7 +55,12 @@ export default function SwipeBackScreen({ onDismiss, disabled, ...props }: Props
           if (finished) runOnJS(finish)();
         });
       } else {
-        translateX.value = withSpring(0, { damping: 20, stiffness: 250 });
+        // damping vicino alla soglia critica per stiffness:250 (~32): niente
+        // rimbalzo quando si annulla lo swipe, solo uno scatto netto in
+        // posizione (un rimbalzo qui si sommava male al riaggancio nativo
+        // dello schermo sottostante, vedi detachInactiveScreens in
+        // (app)/_layout.tsx).
+        translateX.value = withSpring(0, { damping: 30, stiffness: 250 });
       }
     });
 
