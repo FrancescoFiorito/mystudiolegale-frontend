@@ -9,7 +9,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
-import PasswordHint from "@/src/components/PasswordHint";
+import PasswordFieldLabel from "@/src/components/PasswordFieldLabel";
 import { validatePassword } from "@/src/utils/passwordPolicy";
 
 const initials = (name?: string) => {
@@ -133,10 +133,7 @@ export default function Profilo() {
                 onChangeText={(v) => setPwForm({ ...pwForm, current_password: v })}
                 style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, marginBottom: SPACING.md }]}
               />
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Nuova password</Text>
-                <PasswordHint />
-              </View>
+              <PasswordFieldLabel label="Nuova password" style={[s.lbl, { color: t.onSurfaceSecondary }]} />
               <TextInput
                 testID="change-pw-new"
                 secureTextEntry
