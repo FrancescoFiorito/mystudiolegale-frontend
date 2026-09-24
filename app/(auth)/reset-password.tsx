@@ -7,7 +7,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
-import PasswordHint from "@/src/components/PasswordHint";
+import PasswordFieldLabel from "@/src/components/PasswordFieldLabel";
 import { validatePassword } from "@/src/utils/passwordPolicy";
 
 export default function ResetPassword() {
@@ -56,10 +56,7 @@ export default function ResetPassword() {
           </View>
 
           <View style={[s.card, { backgroundColor: t.surface }, SHADOW.floating]}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={[s.label, { color: t.onSurfaceSecondary, marginBottom: 0 }]}>Nuova password</Text>
-              <PasswordHint />
-            </View>
+            <PasswordFieldLabel label="Nuova password" style={[s.label, { color: t.onSurfaceSecondary, marginBottom: 0 }]} />
             <View style={[s.inputWrap, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginTop: SPACING.xs }]}>
               <Feather name="lock" size={17} color={t.onSurfaceTertiary} />
               <TextInput

@@ -7,7 +7,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { SPACING, RADIUS } from "@/src/theme";
-import PasswordHint from "@/src/components/PasswordHint";
+import PasswordFieldLabel from "@/src/components/PasswordFieldLabel";
 import { validatePassword } from "@/src/utils/passwordPolicy";
 
 export default function Register() {
@@ -16,6 +16,7 @@ export default function Register() {
   const router = useRouter();
   const params = useLocalSearchParams<{ invite?: string }>();
   const [form, setForm] = useState({ email: "", password: "", nome: "", cognome: "", studio: "", invite_token: params.invite || "" });
+  const [password2, setPassword2] = useState("");
   const [consenso, setConsenso] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,7 @@ export default function Register() {
     if (!form.email || !form.password) return setErr("Email e password obbligatorie");
     const pwErr = validatePassword(form.password);
     if (pwErr) return setErr(pwErr);
+    if (form.password !== password2) return setErr("Le due password non coincidono");
     if (!consenso) return setErr("Devi accettare l'informativa privacy per proseguire");
     setLoading(true);
     try { await register({ ...form, consenso_privacy: consenso }); }
@@ -62,10 +64,7 @@ export default function Register() {
           <View style={s.form}>
             {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address", placeholder: "mario.rossi@studio.it" })}
             <View style={{ height: SPACING.md }} />
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Password</Text>
-              <PasswordHint />
-            </View>
+            <PasswordFieldLabel label="Password" style={[s.label, { color: t.onSurfaceSecondary }]} />
             <TextInput
               testID="register-password-input"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -74,6 +73,17 @@ export default function Register() {
               secureTextEntry
               value={form.password}
               onChangeText={(v) => set("password", v)}
+            />
+            <View style={{ height: SPACING.md }} />
+            <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Conferma password</Text>
+            <TextInput
+              testID="register-password2-input"
+              style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+              placeholderTextColor={t.onSurfaceTertiary}
+              placeholder="Ripeti la password"
+              secureTextEntry
+              value={password2}
+              onChangeText={setPassword2}
             />
             <View style={{ height: SPACING.md }} />
             {field("nome", "Nome", { placeholder: "Mario" })}
