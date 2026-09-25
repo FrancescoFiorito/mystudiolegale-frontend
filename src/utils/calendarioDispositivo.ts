@@ -4,8 +4,7 @@ import { storage } from "@/src/utils/storage";
 import { api } from "@/src/api";
 
 // Sincronizzazione delle scadenze col calendario nativo del dispositivo
-// (iOS/Android), a differenza di Google/Outlook Calendar (che passano dal
-// backend via OAuth) qui non serve alcuna credenziale: creiamo un calendario
+// (iOS/Android): non serve alcuna credenziale, creiamo un calendario
 // dedicato ("MyStudioLegale") sul dispositivo e ci scriviamo dentro
 // direttamente con expo-calendar. Su iOS, se il calendario di default e'
 // gia' su iCloud, anche questo dedicato lo segue automaticamente (e' lo
@@ -44,10 +43,15 @@ export async function connettiCalendarioDispositivo(): Promise<void> {
     color: "#2563EB",
     entityType: Calendar.EntityTypes.EVENT,
     sourceId: Platform.OS === "ios" ? await sourceIdDefault() : undefined,
-    source: Platform.OS === "android" ? { isLocalAccount: true, name: CALENDAR_TITLE, type: Calendar.SourceType.LOCAL } : undefined,
+    source: Platform.OS === "android" ? { isLocalAccount: true, name: CALENDAR_TITLE } : undefined,
     name: CALENDAR_TITLE,
     ownerAccount: CALENDAR_TITLE,
     accessLevel: Calendar.CalendarAccessLevel.OWNER,
+    // Senza questi due il calendario puo' essere creato ma restare
+    // invisibile/non sincronizzato nell'app Calendario di Android (lo
+    // segnala la documentazione stessa di expo-calendar).
+    isVisible: Platform.OS === "android" ? true : undefined,
+    isSynced: Platform.OS === "android" ? true : undefined,
   } as any);
   await storage.setItem(CALENDAR_ID_KEY, newId);
 }

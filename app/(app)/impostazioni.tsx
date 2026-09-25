@@ -26,17 +26,15 @@ export default function Impostazioni() {
   const canViewAudit = useHasPerm("view_audit");
   const canGdprAdmin = useHasPerm("gdpr_admin");
 
-  const [integrazioni, setIntegrazioni] = React.useState<{ google?: any; outlook?: any }>({});
   const [dispositivoConnesso, setDispositivoConnesso] = React.useState(false);
   const [statoPush, setStatoPush] = React.useState<{ ok: boolean; messaggio?: string; at: string } | null>(null);
   const [verificandoPush, setVerificandoPush] = React.useState(false);
 
-  const loadIntegrazioni = React.useCallback(async () => {
-    try { setIntegrazioni(await api.get("/integrations/status")); } catch {}
+  const loadStato = React.useCallback(async () => {
     setDispositivoConnesso(await calendarioDispositivoConnesso());
     setStatoPush(await leggiStatoPush());
   }, []);
-  React.useEffect(() => { loadIntegrazioni(); }, [loadIntegrazioni]);
+  React.useEffect(() => { loadStato(); }, [loadStato]);
 
   // Prima, un fallimento nella registrazione del token push (permesso
   // negato, credenziali push mancanti sul progetto EAS, ecc.) restava
@@ -69,44 +67,21 @@ export default function Impostazioni() {
     </Pressable>
   );
 
-  const connettiCalendario = async (provider: "google" | "outlook") => {
-    try {
-      const r = await api.get(`/integrations/${provider}/connect`);
-      await WebBrowser.openBrowserAsync(r.auth_url);
-      setTimeout(loadIntegrazioni, 1500);
-    } catch (e: any) {
-      Alert.alert(provider === "google" ? "Google Calendar" : "Outlook Calendar", e.message || "Integrazione non configurata dal tuo amministratore di sistema");
-    }
-  };
-
-  const sincronizzaCalendario = async (provider: "google" | "outlook") => {
-    try {
-      const r = await api.post(`/integrations/${provider}/sync`);
-      Alert.alert("Sincronizzazione completata", `${r.sincronizzate} scadenze sincronizzate${r.errori ? `, ${r.errori} errori` : ""}.`);
-    } catch (e: any) {
-      Alert.alert("Errore sincronizzazione", e.message);
-    }
-  };
-
-  const disconnetti = async (provider: "google" | "outlook") => {
-    await api.del(`/integrations/${provider}`);
-    loadIntegrazioni();
-  };
-
-  // A differenza di Google/Outlook (OAuth via backend), il calendario del
-  // dispositivo non richiede alcuna configurazione esterna: scrive
-  // direttamente in un calendario dedicato sul telefono, tramite
-  // expo-calendar. Su iOS, se il calendario di default e' su iCloud, lo
-  // segue automaticamente.
+  // Il calendario del dispositivo non richiede alcuna configurazione
+  // esterna: scrive direttamente in un calendario dedicato sul telefono,
+  // tramite expo-calendar. Su iOS, se il calendario di default e' su
+  // iCloud, lo segue automaticamente.
+  // Al primo collegamento sincronizziamo subito le scadenze esistenti:
+  // altrimenti l'utente autorizza l'accesso ma non vede nulla comparire
+  // nel calendario finche' non tocca di nuovo la voce.
   const gestisciCalendarioDispositivo = async () => {
     try {
-      if (dispositivoConnesso) {
-        const r = await sincronizzaCalendarioDispositivo();
-        Alert.alert("Sincronizzazione completata", `${r.sincronizzate} scadenze sincronizzate${r.errori ? `, ${r.errori} errori` : ""}.`);
-      } else {
+      if (!dispositivoConnesso) {
         await connettiCalendarioDispositivo();
         setDispositivoConnesso(true);
       }
+      const r = await sincronizzaCalendarioDispositivo();
+      Alert.alert("Sincronizzazione completata", `${r.sincronizzate} scadenze sincronizzate${r.errori ? `, ${r.errori} errori` : ""}.`);
     } catch (e: any) {
       Alert.alert("Calendario del dispositivo", e.message || "Operazione non riuscita. Riprova.");
     }
@@ -171,23 +146,7 @@ export default function Impostazioni() {
         ) : null}
         {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} navigates /> : null}
 
-        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO ESTERNO</Text>
-        <Item
-          icon="calendar"
-          label={integrazioni.google?.connesso ? "Google Calendar · connesso" : "Collega Google Calendar"}
-          onPress={() => (integrazioni.google?.connesso ? sincronizzaCalendario("google") : connettiCalendario("google"))}
-          right={integrazioni.google?.connesso ? (
-            <Pressable onPress={() => disconnetti("google")}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
-          ) : undefined}
-        />
-        <Item
-          icon="calendar"
-          label={integrazioni.outlook?.connesso ? "Outlook Calendar · connesso" : "Collega Outlook Calendar"}
-          onPress={() => (integrazioni.outlook?.connesso ? sincronizzaCalendario("outlook") : connettiCalendario("outlook"))}
-          right={integrazioni.outlook?.connesso ? (
-            <Pressable onPress={() => disconnetti("outlook")}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
-          ) : undefined}
-        />
+        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO</Text>
         <Item
           icon="smartphone"
           label={dispositivoConnesso ? "Calendario del dispositivo · connesso" : "Collega calendario del dispositivo"}
