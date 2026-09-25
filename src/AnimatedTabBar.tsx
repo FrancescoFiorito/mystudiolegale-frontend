@@ -10,20 +10,30 @@ import { SHADOW, RADIUS } from "@/src/theme";
 // ricalcolata a mano: così resta sempre perfettamente centrata,
 // indipendentemente da padding/arrotondamenti.
 //
-// "position" arriva dal pager (material-top-tabs/react-native-tab-view):
-// e' un valore continuo (0, 1, 2, ma anche 1.35 mentre si sta trascinando
-// a meta' fra la tab 1 e la 2), aggiornato in tempo reale durante lo swipe
-// — per quel caso la pillola lo rispecchia semplicemente 1:1 (vedi il
-// listener sotto). Il tocco su un'icona pero' e' un caso diverso:
-// react-native-pager-view non manda alcun evento di scroll intermedio per
-// i cambi pagina non interattivi (solo per lo swipe), quindi "position"
-// resta fermo per tutta la transizione nativa e scatta di colpo al valore
-// finale solo a transizione conclusa — a video si vede l'icona cambiare
-// colore subito (viene da state.index, non da position) e la pillola
-// restare ferma per un istante per poi saltare. In quel caso la pillola
-// non segue affatto position: la animiamo esplicitamente noi con un
-// timing, cosi' si muove in modo fluido e prevedibile a prescindere da
-// come il pager gestisce internamente la transizione non interattiva.
+// Ci sono DUE pillole sovrapposte, per due motivi opposti:
+//
+// 1) "animX/animW" (sempre montata) interpola DIRETTAMENTE "position", il
+//    valore continuo fornito dal pager (material-top-tabs/react-native-tab-
+//    view), aggiornato in tempo reale durante lo swipe. E' l'unico modo
+//    verificato per un movimento fluido durante lo swipe: un tentativo
+//    precedente di "rispecchiare" position su un Animated.Value nostro
+//    tramite listener (per unificarlo col caso del tocco qui sotto) ha
+//    introdotto un ritardo percepibile anche sullo swipe, che prima
+//    funzionava perfettamente — va quindi lasciata sola, mai intermediata.
+//
+// 2) "tapAnimX/tapAnimW" (montata solo per una manciata di ms dopo un
+//    tocco) copre la prima con una pillola animata esplicitamente da noi.
+//    Serve perche' al tocco di un'icona "position" non manda alcun
+//    aggiornamento fluido: arriva un solo salto secco, e pure in ritardo
+//    (qualche centinaio di ms dopo il tocco, quando la transizione nativa
+//    del pager e' conclusa), quindi interpolarci sopra come al punto 1
+//    farebbe restare la pillola ferma e poi scattare di colpo. Qui la
+//    animiamo noi verso la tab di destinazione, e la teniamo sopra
+//    abbastanza a lungo da coprire anche il ritardo di "position": quando
+//    la nascondiamo, quella vera l'ha ormai raggiunta, senza scatti.
+const TAP_ANIM_MS = 300;
+const TAP_OVERLAY_MS = 750; // margine oltre TAP_ANIM_MS per il ritardo di "position"
+
 export default function AnimatedTabBar({ state, descriptors, navigation, position, jumpTo }: any) {
   const { t } = useTheme();
   const routes = state.routes.filter((r: any) => !!descriptors[r.key]?.options?.tabBarIconName);
@@ -33,31 +43,23 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
   const [layouts, setLayouts] = React.useState<Record<number, { x: number; width: number }>>({});
   const tuttiMisurati = routes.length > 0 && routes.every((_: any, i: number) => !!layouts[i]);
 
-  const indicatorIndex = React.useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
-  const swipeSyncSospesa = React.useRef(false);
-  const tapToken = React.useRef(0);
-
-  React.useEffect(() => {
-    const id = position.addListener(({ value }: { value: number }) => {
-      if (swipeSyncSospesa.current) return;
-      indicatorIndex.setValue(value);
-    });
-    return () => position.removeListener(id);
-  }, [position, indicatorIndex]);
-
   const inset = 8;
-  const animX = tuttiMisurati
-    ? indicatorIndex.interpolate({
-        inputRange: routes.map((_: any, i: number) => i),
-        outputRange: routes.map((_: any, i: number) => layouts[i].x + inset),
-      })
-    : 0;
-  const animW = tuttiMisurati
-    ? indicatorIndex.interpolate({
-        inputRange: routes.map((_: any, i: number) => i),
-        outputRange: routes.map((_: any, i: number) => layouts[i].width - inset * 2),
-      })
-    : 0;
+  const inputRange = routes.map((_: any, i: number) => i);
+  const xRange = routes.map((_: any, i: number) => (layouts[i]?.x ?? 0) + inset);
+  const wRange = routes.map((_: any, i: number) => (layouts[i]?.width ?? 0) - inset * 2);
+
+  const animX = tuttiMisurati ? position.interpolate({ inputRange, outputRange: xRange }) : 0;
+  const animW = tuttiMisurati ? position.interpolate({ inputRange, outputRange: wRange }) : 0;
+
+  const [tapTarget, setTapTarget] = React.useState<number | null>(null);
+  const tapIndex = React.useRef(new Animated.Value(0)).current;
+  const tapHideTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tapAnimX = tuttiMisurati ? tapIndex.interpolate({ inputRange, outputRange: xRange }) : 0;
+  const tapAnimW = tuttiMisurati ? tapIndex.interpolate({ inputRange, outputRange: wRange }) : 0;
+
+  React.useEffect(() => () => {
+    if (tapHideTimeout.current) clearTimeout(tapHideTimeout.current);
+  }, []);
 
   return (
     <View style={[s.bar, { backgroundColor: t.surface }, SHADOW.floating]}>
@@ -65,6 +67,12 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
         <Animated.View
           pointerEvents="none"
           style={[s.indicator, { backgroundColor: t.brandSecondary, left: animX, width: animW }]}
+        />
+      ) : null}
+      {tuttiMisurati && tapTarget !== null ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[s.indicator, { backgroundColor: t.brandSecondary, left: tapAnimX, width: tapAnimW }]}
         />
       ) : null}
 
@@ -76,16 +84,18 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
         const onPress = () => {
           const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
           if (isFocused || event.defaultPrevented) return;
-          const token = ++tapToken.current;
-          swipeSyncSospesa.current = true;
-          Animated.timing(indicatorIndex, {
+
+          if (tapHideTimeout.current) clearTimeout(tapHideTimeout.current);
+          tapIndex.setValue(activeIndex >= 0 ? activeIndex : 0);
+          setTapTarget(index);
+          Animated.timing(tapIndex, {
             toValue: index,
-            duration: 300,
+            duration: TAP_ANIM_MS,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: false,
-          }).start(() => {
-            if (tapToken.current === token) swipeSyncSospesa.current = false;
-          });
+          }).start();
+          tapHideTimeout.current = setTimeout(() => setTapTarget(null), TAP_OVERLAY_MS);
+
           jumpTo(route.key);
         };
 
