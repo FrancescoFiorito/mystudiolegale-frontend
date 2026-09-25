@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Pressable, Text, StyleSheet, Animated, Platform, Easing } from "react-native";
+import { View, Pressable, Text, StyleSheet, Animated, Platform } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
 import { SHADOW, RADIUS } from "@/src/theme";
@@ -10,56 +10,44 @@ import { SHADOW, RADIUS } from "@/src/theme";
 // ricalcolata a mano: così resta sempre perfettamente centrata,
 // indipendentemente da padding/arrotondamenti.
 //
-// Ci sono DUE pillole sovrapposte, per due motivi opposti:
+// Un'unica animazione, guidata sempre e solo da "position" (il valore
+// continuo fornito dal pager, material-top-tabs/react-native-tab-view):
+// segue lo swipe in tempo reale, e siccome il tocco su un'icona chiama
+// "jumpTo" (che muove il pager esattamente come farebbe uno swipe), la
+// stessa interpolazione segue anche quella transizione — e' lo stesso
+// meccanismo, senza alcuna distinzione, usato anche dall'indicatore di
+// default di react-native-tab-view.
 //
-// 1) "animX/animW" (sempre montata) interpola DIRETTAMENTE "position", il
-//    valore continuo fornito dal pager (material-top-tabs/react-native-tab-
-//    view), aggiornato in tempo reale durante lo swipe. E' l'unico modo
-//    verificato per un movimento fluido durante lo swipe: un tentativo
-//    precedente di "rispecchiare" position su un Animated.Value nostro
-//    tramite listener (per unificarlo col caso del tocco qui sotto) ha
-//    introdotto un ritardo percepibile anche sullo swipe, che prima
-//    funzionava perfettamente — va quindi lasciata sola, mai intermediata.
-//
-// 2) "tapAnimX/tapAnimW" (montata solo per una manciata di ms dopo un
-//    tocco) copre la prima con una pillola animata esplicitamente da noi.
-//    Serve perche' al tocco di un'icona "position" non manda alcun
-//    aggiornamento fluido: arriva un solo salto secco, e pure in ritardo
-//    (qualche centinaio di ms dopo il tocco, quando la transizione nativa
-//    del pager e' conclusa), quindi interpolarci sopra come al punto 1
-//    farebbe restare la pillola ferma e poi scattare di colpo. Qui la
-//    animiamo noi verso la tab di destinazione, e la teniamo sopra
-//    abbastanza a lungo da coprire anche il ritardo di "position": quando
-//    la nascondiamo, quella vera l'ha ormai raggiunta, senza scatti.
-const TAP_ANIM_MS = 300;
-const TAP_OVERLAY_MS = 750; // margine oltre TAP_ANIM_MS per il ritardo di "position"
-
+// Il punto delicato e' che "position.interpolate(...)" va costruito UNA
+// SOLA VOLTA (qui con useMemo) e non ricreato a ogni render. Il tocco su
+// un'icona fa cambiare state.index, che rimonta AnimatedTabBar: se ad ogni
+// render si ricreava un nuovo nodo Animated (come succedeva prima), il
+// binding col pager veniva smontato e rimontato proprio nel mezzo della
+// transizione innescata dal tocco, con un vistoso "salto" a transizione
+// nativa ormai conclusa invece di un movimento fluido. Tenendo lo stesso
+// nodo Animated attraverso i render, la pillola segue "position" in modo
+// continuo in entrambi i casi.
 export default function AnimatedTabBar({ state, descriptors, navigation, position, jumpTo }: any) {
   const { t } = useTheme();
   const routes = state.routes.filter((r: any) => !!descriptors[r.key]?.options?.tabBarIconName);
   const activeRouteKey = state.routes[state.index]?.key;
-  const activeIndex = routes.findIndex((r: any) => r.key === activeRouteKey);
 
   const [layouts, setLayouts] = React.useState<Record<number, { x: number; width: number }>>({});
   const tuttiMisurati = routes.length > 0 && routes.every((_: any, i: number) => !!layouts[i]);
+  const layoutsSignature = tuttiMisurati
+    ? routes.map((_: any, i: number) => `${layouts[i].x}:${layouts[i].width}`).join("|")
+    : "";
 
-  const inset = 8;
-  const inputRange = routes.map((_: any, i: number) => i);
-  const xRange = routes.map((_: any, i: number) => (layouts[i]?.x ?? 0) + inset);
-  const wRange = routes.map((_: any, i: number) => (layouts[i]?.width ?? 0) - inset * 2);
-
-  const animX = tuttiMisurati ? position.interpolate({ inputRange, outputRange: xRange }) : 0;
-  const animW = tuttiMisurati ? position.interpolate({ inputRange, outputRange: wRange }) : 0;
-
-  const [tapTarget, setTapTarget] = React.useState<number | null>(null);
-  const tapIndex = React.useRef(new Animated.Value(0)).current;
-  const tapHideTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const tapAnimX = tuttiMisurati ? tapIndex.interpolate({ inputRange, outputRange: xRange }) : 0;
-  const tapAnimW = tuttiMisurati ? tapIndex.interpolate({ inputRange, outputRange: wRange }) : 0;
-
-  React.useEffect(() => () => {
-    if (tapHideTimeout.current) clearTimeout(tapHideTimeout.current);
-  }, []);
+  const { animX, animW } = React.useMemo(() => {
+    if (!tuttiMisurati) return { animX: 0 as any, animW: 0 as any };
+    const inset = 8;
+    const inputRange = routes.map((_: any, i: number) => i);
+    return {
+      animX: position.interpolate({ inputRange, outputRange: routes.map((_: any, i: number) => layouts[i].x + inset) }),
+      animW: position.interpolate({ inputRange, outputRange: routes.map((_: any, i: number) => layouts[i].width - inset * 2) }),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position, tuttiMisurati, layoutsSignature]);
 
   return (
     <View style={[s.bar, { backgroundColor: t.surface }, SHADOW.floating]}>
@@ -67,12 +55,6 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
         <Animated.View
           pointerEvents="none"
           style={[s.indicator, { backgroundColor: t.brandSecondary, left: animX, width: animW }]}
-        />
-      ) : null}
-      {tuttiMisurati && tapTarget !== null ? (
-        <Animated.View
-          pointerEvents="none"
-          style={[s.indicator, { backgroundColor: t.brandSecondary, left: tapAnimX, width: tapAnimW }]}
         />
       ) : null}
 
@@ -83,20 +65,7 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
 
         const onPress = () => {
           const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
-          if (isFocused || event.defaultPrevented) return;
-
-          if (tapHideTimeout.current) clearTimeout(tapHideTimeout.current);
-          tapIndex.setValue(activeIndex >= 0 ? activeIndex : 0);
-          setTapTarget(index);
-          Animated.timing(tapIndex, {
-            toValue: index,
-            duration: TAP_ANIM_MS,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: false,
-          }).start();
-          tapHideTimeout.current = setTimeout(() => setTapTarget(null), TAP_OVERLAY_MS);
-
-          jumpTo(route.key);
+          if (!isFocused && !event.defaultPrevented) jumpTo(route.key);
         };
 
         return (
