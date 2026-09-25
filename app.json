@@ -31,15 +31,6 @@
     "plugins": [
       "expo-router",
       [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/loading-logo.png",
-          "imageWidth": 170,
-          "resizeMode": "contain",
-          "backgroundColor": "#16233E"
-        }
-      ],
-      [
         "expo-calendar",
         {
           "calendarPermission": "Permetti a MyStudioLegale di aggiungere le scadenze al tuo calendario."
