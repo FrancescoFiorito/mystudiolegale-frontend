@@ -45,6 +45,12 @@
           "icon": "./assets/images/icon.png",
           "color": "#2563EB"
         }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Permetti a MyStudioLegale di aggiungere le scadenze al tuo calendario."
+        }
       ]
     ],
     "experiments": {
