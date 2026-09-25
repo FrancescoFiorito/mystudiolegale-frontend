@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -10,6 +10,13 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import { apriDocumentoRemoto } from "@/src/utils/apriDocumentoRemoto";
+import {
+  calendarioDispositivoConnesso,
+  connettiCalendarioDispositivo,
+  disconnettiCalendarioDispositivo,
+  sincronizzaCalendarioDispositivo,
+} from "@/src/utils/calendarioDispositivo";
+import { leggiStatoPush, registraPushToken } from "@/src/hooks/use-push-notifications";
 
 export default function Impostazioni() {
   const { t, mode, setMode } = useTheme();
@@ -20,11 +27,32 @@ export default function Impostazioni() {
   const canGdprAdmin = useHasPerm("gdpr_admin");
 
   const [integrazioni, setIntegrazioni] = React.useState<{ google?: any; outlook?: any }>({});
+  const [dispositivoConnesso, setDispositivoConnesso] = React.useState(false);
+  const [statoPush, setStatoPush] = React.useState<{ ok: boolean; messaggio?: string; at: string } | null>(null);
+  const [verificandoPush, setVerificandoPush] = React.useState(false);
 
   const loadIntegrazioni = React.useCallback(async () => {
     try { setIntegrazioni(await api.get("/integrations/status")); } catch {}
+    setDispositivoConnesso(await calendarioDispositivoConnesso());
+    setStatoPush(await leggiStatoPush());
   }, []);
   React.useEffect(() => { loadIntegrazioni(); }, [loadIntegrazioni]);
+
+  // Prima, un fallimento nella registrazione del token push (permesso
+  // negato, credenziali push mancanti sul progetto EAS, ecc.) restava
+  // invisibile fuori da un ambiente di sviluppo: qui si puo' rivedere
+  // l'ultimo risultato e ripetere il tentativo, senza dover collegare un
+  // dispositivo a Xcode per leggere i log.
+  const riprovaPush = async () => {
+    setVerificandoPush(true);
+    try {
+      const stato = await registraPushToken();
+      setStatoPush(stato);
+      if (!stato.ok) Alert.alert("Notifiche push", stato.messaggio || "Registrazione non riuscita.");
+    } finally {
+      setVerificandoPush(false);
+    }
+  };
 
   // La freccetta a destra indica che il pulsante apre un'altra schermata
   // (navigazione, es. Team & Ruoli): va mostrata solo li', passando
@@ -63,6 +91,30 @@ export default function Impostazioni() {
   const disconnetti = async (provider: "google" | "outlook") => {
     await api.del(`/integrations/${provider}`);
     loadIntegrazioni();
+  };
+
+  // A differenza di Google/Outlook (OAuth via backend), il calendario del
+  // dispositivo non richiede alcuna configurazione esterna: scrive
+  // direttamente in un calendario dedicato sul telefono, tramite
+  // expo-calendar. Su iOS, se il calendario di default e' su iCloud, lo
+  // segue automaticamente.
+  const gestisciCalendarioDispositivo = async () => {
+    try {
+      if (dispositivoConnesso) {
+        const r = await sincronizzaCalendarioDispositivo();
+        Alert.alert("Sincronizzazione completata", `${r.sincronizzate} scadenze sincronizzate${r.errori ? `, ${r.errori} errori` : ""}.`);
+      } else {
+        await connettiCalendarioDispositivo();
+        setDispositivoConnesso(true);
+      }
+    } catch (e: any) {
+      Alert.alert("Calendario del dispositivo", e.message || "Operazione non riuscita. Riprova.");
+    }
+  };
+
+  const disconnettiDispositivo = async () => {
+    await disconnettiCalendarioDispositivo();
+    setDispositivoConnesso(false);
   };
 
   const esportaDatiGdpr = async () => {
@@ -135,6 +187,25 @@ export default function Impostazioni() {
           right={integrazioni.outlook?.connesso ? (
             <Pressable onPress={() => disconnetti("outlook")}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
           ) : undefined}
+        />
+        <Item
+          icon="smartphone"
+          label={dispositivoConnesso ? "Calendario del dispositivo · connesso" : "Collega calendario del dispositivo"}
+          onPress={gestisciCalendarioDispositivo}
+          right={dispositivoConnesso ? (
+            <Pressable onPress={disconnettiDispositivo}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
+          ) : undefined}
+        />
+
+        <Text style={[s.section, { color: t.onSurfaceSecondary }]}>NOTIFICHE</Text>
+        <Item
+          icon={statoPush?.ok ? "bell" : "bell-off"}
+          label={statoPush?.ok ? "Notifiche push attive" : statoPush ? `Notifiche push non attive: ${statoPush.messaggio}` : "Verifica notifiche push"}
+          onPress={riprovaPush}
+          disabled={verificandoPush}
+          right={verificandoPush ? <ActivityIndicator size="small" color={t.brand} /> : (
+            <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700" }}>Verifica</Text>
+          )}
         />
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>PRIVACY (GDPR)</Text>
