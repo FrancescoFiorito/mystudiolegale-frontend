@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -32,7 +32,9 @@ export default function AuditLog() {
     }
   }, [filtro, router]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando su questa schermata deve
+  // comparire l'attivita' registrata nel frattempo.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>

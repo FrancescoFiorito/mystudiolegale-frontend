@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -132,7 +132,11 @@ export default function Dashboard() {
     }
   }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: la Home non viene mai smontata
+  // cambiando tab (e' un pager), quindi un useEffect legato al mount da
+  // solo non la ricaricherebbe mai al ritorno da un'altra tab - prima
+  // serviva lo swipe-to-refresh manuale per vedere i contatori aggiornati.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   if (!data && errore) {

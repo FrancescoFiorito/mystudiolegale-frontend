@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -27,7 +27,9 @@ export default function Team() {
     }
   }, [router]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando su questa schermata i
+  // membri del team vanno ricontrollati (es. un ruolo cambiato altrove).
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   const cambiaRuolo = async (userId: string, nuovoRuolo: string) => {
     await api.patch(`/team/${userId}/ruolo`, { ruolo: nuovoRuolo });

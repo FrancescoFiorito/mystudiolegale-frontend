@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -33,12 +33,16 @@ export default function Clienti() {
   // La ricerca e' gia' debounced (debouncedQ sopra); qui in piu' annulliamo
   // la richiesta precedente se una piu' recente parte prima che risponda,
   // cosi' una risposta "vecchia" arrivata in ritardo non sovrascrive quella
-  // giusta (race condition).
-  React.useEffect(() => {
-    const controller = new AbortController();
-    load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  // giusta (race condition). useFocusEffect invece di useEffect: Clienti
+  // non viene mai smontata cambiando tab, quindi al ritorno da un'altra
+  // tab l'elenco andrebbe ricaricato a mano (swipe-to-refresh) senza questo.
+  useFocusEffect(
+    React.useCallback(() => {
+      const controller = new AbortController();
+      load(controller.signal);
+      return () => controller.abort();
+    }, [load])
+  );
 
   // Se si arriva qui dal pulsante "Nuovo cliente" della creazione pratica
   // (vedi archivio.tsx), apre subito la modale di creazione. Clienti non

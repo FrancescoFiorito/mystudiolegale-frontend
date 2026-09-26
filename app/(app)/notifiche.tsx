@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -17,7 +17,9 @@ export default function Notifiche() {
   const load = React.useCallback(async () => {
     try { setItems(await api.get("/notifiche")); } catch { setItems([]); }
   }, []);
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando su questa schermata
+  // devono comparire le notifiche arrivate nel frattempo.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   const markRead = async (id: string) => { await api.patch(`/notifiche/${id}/read`); load(); };
 
