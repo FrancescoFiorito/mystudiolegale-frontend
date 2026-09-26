@@ -16,19 +16,31 @@ type ViewMode = typeof VIEWS[number];
 function toISODate(d: Date) { return d.toISOString().slice(0, 10); }
 function startOfWeek(d: Date) { const day = d.getDay() === 0 ? 6 : d.getDay() - 1; const r = new Date(d); r.setDate(d.getDate() - day); return r; }
 function addDays(d: Date, n: number) { const r = new Date(d); r.setDate(d.getDate() + n); return r; }
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Costruita da y/m/d espliciti invece che con `new Date(stringaISO)`, che
+// JS interpreta come UTC e puo' far slittare il giorno di uno in fusi
+// orari negativi (es. Americhe) quando poi lo si legge in ora locale.
+function parseISODate(s: string) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
 
 export default function Calendario() {
   const { t } = useTheme();
   const router = useRouter();
   const today = new Date();
-  const params = useLocalSearchParams<{ view?: string; _t?: string }>();
+  const params = useLocalSearchParams<{ view?: string; _t?: string; day?: string }>();
   const [view, setView] = React.useState<ViewMode>((params.view as ViewMode) && VIEWS.includes(params.view as ViewMode) ? (params.view as ViewMode) : "Mese");
+  const giornoIniziale = params.day && ISO_DATE_RE.test(params.day) ? params.day : toISODate(today);
+  const [cursor, setCursor] = React.useState(giornoIniziale === toISODate(today) ? today : parseISODate(giornoIniziale));
+  const [selectedDay, setSelectedDay] = React.useState<string>(giornoIniziale);
 
   React.useEffect(() => {
     if (params.view && VIEWS.includes(params.view as ViewMode)) setView(params.view as ViewMode);
   }, [params.view, params._t]);
-  const [cursor, setCursor] = React.useState(today);
-  const [selectedDay, setSelectedDay] = React.useState<string>(toISODate(today));
+  React.useEffect(() => {
+    if (params.day && ISO_DATE_RE.test(params.day)) {
+      setSelectedDay(params.day);
+      setCursor(parseISODate(params.day));
+    }
+  }, [params.day, params._t]);
   const [events, setEvents] = React.useState<any[]>([]);
   const [moveTarget, setMoveTarget] = React.useState<any>(null);
   const [moveDate, setMoveDate] = React.useState("");
