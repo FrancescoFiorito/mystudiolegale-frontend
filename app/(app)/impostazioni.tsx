@@ -93,7 +93,7 @@ export default function Impostazioni() {
   const infoCalendarioDispositivo = () => {
     Alert.alert(
       "Calendario del dispositivo",
-      "Solo le scadenze entro il prossimo anno vengono scritte nel calendario del telefono. Quelle più lontane compariranno automaticamente man mano che si avvicinano, alla prossima sincronizzazione (creazione, modifica o eliminazione di una scadenza, oppure toccando di nuovo questa voce)."
+      "Solo le scadenze entro il prossimo anno vengono scritte nel calendario del tuo dispositivo, mentre saranno tutte visibili dal calendario in-app. Quelle più lontane nel tempo appariranno automaticamente man mano che si avvicinano, alla prossima sincronizzazione."
     );
   };
 
