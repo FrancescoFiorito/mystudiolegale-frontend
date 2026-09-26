@@ -113,6 +113,10 @@ export default function PraticaDetail() {
   };
 
   const submitAdd = async () => {
+    if (tab === "Scadenze" && !addForm.titolo?.trim()) {
+      Alert.alert("Nome mancante", "Inserisci un nome per la scadenza.");
+      return;
+    }
     setSavingAdd(true);
     try {
       if (tab === "Note") {
@@ -376,7 +380,7 @@ export default function PraticaDetail() {
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title={`Aggiungi ${tab}`} onBack={() => setShowAdd(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
-              <Text style={s.lbl}>Titolo</Text>
+              <Text style={s.lbl}>{tab === "Scadenze" ? "Titolo *" : "Titolo"}</Text>
               <TextInput testID="add-titolo" value={addForm.titolo || ""} onChangeText={(v) => setAddForm({ ...addForm, titolo: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
               {tab === "Note" ? (
                 <>
