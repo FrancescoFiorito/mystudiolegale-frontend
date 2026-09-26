@@ -35,6 +35,7 @@ export default function Calcolatori() {
   const [unita, setUnita] = React.useState<"giorni"|"mesi"|"anni">("giorni");
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [risScad, setRisScad] = React.useState<any>(null);
+  const [titoloScad, setTitoloScad] = React.useState("");
   const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [pratiche, setPratiche] = React.useState<any[]>([]);
   const [praticaId, setPraticaId] = React.useState<string | null>(null);
@@ -49,6 +50,7 @@ export default function Calcolatori() {
     try {
       const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer });
       setRisScad(r);
+      setTitoloScad("");
     } catch (e: any) { setRisScad({ error: e.message }); }
   };
   const calcPar = async () => {
@@ -62,7 +64,7 @@ export default function Calcolatori() {
     if (!risScad?.data_calcolata) return;
     setSaving(true);
     try {
-      await api.post("/scadenze", { pratica_id: praticaId, titolo: `Scadenza calcolata (${giorni} ${unita})`, data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim() || "Scadenza calcolata", data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
@@ -159,6 +161,15 @@ export default function Calcolatori() {
                     {risScad.prorogato_a_prossimo_feriale ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Prorogato al prossimo giorno feriale</Text> : null}
                     {!risScad.salvata ? (
                       <>
+                        <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome scadenza</Text>
+                        <TextInput
+                          testID="scad-titolo"
+                          value={titoloScad}
+                          onChangeText={setTitoloScad}
+                          placeholder="Es. Deposito ricorso"
+                          placeholderTextColor={t.onSurfaceTertiary}
+                          style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                        />
                         <PraticaPicker />
                         <PromemoriaInput value={promemoria} onChange={setPromemoria} />
                         <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
