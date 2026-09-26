@@ -90,6 +90,13 @@ export default function Impostazioni() {
     }
   };
 
+  const infoCalendarioDispositivo = () => {
+    Alert.alert(
+      "Calendario del dispositivo",
+      "Solo le scadenze entro il prossimo anno vengono scritte nel calendario del telefono. Quelle più lontane compariranno automaticamente man mano che si avvicinano, alla prossima sincronizzazione (creazione, modifica o eliminazione di una scadenza, oppure toccando di nuovo questa voce)."
+    );
+  };
+
   const disconnettiDispositivo = async () => {
     await disconnettiCalendarioDispositivo();
     setDispositivoConnesso(false);
@@ -154,9 +161,16 @@ export default function Impostazioni() {
           icon="smartphone"
           label={dispositivoConnesso ? "Calendario del dispositivo · connesso" : "Collega calendario del dispositivo"}
           onPress={gestisciCalendarioDispositivo}
-          right={dispositivoConnesso ? (
-            <Pressable onPress={disconnettiDispositivo}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
-          ) : undefined}
+          right={
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <Pressable testID="info-calendario-dispositivo" onPress={infoCalendarioDispositivo} hitSlop={8}>
+                <Feather name="info" size={16} color={t.onSurfaceTertiary} />
+              </Pressable>
+              {dispositivoConnesso ? (
+                <Pressable onPress={disconnettiDispositivo}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
+              ) : null}
+            </View>
+          }
         />
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>NOTIFICHE</Text>

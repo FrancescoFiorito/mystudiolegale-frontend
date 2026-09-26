@@ -12,6 +12,10 @@ import { api } from "@/src/api";
 const CALENDAR_ID_KEY = "device_calendar_id";
 const SYNC_MAP_KEY = "device_calendar_sync_map";
 const CALENDAR_TITLE = "MyStudioLegale";
+// Solo le scadenze entro questa finestra vengono scritte nel calendario del
+// dispositivo (le altre compariranno automaticamente man mano che si
+// avvicinano, alla prossima sincronizzazione).
+export const SYNC_LOOKAHEAD_DAYS = 365;
 
 async function sourceIdDefault(): Promise<string | undefined> {
   if (Platform.OS !== "ios") return undefined;
@@ -76,9 +80,9 @@ export async function sincronizzaCalendarioDispositivo(): Promise<{ sincronizzat
   if (!calendarId) throw new Error("Calendario del dispositivo non collegato");
 
   const oggi = new Date().toISOString().slice(0, 10);
-  const tra180Giorni = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const traUnAnno = new Date(Date.now() + SYNC_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const scadenze: any[] = await api.get("/scadenze");
-  const daSincronizzare = scadenze.filter((s) => !s.completata && s.data >= oggi && s.data <= tra180Giorni);
+  const daSincronizzare = scadenze.filter((s) => !s.completata && s.data >= oggi && s.data <= traUnAnno);
   const idValidi = new Set(daSincronizzare.map((s) => s.id));
 
   const mappa = (await storage.getItem<Record<string, string>>(SYNC_MAP_KEY, {})) || {};
