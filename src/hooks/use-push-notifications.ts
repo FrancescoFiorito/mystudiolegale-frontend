@@ -2,6 +2,7 @@ import React from "react";
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router";
 import { api } from "@/src/api";
 import { useAuth } from "@/src/AuthContext";
 import { storage } from "@/src/utils/storage";
@@ -83,9 +84,28 @@ export async function registraPushToken(): Promise<StatoPush> {
 
 export function usePushNotifications() {
   const { user } = useAuth();
+  const router = useRouter();
 
   React.useEffect(() => {
     if (!user) return;
     registraPushToken();
   }, [user?.id]);
+
+  // Toccando un promemoria di scadenza si viene portati direttamente sul
+  // giorno di quella scadenza nel calendario, invece di restare sulla
+  // schermata dove si trovava l'app quando la notifica e' arrivata.
+  React.useEffect(() => {
+    const apriDaNotifica = (data: any) => {
+      if (data?.tipo === "scadenza" && data?.scadenza_data) {
+        router.push(`/(app)/calendario?day=${data.scadenza_data}`);
+      }
+    };
+    Notifications.getLastNotificationResponseAsync().then((r) => {
+      if (r) apriDaNotifica(r.notification.request.content.data);
+    });
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      apriDaNotifica(r.notification.request.content.data);
+    });
+    return () => sub.remove();
+  }, [router]);
 }

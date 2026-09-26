@@ -8,6 +8,7 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import PromemoriaInput from "@/src/components/PromemoriaInput";
 
 export default function Calcolatori() {
   const { t } = useTheme();
@@ -34,6 +35,7 @@ export default function Calcolatori() {
   const [unita, setUnita] = React.useState<"giorni"|"mesi"|"anni">("giorni");
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [risScad, setRisScad] = React.useState<any>(null);
+  const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [pratiche, setPratiche] = React.useState<any[]>([]);
   const [praticaId, setPraticaId] = React.useState<string | null>(null);
   // Parcelle
@@ -60,7 +62,7 @@ export default function Calcolatori() {
     if (!risScad?.data_calcolata) return;
     setSaving(true);
     try {
-      await api.post("/scadenze", { pratica_id: praticaId, titolo: `Scadenza calcolata (${giorni} ${unita})`, data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria: [1, 7], descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: `Scadenza calcolata (${giorni} ${unita})`, data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
@@ -158,6 +160,7 @@ export default function Calcolatori() {
                     {!risScad.salvata ? (
                       <>
                         <PraticaPicker />
+                        <PromemoriaInput value={promemoria} onChange={setPromemoria} />
                         <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                           <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva come scadenza"}</Text>
                         </Pressable>

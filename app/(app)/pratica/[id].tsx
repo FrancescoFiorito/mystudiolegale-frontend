@@ -10,6 +10,7 @@ import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
+import PromemoriaInput from "@/src/components/PromemoriaInput";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -27,6 +28,7 @@ export default function PraticaDetail() {
   const [showAdd, setShowAdd] = React.useState(false);
   const [addForm, setAddForm] = React.useState<any>({});
   const [checklist, setChecklist] = React.useState<{ testo: string; fatto: boolean }[]>([]);
+  const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [nuovaVoce, setNuovaVoce] = React.useState("");
   const [uploading, setUploading] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
@@ -95,6 +97,7 @@ export default function PraticaDetail() {
     setAddForm({ tipo: "nota", titolo: "", descrizione: "", data: new Date().toISOString().slice(0, 10), categoria: "generale", priorita: "media", ora: "09:00", contenuto: "" });
     setChecklist([]);
     setNuovaVoce("");
+    setPromemoria([1]);
     setShowAdd(true);
   };
 
@@ -110,7 +113,7 @@ export default function PraticaDetail() {
       if (tab === "Note") {
         await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
       } else if (tab === "Scadenze") {
-        await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria: [1, 7] });
+        await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
       }
       setShowAdd(false); load();
     } catch (e: any) {
@@ -417,6 +420,7 @@ export default function PraticaDetail() {
                           </Pressable>
                         ))}
                       </View>
+                      <PromemoriaInput value={promemoria} onChange={setPromemoria} />
                     </>
                   )}
                 </>
