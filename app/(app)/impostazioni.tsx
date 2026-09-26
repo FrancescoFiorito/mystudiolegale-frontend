@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth, useHasPerm } from "@/src/AuthContext";
@@ -34,7 +34,10 @@ export default function Impostazioni() {
     setDispositivoConnesso(await calendarioDispositivoConnesso());
     setStatoPush(await leggiStatoPush());
   }, []);
-  React.useEffect(() => { loadStato(); }, [loadStato]);
+  // useFocusEffect invece di useEffect: tornando su questa schermata lo
+  // stato del calendario/notifiche va riletto (es. cambiato da un altro
+  // punto dell'app, o il permesso revocato dalle Impostazioni di sistema).
+  useFocusEffect(React.useCallback(() => { loadStato(); }, [loadStato]));
 
   // Prima, un fallimento nella registrazione del token push (permesso
   // negato, credenziali push mancanti sul progetto EAS, ecc.) restava

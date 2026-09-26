@@ -3,7 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
@@ -49,7 +49,11 @@ export default function PraticaDetail() {
     setPratica(p); setNote(n); setScadenze(sc); setParcelle(par); setDocumenti(doc);
   }, [id]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando indietro su questa
+  // schermata (es. dopo aver caricato un documento o creato un cliente
+  // altrove) resta montata sotto, quindi senza questo i dati non si
+  // aggiornerebbero.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
   React.useEffect(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
 
   const salvaModifiche = async () => {

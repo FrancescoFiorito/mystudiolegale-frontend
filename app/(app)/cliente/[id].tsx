@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -26,7 +26,10 @@ export default function ClienteDettaglio() {
     setPratiche(p);
   }, [id]);
 
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando indietro su questa
+  // schermata (es. dopo aver modificato una pratica collegata) resta
+  // montata sotto, quindi senza questo i dati non si aggiornerebbero.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   if (!cliente) {
     return (

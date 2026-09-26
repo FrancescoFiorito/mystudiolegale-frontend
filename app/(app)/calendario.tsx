@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 
@@ -63,7 +63,11 @@ export default function Calendario() {
       }
     } catch {}
   }, [view, monthStr, cursor]);
-  React.useEffect(() => { load(); }, [load]);
+  // useFocusEffect invece di useEffect: tornando qui da un'altra schermata
+  // (es. dopo aver modificato una scadenza altrove) senza che view/cursor
+  // siano cambiati, un useEffect legato al mount da solo non ricaricherebbe
+  // gli eventi aggiornati.
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   const evByDay = React.useMemo(() => {
     const map: Record<string, any[]> = {};

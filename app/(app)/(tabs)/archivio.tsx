@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation, useFocusEffect } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
@@ -142,13 +142,18 @@ function SezionePratiche({
 
   // Annulla la richiesta precedente se q o stato cambiano prima che risponda,
   // cosi' una risposta "vecchia" in ritardo non sovrascrive quella giusta.
-  React.useEffect(() => {
-    const controller = new AbortController();
-    load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  // useFocusEffect invece di useEffect: Archivio non viene mai smontata
+  // cambiando tab, quindi al ritorno da un'altra tab l'elenco andrebbe
+  // ricaricato a mano (swipe-to-refresh) senza questo.
+  useFocusEffect(
+    React.useCallback(() => {
+      const controller = new AbortController();
+      load(controller.signal);
+      return () => controller.abort();
+    }, [load])
+  );
   const loadClienti = React.useCallback(() => { api.get("/clienti").then(setClienti).catch(() => {}); }, []);
-  React.useEffect(() => { loadClienti(); }, [loadClienti]);
+  useFocusEffect(React.useCallback(() => { loadClienti(); }, [loadClienti]));
 
   // Ritorno dalla creazione di un cliente fatta "al volo" dalla schermata
   // Clienti (vedi il pulsante "Nuovo cliente" piu' sotto): riapre la modale
@@ -298,11 +303,15 @@ function SezioneDocumenti() {
 
   // Annulla la richiesta precedente se la ricerca cambia prima che risponda,
   // cosi' una risposta "vecchia" in ritardo non sovrascrive quella giusta.
-  React.useEffect(() => {
-    const controller = new AbortController();
-    load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
+  // useFocusEffect invece di useEffect: vedi il commento nello stesso punto
+  // di SezionePratiche piu' sopra.
+  useFocusEffect(
+    React.useCallback(() => {
+      const controller = new AbortController();
+      load(controller.signal);
+      return () => controller.abort();
+    }, [load])
+  );
 
   const cartelleVisibili = cartelle.filter((c) => (c.parent_id || null) === cartellaCorrente);
   const documentiVisibili = q ? documenti : documenti.filter((d) => (d.cartella_id || null) === cartellaCorrente);
@@ -391,7 +400,7 @@ function SezioneParcelle() {
   const [items, setItems] = React.useState<any[] | null>(null);
 
   const load = React.useCallback(async () => setItems(await api.get("/parcelle")), []);
-  React.useEffect(() => { load(); }, [load]);
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
   const emesse = (items || []).filter((p) => p.emessa);
 
