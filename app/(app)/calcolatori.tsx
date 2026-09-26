@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
+import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 
 export default function Calcolatori() {
   const { t } = useTheme();
@@ -65,6 +66,7 @@ export default function Calcolatori() {
     setSaving(true);
     try {
       await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim() || "Scadenza calcolata", data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      sincronizzaSeConnesso();
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");

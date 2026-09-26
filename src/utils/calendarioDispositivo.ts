@@ -110,3 +110,19 @@ export async function sincronizzaCalendarioDispositivo(): Promise<{ sincronizzat
   await storage.setItem(SYNC_MAP_KEY, mappa);
   return { sincronizzate, errori };
 }
+
+// Da chiamare dopo aver creato una scadenza (pratica/[id].tsx,
+// calcolatori.tsx): se il calendario del dispositivo e' collegato, la
+// sincronizza subito in background invece di aspettare che l'utente torni
+// in Impostazioni a toccare "Sincronizza" a mano. Silenziosa di proposito
+// (nessun alert, nessun errore bloccante): e' una comodita' automatica, non
+// un'azione esplicita dell'utente.
+export async function sincronizzaSeConnesso(): Promise<void> {
+  try {
+    if (await calendarioDispositivoConnesso()) {
+      await sincronizzaCalendarioDispositivo();
+    }
+  } catch {
+    // L'utente puo' sempre risincronizzare a mano da Impostazioni.
+  }
+}

@@ -11,6 +11,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
+import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -118,6 +119,7 @@ export default function PraticaDetail() {
         await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
       } else if (tab === "Scadenze") {
         await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
+        sincronizzaSeConnesso();
       }
       setShowAdd(false); load();
     } catch (e: any) {
