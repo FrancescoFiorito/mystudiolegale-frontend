@@ -227,11 +227,15 @@ export default function Dashboard() {
             <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 4 }}>Nessun impegno in programma</Text>
           ) : (
             prossimi.map((ev) => (
-              <View key={ev.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 }}>
+              <Pressable
+                key={ev.id}
+                onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", day: ev.data, _t: String(Date.now()) } })}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 }}
+              >
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.brand }} />
                 <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, fontVariant: ["tabular-nums"] }}>{giornoBreve(ev.data)} · {ev.ora}</Text>
                 <Text style={{ color: t.onSurface, fontSize: 12, fontWeight: "600", flex: 1 }} numberOfLines={1}>{ev.titolo}</Text>
-              </View>
+              </Pressable>
             ))
           )}
         </Pressable>

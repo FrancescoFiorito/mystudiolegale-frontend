@@ -1,6 +1,6 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, Keyboard } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
@@ -48,6 +48,7 @@ export default function Calcolatori() {
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
   const calcScad = async () => {
+    Keyboard.dismiss();
     try {
       const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer });
       setRisScad(r);
@@ -63,9 +64,13 @@ export default function Calcolatori() {
 
   const saveScad = async () => {
     if (!risScad?.data_calcolata) return;
+    if (!titoloScad.trim()) {
+      Alert.alert("Nome mancante", "Inserisci un nome per la scadenza.");
+      return;
+    }
     setSaving(true);
     try {
-      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim() || "Scadenza calcolata", data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim(), data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
       sincronizzaSeConnesso();
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
@@ -163,7 +168,7 @@ export default function Calcolatori() {
                     {risScad.prorogato_a_prossimo_feriale ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Prorogato al prossimo giorno feriale</Text> : null}
                     {!risScad.salvata ? (
                       <>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome scadenza</Text>
+                        <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome scadenza *</Text>
                         <TextInput
                           testID="scad-titolo"
                           value={titoloScad}
