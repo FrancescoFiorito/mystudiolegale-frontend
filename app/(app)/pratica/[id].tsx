@@ -168,7 +168,7 @@ export default function PraticaDetail() {
   const eliminaScadenza = (sc: any) => {
     Alert.alert("Elimina scadenza", `Eliminare "${sc.titolo}"?`, [
       { text: "Annulla", style: "cancel" },
-      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${sc.id}`); load(); } },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${sc.id}`); sincronizzaSeConnesso(); load(); } },
     ]);
   };
 

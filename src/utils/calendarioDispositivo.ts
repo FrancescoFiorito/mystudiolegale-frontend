@@ -79,6 +79,7 @@ export async function sincronizzaCalendarioDispositivo(): Promise<{ sincronizzat
   const tra180Giorni = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const scadenze: any[] = await api.get("/scadenze");
   const daSincronizzare = scadenze.filter((s) => !s.completata && s.data >= oggi && s.data <= tra180Giorni);
+  const idValidi = new Set(daSincronizzare.map((s) => s.id));
 
   const mappa = (await storage.getItem<Record<string, string>>(SYNC_MAP_KEY, {})) || {};
   let sincronizzate = 0;
@@ -107,16 +108,30 @@ export async function sincronizzaCalendarioDispositivo(): Promise<{ sincronizzat
     }
   }
 
+  // Rimuove dal calendario del dispositivo gli eventi delle scadenze non
+  // piu' valide (eliminate, completate, o la cui data e' uscita dalla
+  // finestra dei prossimi 180 giorni): prima restavano appesi finche' non
+  // si scollegava e ricollegava da zero il calendario.
+  for (const scadenzaId of Object.keys(mappa)) {
+    if (idValidi.has(scadenzaId)) continue;
+    try {
+      await Calendar.deleteEventAsync(mappa[scadenzaId]);
+    } catch {
+      // Evento gia' rimosso manualmente dal dispositivo: va bene comunque.
+    }
+    delete mappa[scadenzaId];
+  }
+
   await storage.setItem(SYNC_MAP_KEY, mappa);
   return { sincronizzate, errori };
 }
 
-// Da chiamare dopo aver creato una scadenza (pratica/[id].tsx,
-// calcolatori.tsx): se il calendario del dispositivo e' collegato, la
-// sincronizza subito in background invece di aspettare che l'utente torni
-// in Impostazioni a toccare "Sincronizza" a mano. Silenziosa di proposito
-// (nessun alert, nessun errore bloccante): e' una comodita' automatica, non
-// un'azione esplicita dell'utente.
+// Da chiamare dopo aver creato, eliminato o spostato di data una scadenza:
+// se il calendario del dispositivo e' collegato, lo sincronizza subito in
+// background invece di aspettare che l'utente torni in Impostazioni a
+// toccare "Sincronizza" a mano. Silenziosa di proposito (nessun alert,
+// nessun errore bloccante): e' una comodita' automatica, non un'azione
+// esplicita dell'utente.
 export async function sincronizzaSeConnesso(): Promise<void> {
   try {
     if (await calendarioDispositivoConnesso()) {

@@ -7,6 +7,7 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 
 const MONTHS = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const DOW = ["L","M","M","G","V","S","D"];
@@ -82,6 +83,7 @@ export default function Calendario() {
     if (!moveTarget) return;
     try {
       await api.patch(`/scadenze/${moveTarget.id}/sposta?data=${moveDate}`);
+      sincronizzaSeConnesso();
       setMoveTarget(null);
       load();
     } catch (e: any) { Alert.alert("Errore", e.message); }
@@ -90,7 +92,7 @@ export default function Calendario() {
   const eliminaEvento = (e: any) => {
     Alert.alert("Elimina scadenza", `Eliminare "${e.titolo}"?`, [
       { text: "Annulla", style: "cancel" },
-      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${e.id}`); load(); } },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${e.id}`); sincronizzaSeConnesso(); load(); } },
     ]);
   };
 
