@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
+import PraticaPicker from "@/src/components/PraticaPicker";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 
 export default function Calcolatori() {
@@ -43,6 +44,7 @@ export default function Calcolatori() {
   // Parcelle
   const [par, setPar] = React.useState<any>({ fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "", fase_esecutiva: "", diritti: "", anticipazioni: "", spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0" });
   const [risPar, setRisPar] = React.useState<any>(null);
+  const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
@@ -60,6 +62,7 @@ export default function Calcolatori() {
     Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
+    setTitoloPar("");
   };
 
   const saveScad = async () => {
@@ -82,7 +85,7 @@ export default function Calcolatori() {
   const savePar = async () => {
     setSaving(true);
     try {
-      const body: any = { tipo: "parcella", pratica_id: praticaId };
+      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim() };
       Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
       const p = await api.post("/parcelle", body);
       setRisPar({ ...risPar, salvata: true, id: p.id });
@@ -93,22 +96,6 @@ export default function Calcolatori() {
     }
   };
 
-  const PraticaPicker = () => (
-    <View style={{ marginTop: SPACING.md }}>
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: 0 }]}>Collega a una pratica (facoltativo)</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        <Pressable testID="pratica-link-none" onPress={() => setPraticaId(null)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: praticaId ? t.surfaceSecondary : t.brand, borderWidth: 1, borderColor: t.border }}>
-          <Text style={{ color: praticaId ? t.onSurfaceSecondary : t.onBrand, fontSize: 12 }}>Nessuna</Text>
-        </Pressable>
-        {pratiche.map((p) => (
-          <Pressable key={p.id} testID={`pratica-link-${p.id}`} onPress={() => setPraticaId(p.id)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: praticaId === p.id ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border, maxWidth: 180 }}>
-            <Text style={{ color: praticaId === p.id ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }} numberOfLines={1}>{p.oggetto}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
-      {praticaId ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 6 }}>Comparirà anche nella scheda di quella pratica.</Text> : <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 6 }}>Comparirà solo qui e nel calendario.</Text>}
-    </View>
-  );
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
@@ -177,7 +164,12 @@ export default function Calcolatori() {
                           placeholderTextColor={t.onSurfaceTertiary}
                           style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
                         />
-                        <PraticaPicker />
+                        <PraticaPicker
+                          pratiche={pratiche}
+                          praticaId={praticaId}
+                          onChange={setPraticaId}
+                          helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui e nel calendario."}
+                        />
                         <PromemoriaInput value={promemoria} onChange={setPromemoria} />
                         <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                           <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva come scadenza"}</Text>
@@ -237,7 +229,21 @@ export default function Calcolatori() {
                 </View>
                 {!risPar.salvata ? (
                   <>
-                    <PraticaPicker />
+                    <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>Nome parcella (facoltativo)</Text>
+                    <TextInput
+                      testID="par-titolo"
+                      value={titoloPar}
+                      onChangeText={setTitoloPar}
+                      placeholder="Es. Acconto fase istruttoria"
+                      placeholderTextColor={t.onSurfaceTertiary}
+                      style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                    />
+                    <PraticaPicker
+                      pratiche={pratiche}
+                      praticaId={praticaId}
+                      onChange={setPraticaId}
+                      helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui in Archivio."}
+                    />
                     <Pressable testID="save-par" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                       <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva parcella"}</Text>
                     </Pressable>
