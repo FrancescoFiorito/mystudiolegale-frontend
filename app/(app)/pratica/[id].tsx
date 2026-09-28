@@ -162,6 +162,22 @@ export default function PraticaDetail() {
     scegliAperturaDocumento(`/documenti/${doc.id}/download`, `/documenti/${doc.id}/view-link`, doc.nome || "documento");
   };
 
+  const apriPdfParcella = (p: any) => {
+    scegliAperturaDocumento(`/parcelle/${p.id}/pdf`, `/parcelle/${p.id}/pdf/view-link`, `${p.numero || "parcella"}.pdf`);
+  };
+
+  // Emettere una parcella la rende definitiva (data di emissione fissata) e
+  // produce subito il PDF, invece di essere due azioni separate.
+  const emettiParcella = async (p: any) => {
+    try {
+      await api.patch(`/parcelle/${p.id}/emit`);
+      await load();
+      apriPdfParcella(p);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile emettere la parcella. Riprova.");
+    }
+  };
+
   const eliminaDocumento = (doc: any) => {
     Alert.alert("Elimina documento", `Eliminare "${doc.nome}"?`, [
       { text: "Annulla", style: "cancel" },
@@ -305,6 +321,17 @@ export default function PraticaDetail() {
                 </View>
                 {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>{p.titolo}</Text> : null}
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{p.numero}</Text>
+                {p.emessa ? (
+                  <Pressable testID={`pdf-parcella-${p.id}`} onPress={() => apriPdfParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.sm }}>
+                    <Feather name="download" size={14} color={t.onBrand} />
+                    <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable testID={`emetti-parcella-${p.id}`} onPress={() => emettiParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.sm }}>
+                    <Feather name="check-circle" size={14} color={t.onBrand} />
+                    <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
+                  </Pressable>
+                )}
               </View>
             ))
           )}
