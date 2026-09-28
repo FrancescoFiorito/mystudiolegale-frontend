@@ -420,7 +420,7 @@ function SezioneParcelle() {
   };
 
   const eliminaParcella = (p: any) => {
-    Alert.alert("Elimina parcella", `Eliminare la parcella "${p.numero}"?`, [
+    Alert.alert("Elimina parcella", `Eliminare "${p.titolo || "questa parcella"}"?`, [
       { text: "Annulla", style: "cancel" },
       { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/parcelle/${p.id}`); load(); } },
     ]);
@@ -437,8 +437,7 @@ function SezioneParcelle() {
       ) : items.map((p) => (
         <SwipeToDelete key={p.id} testID={`parcella-${p.id}`} onDelete={() => eliminaParcella(p)}>
           <View testID={`parcella-${p.id}`} style={[s.card, { backgroundColor: t.surface }, SHADOW.card, { alignItems: "flex-start", flexDirection: "column" }]}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
-              <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{p.numero}</Text>
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", width: "100%" }}>
               <View style={{ backgroundColor: (p.emessa ? t.success : t.warning) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
                 <Text style={{ color: p.emessa ? t.success : t.warning, fontSize: 10, fontWeight: "700" }}>{p.emessa ? "EMESSA" : "BOZZA"}</Text>
               </View>
