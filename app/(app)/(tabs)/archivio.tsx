@@ -402,8 +402,6 @@ function SezioneParcelle() {
   const load = React.useCallback(async () => setItems(await api.get("/parcelle")), []);
   useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
-  const emesse = (items || []).filter((p) => p.emessa);
-
   const openPdf = (p: any) => {
     scegliAperturaDocumento(`/parcelle/${p.id}/pdf`, `/parcelle/${p.id}/pdf/view-link`, `${p.numero || "parcella"}.pdf`);
   };
@@ -418,21 +416,22 @@ function SezioneParcelle() {
   return (
     <>
     <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
-      {!items ? <ActivityIndicator color={t.brand} /> : emesse.length === 0 ? (
+      {!items ? <ActivityIndicator color={t.brand} /> : items.length === 0 ? (
         <View style={s.emptyBox}>
           <Feather name="archive" size={40} color={t.onSurfaceTertiary} />
-          <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna parcella emessa</Text>
+          <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna parcella</Text>
         </View>
-      ) : emesse.map((p) => (
+      ) : items.map((p) => (
         <SwipeToDelete key={p.id} testID={`parcella-${p.id}`} onDelete={() => eliminaParcella(p)}>
           <View testID={`parcella-${p.id}`} style={[s.card, { backgroundColor: t.surface }, SHADOW.card, { alignItems: "flex-start", flexDirection: "column" }]}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", width: "100%" }}>
               <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"] }}>{p.numero}</Text>
-              <View style={{ backgroundColor: t.success + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
-                <Text style={{ color: t.success, fontSize: 10, fontWeight: "700" }}>EMESSA</Text>
+              <View style={{ backgroundColor: (p.emessa ? t.success : t.warning) + "22", paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.pill }}>
+                <Text style={{ color: p.emessa ? t.success : t.warning, fontSize: 10, fontWeight: "700" }}>{p.emessa ? "EMESSA" : "BOZZA"}</Text>
               </View>
             </View>
-            <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
+            {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 14, fontWeight: "700", marginTop: 6 }} numberOfLines={1}>{p.titolo}</Text> : null}
+            <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: p.titolo ? 2 : 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
             {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
             <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
               <Feather name="download" size={14} color={t.onBrand} />

@@ -303,6 +303,7 @@ export default function PraticaDetail() {
                     <Text style={{ color: p.emessa ? t.success : t.warning, fontSize: 10, fontWeight: "700" }}>{p.emessa ? "EMESSA" : "BOZZA"}</Text>
                   </View>
                 </View>
+                {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>{p.titolo}</Text> : null}
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{p.numero}</Text>
               </View>
             ))
