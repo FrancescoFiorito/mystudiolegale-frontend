@@ -178,6 +178,11 @@ export default function PraticaDetail() {
     }
   };
 
+  // Modificabile in qualsiasi momento, anche dopo l'emissione.
+  const modificaParcella = (p: any) => {
+    router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", editId: p.id, _t: String(Date.now()) } });
+  };
+
   const eliminaDocumento = (doc: any) => {
     Alert.alert("Elimina documento", `Eliminare "${doc.nome}"?`, [
       { text: "Annulla", style: "cancel" },
@@ -320,17 +325,23 @@ export default function PraticaDetail() {
                   </View>
                 </View>
                 {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>{p.titolo}</Text> : null}
-                {p.emessa ? (
-                  <Pressable testID={`pdf-parcella-${p.id}`} onPress={() => apriPdfParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.sm }}>
-                    <Feather name="download" size={14} color={t.onBrand} />
-                    <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm }}>
+                  {p.emessa ? (
+                    <Pressable testID={`pdf-parcella-${p.id}`} onPress={() => apriPdfParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                      <Feather name="download" size={14} color={t.onBrand} />
+                      <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable testID={`emetti-parcella-${p.id}`} onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                      <Feather name="check-circle" size={14} color={t.onBrand} />
+                      <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
+                    </Pressable>
+                  )}
+                  <Pressable testID={`modifica-parcella-${p.id}`} onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+                    <Feather name="edit-2" size={14} color={t.onSurface} />
+                    <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 12 }}>Modifica</Text>
                   </Pressable>
-                ) : (
-                  <Pressable testID={`emetti-parcella-${p.id}`} onPress={() => emettiParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.sm }}>
-                    <Feather name="check-circle" size={14} color={t.onBrand} />
-                    <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
-                  </Pressable>
-                )}
+                </View>
               </View>
             ))
           )}
