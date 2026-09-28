@@ -320,7 +320,6 @@ export default function PraticaDetail() {
                   </View>
                 </View>
                 {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>{p.titolo}</Text> : null}
-                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{p.numero}</Text>
                 {p.emessa ? (
                   <Pressable testID={`pdf-parcella-${p.id}`} onPress={() => apriPdfParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.sm }}>
                     <Feather name="download" size={14} color={t.onBrand} />
