@@ -406,6 +406,19 @@ function SezioneParcelle() {
     scegliAperturaDocumento(`/parcelle/${p.id}/pdf`, `/parcelle/${p.id}/pdf/view-link`, `${p.numero || "parcella"}.pdf`);
   };
 
+  // Emettere una parcella la rende definitiva (data di emissione fissata) e
+  // produce subito il PDF, invece di essere due azioni separate: prima non
+  // esisteva alcun pulsante per farlo, restava per sempre "BOZZA".
+  const emettiParcella = async (p: any) => {
+    try {
+      await api.patch(`/parcelle/${p.id}/emit`);
+      await load();
+      openPdf(p);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile emettere la parcella. Riprova.");
+    }
+  };
+
   const eliminaParcella = (p: any) => {
     Alert.alert("Elimina parcella", `Eliminare la parcella "${p.numero}"?`, [
       { text: "Annulla", style: "cancel" },
@@ -433,10 +446,17 @@ function SezioneParcelle() {
             {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 14, fontWeight: "700", marginTop: 6 }} numberOfLines={1}>{p.titolo}</Text> : null}
             <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: p.titolo ? 2 : 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
             {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
-            <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
-              <Feather name="download" size={14} color={t.onBrand} />
-              <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
-            </Pressable>
+            {p.emessa ? (
+              <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
+                <Feather name="download" size={14} color={t.onBrand} />
+                <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+              </Pressable>
+            ) : (
+              <Pressable testID={`emetti-${p.id}`} onPress={() => emettiParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
+                <Feather name="check-circle" size={14} color={t.onBrand} />
+                <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
+              </Pressable>
+            )}
           </View>
         </SwipeToDelete>
       ))}
