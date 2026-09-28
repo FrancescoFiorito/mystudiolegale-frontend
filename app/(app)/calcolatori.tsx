@@ -15,8 +15,9 @@ import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 export default function Calcolatori() {
   const { t } = useTheme();
   const router = useRouter();
-  const params = useLocalSearchParams<{ tab?: string; _t?: string }>();
+  const params = useLocalSearchParams<{ tab?: string; _t?: string; editId?: string }>();
   const locked = params.tab === "parcelle" || params.tab === "scadenze";
+  const isEditingPar = params.tab === "parcelle" && !!params.editId;
   const [tab, setTab] = React.useState<"scadenze" | "parcelle">(params.tab === "parcelle" ? "parcelle" : "scadenze");
   const scrollRef = React.useRef<ScrollView>(null);
 
@@ -29,7 +30,7 @@ export default function Calcolatori() {
     else if (params.tab === "scadenze") setTab("scadenze");
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [params.tab, params._t]);
-  const headerTitle = locked ? (tab === "parcelle" ? "Crea parcella" : "Aggiungi scadenza") : "Calcolatori";
+  const headerTitle = locked ? (tab === "parcelle" ? (isEditingPar ? "Modifica parcella" : "Crea parcella") : "Aggiungi scadenza") : "Calcolatori";
   // Scadenze
   const [dataPartenza, setDataPartenza] = React.useState(new Date().toISOString().slice(0,10));
   const [giorni, setGiorni] = React.useState("30");
@@ -49,6 +50,32 @@ export default function Calcolatori() {
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
+  // Modifica di una parcella esistente (arrivo qui da Archivio o dalla
+  // scheda pratica con ?editId=...): precarica i campi e il calcolo gia'
+  // salvato, cosi' il modulo si presenta gia' compilato invece di dover
+  // rifare "Calcola" da zero.
+  React.useEffect(() => {
+    if (!params.editId) return;
+    api.get(`/parcelle/${params.editId}`).then((doc: any) => {
+      setPar({
+        fase_studio: String(doc.fase_studio ?? 0),
+        fase_introduttiva: String(doc.fase_introduttiva ?? 0),
+        fase_istruttoria: String(doc.fase_istruttoria ?? 0),
+        fase_decisionale: String(doc.fase_decisionale ?? 0),
+        fase_esecutiva: String(doc.fase_esecutiva ?? 0),
+        diritti: String(doc.diritti ?? 0),
+        anticipazioni: String(doc.anticipazioni ?? 0),
+        spese_generali_pct: String(doc.spese_generali_pct ?? 15),
+        cpa_pct: String(doc.cpa_pct ?? 4),
+        iva_pct: String(doc.iva_pct ?? 22),
+        ritenuta_pct: String(doc.ritenuta_pct ?? 0),
+      });
+      setTitoloPar(doc.titolo || "");
+      setPraticaId(doc.pratica_id || null);
+      setRisPar(doc.calcolo || null);
+    }).catch(() => {});
+  }, [params.editId, params._t]);
+
   const calcScad = async () => {
     Keyboard.dismiss();
     try {
@@ -62,7 +89,10 @@ export default function Calcolatori() {
     Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
-    setTitoloPar("");
+    // In modifica il ricalcolo raffina la stessa parcella: non si deve
+    // perdere il nome/la pratica gia' collegati solo perche' si e'
+    // ritoccata una cifra.
+    if (!params.editId) setTitoloPar("");
   };
 
   const saveScad = async () => {
@@ -87,8 +117,12 @@ export default function Calcolatori() {
     try {
       const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim() };
       Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
-      const p = await api.post("/parcelle", body);
-      setRisPar({ ...risPar, salvata: true, id: p.id });
+      if (params.editId) {
+        await api.put(`/parcelle/${params.editId}`, body);
+      } else {
+        await api.post("/parcelle", body);
+      }
+      setRisPar((prev: any) => ({ ...prev, salvata: true }));
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
     } finally {
@@ -245,10 +279,10 @@ export default function Calcolatori() {
                       helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui in Archivio."}
                     />
                     <Pressable testID="save-par" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
-                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva parcella"}</Text>
+                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : isEditingPar ? "Salva modifiche" : "Salva parcella"}</Text>
                     </Pressable>
                   </>
-                ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Parcella salvata</Text>}
+                ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ {isEditingPar ? "Modifiche salvate" : "Parcella salvata"}</Text>}
               </View>
             ) : null}
           </View>

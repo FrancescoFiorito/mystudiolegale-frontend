@@ -419,6 +419,11 @@ function SezioneParcelle() {
     }
   };
 
+  // Modificabile in qualsiasi momento, anche dopo l'emissione.
+  const modificaParcella = (p: any) => {
+    router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", editId: p.id, _t: String(Date.now()) } });
+  };
+
   const eliminaParcella = (p: any) => {
     Alert.alert("Elimina parcella", `Eliminare "${p.titolo || "questa parcella"}"?`, [
       { text: "Annulla", style: "cancel" },
@@ -445,17 +450,23 @@ function SezioneParcelle() {
             {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 14, fontWeight: "700", marginTop: 6 }} numberOfLines={1}>{p.titolo}</Text> : null}
             <Text style={{ color: t.onSurface, fontSize: 20, fontWeight: "800", marginTop: p.titolo ? 2 : 6, fontVariant: ["tabular-nums"] }}>€ {p.calcolo?.totale?.toFixed(2) || "0.00"}</Text>
             {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
-            {p.emessa ? (
-              <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
-                <Feather name="download" size={14} color={t.onBrand} />
-                <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+            <View style={{ flexDirection: "row", gap: 8, width: "100%", marginTop: SPACING.md }}>
+              {p.emessa ? (
+                <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                  <Feather name="download" size={14} color={t.onBrand} />
+                  <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
+                </Pressable>
+              ) : (
+                <Pressable testID={`emetti-${p.id}`} onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                  <Feather name="check-circle" size={14} color={t.onBrand} />
+                  <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
+                </Pressable>
+              )}
+              <Pressable testID={`modifica-${p.id}`} onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+                <Feather name="edit-2" size={14} color={t.onSurface} />
+                <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 12 }}>Modifica</Text>
               </Pressable>
-            ) : (
-              <Pressable testID={`emetti-${p.id}`} onPress={() => emettiParcella(p)} style={{ flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand, marginTop: SPACING.md, width: "100%" }}>
-                <Feather name="check-circle" size={14} color={t.onBrand} />
-                <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
-              </Pressable>
-            )}
+            </View>
           </View>
         </SwipeToDelete>
       ))}
