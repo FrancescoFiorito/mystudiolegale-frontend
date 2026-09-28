@@ -211,7 +211,7 @@ function SezionePratiche({
 
   return (
     <>
-      <View style={{ backgroundColor: t.surface, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: t.border }}>
+      <View style={{ backgroundColor: t.surface, paddingTop: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: t.border }}>
         <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
           <Feather name="search" size={16} color={t.onSurfaceTertiary} />
           <TextInput testID="pratiche-search" value={q} onChangeText={setQ} placeholder="Cerca pratica..." placeholderTextColor={t.onSurfaceTertiary} style={{ flex: 1, color: t.onSurface, fontSize: 14 }} />
