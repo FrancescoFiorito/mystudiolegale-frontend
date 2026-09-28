@@ -90,9 +90,14 @@ export async function sincronizzaCalendarioDispositivo(): Promise<{ sincronizzat
   let errori = 0;
 
   for (const sc of daSincronizzare) {
-    const inizio = new Date(`${sc.data}T${sc.ora || "09:00"}:00`);
-    const fine = new Date(inizio.getTime() + 60 * 60 * 1000);
-    const dettagli = { title: sc.titolo, notes: sc.descrizione || "", startDate: inizio, endDate: fine, timeZone: "Europe/Rome" };
+    // Senza un orario specifico la scadenza e' "tutta la giornata": un
+    // evento allDay va da mezzanotte a mezzanotte del giorno successivo
+    // (endDate esclusivo), invece della finestra di un'ora usata per un
+    // orario specifico.
+    const tuttoIlGiorno = !sc.ora;
+    const inizio = tuttoIlGiorno ? new Date(`${sc.data}T00:00:00`) : new Date(`${sc.data}T${sc.ora}:00`);
+    const fine = tuttoIlGiorno ? new Date(inizio.getTime() + 24 * 60 * 60 * 1000) : new Date(inizio.getTime() + 60 * 60 * 1000);
+    const dettagli = { title: sc.titolo, notes: sc.descrizione || "", startDate: inizio, endDate: fine, timeZone: "Europe/Rome", allDay: tuttoIlGiorno };
     try {
       const idEsistente = mappa[sc.id];
       if (idEsistente) {

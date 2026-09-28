@@ -11,7 +11,9 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
+import OrarioInput from "@/src/components/OrarioInput";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
+import { formatOra } from "@/src/utils/orario";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -99,7 +101,7 @@ export default function PraticaDetail() {
   };
 
   const openAdd = () => {
-    setAddForm({ tipo: "nota", titolo: "", descrizione: "", data: new Date().toISOString().slice(0, 10), categoria: "generale", priorita: "media", ora: "09:00", contenuto: "" });
+    setAddForm({ tipo: "nota", titolo: "", descrizione: "", data: new Date().toISOString().slice(0, 10), categoria: "generale", priorita: "media", ora: null, contenuto: "" });
     setChecklist([]);
     setNuovaVoce("");
     setPromemoria([1]);
@@ -122,7 +124,7 @@ export default function PraticaDetail() {
       if (tab === "Note") {
         await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
       } else if (tab === "Scadenze") {
-        await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
+        await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora || null, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
         sincronizzaSeConnesso();
       }
       setShowAdd(false); load();
@@ -301,7 +303,7 @@ export default function PraticaDetail() {
                 <View style={{ width: 4, backgroundColor: priColor(sc.priorita, sc.completata) }} />
                 <View style={{ flex: 1, padding: SPACING.md }}>
                   <Text style={{ color: t.onSurface, fontWeight: "700" }}>{sc.titolo}</Text>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{sc.data} · {sc.ora} · {sc.categoria}</Text>
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{sc.data} · {formatOra(sc.ora)} · {sc.categoria}</Text>
                 </View>
                 {!sc.completata ? (
                   <Pressable onPress={() => api.patch(`/scadenze/${sc.id}/complete`).then(load)} style={{ padding: SPACING.md, justifyContent: "center" }}>
@@ -450,9 +452,8 @@ export default function PraticaDetail() {
                   <TextInput testID="add-data" value={addForm.data || ""} onChangeText={(v) => setAddForm({ ...addForm, data: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   {tab === "Scadenze" && (
                     <>
-                      <Text style={s.lbl}>Ora (HH:MM)</Text>
-                      <TextInput testID="add-ora" value={addForm.ora || ""} onChangeText={(v) => setAddForm({ ...addForm, ora: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                      <Text style={s.lbl}>Categoria</Text>
+                      <OrarioInput value={addForm.ora ?? null} onChange={(v) => setAddForm({ ...addForm, ora: v })} />
+                      <Text style={[s.lbl, { marginTop: SPACING.md }]}>Categoria</Text>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                         {["udienza", "deposito", "notifica", "riunione", "generale"].map((c) => (
                           <Pressable key={c} onPress={() => setAddForm({ ...addForm, categoria: c })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: addForm.categoria === c ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>

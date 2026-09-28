@@ -11,6 +11,7 @@ import Header from "@/src/components/Header";
 import LoadingScreen from "@/src/components/LoadingScreen";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
+import { formatOra, chiaveOrdinamentoOra } from "@/src/utils/orario";
 
 type Dash = {
   pratiche_aperte: number;
@@ -126,7 +127,7 @@ export default function Dashboard() {
       ]);
       setData(d);
       const oggi = new Date().toISOString().slice(0, 10);
-      setProssimi((sc || []).filter((s: any) => !s.completata && s.data >= oggi).sort((a: any, b: any) => (a.data + a.ora).localeCompare(b.data + b.ora)).slice(0, 5));
+      setProssimi((sc || []).filter((s: any) => !s.completata && s.data >= oggi).sort((a: any, b: any) => (a.data + chiaveOrdinamentoOra(a.ora)).localeCompare(b.data + chiaveOrdinamentoOra(b.ora))).slice(0, 5));
     } catch {
       setErrore(true);
     }
@@ -233,7 +234,7 @@ export default function Dashboard() {
                 style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 }}
               >
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.brand }} />
-                <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, fontVariant: ["tabular-nums"] }}>{giornoBreve(ev.data)} · {ev.ora}</Text>
+                <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, fontVariant: ["tabular-nums"] }}>{giornoBreve(ev.data)} · {formatOra(ev.ora)}</Text>
                 <Text style={{ color: t.onSurface, fontSize: 12, fontWeight: "600", flex: 1 }} numberOfLines={1}>{ev.titolo}</Text>
               </Pressable>
             ))

@@ -25,6 +25,10 @@ Notifications.setNotificationHandler({
 // qui e letto da Impostazioni (vedi statoPushSalvato/leggiStatoPush), cosi'
 // il problema si vede direttamente nell'app invece che nei log di Xcode.
 const STATO_PUSH_KEY = "push_registration_status";
+// L'unico modo per non ricevere piu' notifiche push era prima negare il
+// permesso dalle Impostazioni di sistema: questa preferenza (di default
+// attiva) permette di disattivarle direttamente dall'app.
+const PREF_PUSH_KEY = "push_abilitato";
 
 type StatoPush = { ok: boolean; messaggio?: string; at: string };
 
@@ -34,6 +38,30 @@ async function salvaStatoPush(stato: StatoPush) {
 
 export async function leggiStatoPush(): Promise<StatoPush | null> {
   return storage.getItem<StatoPush | null>(STATO_PUSH_KEY, null);
+}
+
+export async function leggiPreferenzaPush(): Promise<boolean> {
+  const v = await storage.getItem<boolean>(PREF_PUSH_KEY, true);
+  return v ?? true;
+}
+
+// Disattiva le notifiche push: azzera il token sul backend (che smette
+// cosi' di provare a inviare push a questo utente) e ricorda la
+// preferenza in modo che non venga registrato di nuovo al prossimo avvio.
+export async function disattivaPush(): Promise<void> {
+  await storage.setItem(PREF_PUSH_KEY, false);
+  try {
+    await api.post("/auth/push-token", { token: null });
+  } catch {
+    // Il token verra' comunque ignorato lato client: la preferenza locale
+    // e' la fonte di verita' per l'auto-registrazione al login.
+  }
+  await storage.removeItem(STATO_PUSH_KEY);
+}
+
+export async function attivaPush(): Promise<StatoPush> {
+  await storage.setItem(PREF_PUSH_KEY, true);
+  return registraPushToken();
 }
 
 // Registra il device per le notifiche push (Expo Push Service) e invia il
@@ -88,7 +116,9 @@ export function usePushNotifications() {
 
   React.useEffect(() => {
     if (!user) return;
-    registraPushToken();
+    leggiPreferenzaPush().then((abilitato) => {
+      if (abilitato) registraPushToken();
+    });
   }, [user?.id]);
 
   // Toccando un promemoria di scadenza si viene portati direttamente sul
