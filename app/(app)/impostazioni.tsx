@@ -16,7 +16,7 @@ import {
   disconnettiCalendarioDispositivo,
   sincronizzaCalendarioDispositivo,
 } from "@/src/utils/calendarioDispositivo";
-import { leggiStatoPush, registraPushToken } from "@/src/hooks/use-push-notifications";
+import { leggiStatoPush, leggiPreferenzaPush, attivaPush, disattivaPush } from "@/src/hooks/use-push-notifications";
 
 export default function Impostazioni() {
   const { t, mode, setMode } = useTheme();
@@ -28,30 +28,39 @@ export default function Impostazioni() {
 
   const [dispositivoConnesso, setDispositivoConnesso] = React.useState(false);
   const [statoPush, setStatoPush] = React.useState<{ ok: boolean; messaggio?: string; at: string } | null>(null);
-  const [verificandoPush, setVerificandoPush] = React.useState(false);
+  const [pushAbilitato, setPushAbilitato] = React.useState(true);
+  const [cambiandoPush, setCambiandoPush] = React.useState(false);
 
   const loadStato = React.useCallback(async () => {
     setDispositivoConnesso(await calendarioDispositivoConnesso());
     setStatoPush(await leggiStatoPush());
+    setPushAbilitato(await leggiPreferenzaPush());
   }, []);
   // useFocusEffect invece di useEffect: tornando su questa schermata lo
   // stato del calendario/notifiche va riletto (es. cambiato da un altro
   // punto dell'app, o il permesso revocato dalle Impostazioni di sistema).
   useFocusEffect(React.useCallback(() => { loadStato(); }, [loadStato]));
 
-  // Prima, un fallimento nella registrazione del token push (permesso
-  // negato, credenziali push mancanti sul progetto EAS, ecc.) restava
-  // invisibile fuori da un ambiente di sviluppo: qui si puo' rivedere
-  // l'ultimo risultato e ripetere il tentativo, senza dover collegare un
-  // dispositivo a Xcode per leggere i log.
-  const riprovaPush = async () => {
-    setVerificandoPush(true);
+  // Attiva/disattiva le notifiche push direttamente dall'app, invece di
+  // dover negare il permesso dalle Impostazioni di sistema per fermarle.
+  // Un fallimento nella registrazione (permesso negato, credenziali push
+  // mancanti sul progetto EAS, ecc.) resta visibile qui invece che nei log
+  // di Xcode.
+  const cambiaPush = async () => {
+    setCambiandoPush(true);
     try {
-      const stato = await registraPushToken();
-      setStatoPush(stato);
-      if (!stato.ok) Alert.alert("Notifiche push", stato.messaggio || "Registrazione non riuscita.");
+      if (pushAbilitato) {
+        await disattivaPush();
+        setPushAbilitato(false);
+        setStatoPush(null);
+      } else {
+        const stato = await attivaPush();
+        setPushAbilitato(true);
+        setStatoPush(stato);
+        if (!stato.ok) Alert.alert("Notifiche push", stato.messaggio || "Registrazione non riuscita.");
+      }
     } finally {
-      setVerificandoPush(false);
+      setCambiandoPush(false);
     }
   };
 
@@ -175,12 +184,20 @@ export default function Impostazioni() {
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>NOTIFICHE</Text>
         <Item
-          icon={statoPush?.ok ? "bell" : "bell-off"}
-          label={statoPush?.ok ? "Notifiche push attive" : statoPush ? `Notifiche push non attive: ${statoPush.messaggio}` : "Verifica notifiche push"}
-          onPress={riprovaPush}
-          disabled={verificandoPush}
-          right={verificandoPush ? <ActivityIndicator size="small" color={t.brand} /> : (
-            <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700" }}>Verifica</Text>
+          icon={pushAbilitato && statoPush?.ok ? "bell" : "bell-off"}
+          label={
+            !pushAbilitato
+              ? "Notifiche push disattivate"
+              : statoPush?.ok
+              ? "Notifiche push attive"
+              : statoPush
+              ? `Notifiche push non attive: ${statoPush.messaggio}`
+              : "Notifiche push attive"
+          }
+          onPress={cambiaPush}
+          disabled={cambiandoPush}
+          right={cambiandoPush ? <ActivityIndicator size="small" color={t.brand} /> : (
+            <Text style={{ color: pushAbilitato ? t.error : t.brand, fontSize: 12, fontWeight: "700" }}>{pushAbilitato ? "Disattiva" : "Attiva"}</Text>
           )}
         />
 

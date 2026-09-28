@@ -10,6 +10,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
+import OrarioInput from "@/src/components/OrarioInput";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 
 export default function Calcolatori() {
@@ -39,6 +40,7 @@ export default function Calcolatori() {
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
+  const [oraScad, setOraScad] = React.useState<string | null>(null);
   const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [pratiche, setPratiche] = React.useState<any[]>([]);
   const [praticaId, setPraticaId] = React.useState<string | null>(null);
@@ -103,7 +105,7 @@ export default function Calcolatori() {
     }
     setSaving(true);
     try {
-      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim(), data: risScad.data_calcolata, ora: "09:00", categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim(), data: risScad.data_calcolata, ora: oraScad || null, categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
       sincronizzaSeConnesso();
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
@@ -204,6 +206,7 @@ export default function Calcolatori() {
                           onChange={setPraticaId}
                           helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui e nel calendario."}
                         />
+                        <OrarioInput value={oraScad} onChange={setOraScad} />
                         <PromemoriaInput value={promemoria} onChange={setPromemoria} />
                         <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                           <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva come scadenza"}</Text>

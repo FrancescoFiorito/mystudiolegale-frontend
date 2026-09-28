@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
+import { formatOra, chiaveOrdinamentoOra } from "@/src/utils/orario";
 
 const MONTHS = ["Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno","Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"];
 const DOW = ["L","M","M","G","V","S","D"];
@@ -101,7 +102,7 @@ export default function Calendario() {
       <View style={{ width: 4, backgroundColor: priColor(e.priorita) }} />
       <View style={{ flex: 1, padding: SPACING.md }}>
         <Text style={{ color: t.onSurface, fontWeight: "700" }}>{e.titolo}</Text>
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{e.data} · {e.ora} · {e.categoria}</Text>
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{e.data} · {formatOra(e.ora)} · {e.categoria}</Text>
         {e.pratica ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }}>{e.pratica.numero}</Text> : null}
       </View>
       <Pressable onPress={() => apriSposta(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
@@ -225,7 +226,7 @@ export default function Calendario() {
         {view === "Giorno" && (
           <View style={{ paddingHorizontal: SPACING.lg, paddingTop: SPACING.md }}>
             {(evByDay[toISODate(cursor)] || []).length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun evento in questo giorno</Text> :
-              (evByDay[toISODate(cursor)] || []).sort((a, b) => a.ora.localeCompare(b.ora)).map((e) => <EventCard key={e.id} e={e} />)}
+              (evByDay[toISODate(cursor)] || []).sort((a, b) => chiaveOrdinamentoOra(a.ora).localeCompare(chiaveOrdinamentoOra(b.ora))).map((e) => <EventCard key={e.id} e={e} />)}
           </View>
         )}
 
