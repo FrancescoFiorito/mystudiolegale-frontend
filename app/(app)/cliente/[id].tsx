@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
@@ -17,6 +17,9 @@ export default function ClienteDettaglio() {
   const [cliente, setCliente] = React.useState<any>(null);
   const [pratiche, setPratiche] = React.useState<any[] | null>(null);
   const [q, setQ] = React.useState("");
+  const [showEdit, setShowEdit] = React.useState(false);
+  const [editForm, setEditForm] = React.useState<any>({});
+  const [saving, setSaving] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const [c, p] = await Promise.all([
@@ -31,6 +34,55 @@ export default function ClienteDettaglio() {
   // schermata (es. dopo aver modificato una pratica collegata) resta
   // montata sotto, quindi senza questo i dati non si aggiornerebbero.
   useFocusEffect(React.useCallback(() => { load(); }, [load]));
+
+  const apriModifica = () => {
+    setEditForm({
+      nome: cliente.nome || "",
+      cognome: cliente.cognome || "",
+      ragione_sociale: cliente.ragione_sociale || "",
+      tipo: cliente.tipo || "persona",
+      codice_fiscale: cliente.codice_fiscale || "",
+      partita_iva: cliente.partita_iva || "",
+      pec: cliente.pec || "",
+      email: cliente.email || "",
+      telefono: cliente.telefono || "",
+      indirizzo: cliente.indirizzo || "",
+      citta: cliente.citta || "",
+      cap: cliente.cap || "",
+    });
+    setShowEdit(true);
+  };
+
+  const salvaModifiche = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/clienti/${id}`, editForm);
+      setCliente({ ...cliente, ...editForm });
+      setShowEdit(false);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare le modifiche. Riprova.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const eliminaCliente = () => {
+    Alert.alert("Elimina cliente", "Sei sicuro di voler eliminare questo cliente? L'operazione non è reversibile.", [
+      { text: "Annulla", style: "cancel" },
+      {
+        text: "Elimina",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await api.del(`/clienti/${id}`);
+            router.back();
+          } catch (e: any) {
+            Alert.alert("Errore", e.message || "Impossibile eliminare il cliente. Riprova.");
+          }
+        },
+      },
+    ]);
+  };
 
   if (!cliente) {
     return (
@@ -50,7 +102,22 @@ export default function ClienteDettaglio() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
-      <Header variant="hero" title={nome} subtitle={cliente.tipo === "azienda" ? "Azienda" : "Persona fisica"} onBack={() => router.back()} />
+      <Header
+        variant="hero"
+        title={nome}
+        subtitle={cliente.tipo === "azienda" ? "Azienda" : "Persona fisica"}
+        onBack={() => router.back()}
+        right={
+          <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+            <Pressable testID="edit-cliente" onPress={apriModifica} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+              <Feather name="edit-2" size={17} color={t.onSurfaceSecondary} />
+            </Pressable>
+            <Pressable testID="delete-cliente" onPress={eliminaCliente} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+              <Feather name="trash-2" size={18} color={t.error} />
+            </Pressable>
+          </View>
+        }
+      />
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
         <View style={[s.infoCard, { backgroundColor: t.surface }, SHADOW.card]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.md, marginBottom: SPACING.sm }}>
@@ -100,6 +167,50 @@ export default function ClienteDettaglio() {
           </Pressable>
         ))}
       </ScrollView>
+
+      <Modal visible={showEdit} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowEdit(false)}>
+        <SafeAreaProvider>
+          <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+              <Header variant="hero" title="Modifica cliente" onBack={() => setShowEdit(false)} />
+              <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
+                  {["persona", "azienda"].map((tp) => (
+                    <Pressable key={tp} onPress={() => setEditForm({ ...editForm, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: editForm.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
+                      <Text style={{ color: editForm.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600" }}>{tp}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                {[
+                  ...(editForm.tipo === "azienda"
+                    ? [["ragione_sociale", "Ragione Sociale*"], ["partita_iva", "Partita IVA"]]
+                    : [["nome", "Nome*"], ["cognome", "Cognome"]]),
+                  ["codice_fiscale", "Codice Fiscale"],
+                  ["email", "Email"],
+                  ["telefono", "Telefono"],
+                  ["pec", "PEC"],
+                  ["indirizzo", "Indirizzo"],
+                  ["citta", "Città"],
+                  ["cap", "CAP"],
+                ].map(([k, l]) => (
+                  <View key={k} style={{ marginBottom: SPACING.sm }}>
+                    <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
+                    <TextInput
+                      testID={`edit-cliente-${k}`}
+                      value={editForm[k] || ""}
+                      onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
+                      style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                    />
+                  </View>
+                ))}
+                <Pressable testID="submit-edit-cliente" onPress={salvaModifiche} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                  <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva modifiche"}</Text>
+                </Pressable>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -111,4 +222,6 @@ const s = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, marginBottom: SPACING.sm },
   rowIcon: { width: 40, height: 40, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
   searchBox: { flexDirection: "row", alignItems: "center", borderRadius: RADIUS.md, borderWidth: 1, paddingHorizontal: SPACING.md, paddingVertical: 10, marginBottom: SPACING.sm },
+  lbl: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+  input: { borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, fontSize: 14 },
 });
