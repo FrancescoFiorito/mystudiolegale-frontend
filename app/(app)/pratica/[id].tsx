@@ -31,6 +31,7 @@ export default function PraticaDetail() {
   const [showAdd, setShowAdd] = React.useState(false);
   const [addForm, setAddForm] = React.useState<any>({});
   const [checklist, setChecklist] = React.useState<{ testo: string; fatto: boolean }[]>([]);
+  const [editingNota, setEditingNota] = React.useState<any>(null);
   const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [nuovaVoce, setNuovaVoce] = React.useState("");
   const [uploading, setUploading] = React.useState(false);
@@ -103,8 +104,18 @@ export default function PraticaDetail() {
   const openAdd = () => {
     setAddForm({ tipo: "nota", titolo: "", descrizione: "", data: new Date().toISOString().slice(0, 10), categoria: "generale", priorita: "media", ora: null, contenuto: "" });
     setChecklist([]);
+    setEditingNota(null);
     setNuovaVoce("");
     setPromemoria([1]);
+    setShowAdd(true);
+  };
+
+  const apriModificaNota = (n: any) => {
+    setAddForm({ titolo: n.titolo || "", contenuto: n.contenuto || "" });
+    setChecklist(n.checklist || []);
+    setEditingNota(n);
+    setNuovaVoce("");
+    setTab("Note");
     setShowAdd(true);
   };
 
@@ -122,7 +133,11 @@ export default function PraticaDetail() {
     setSavingAdd(true);
     try {
       if (tab === "Note") {
-        await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
+        if (editingNota) {
+          await api.put(`/note/${editingNota.id}`, { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist, allegati: editingNota.allegati || [] });
+        } else {
+          await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
+        }
       } else if (tab === "Scadenze") {
         await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora || null, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
         sincronizzaSeConnesso();
@@ -280,14 +295,22 @@ export default function PraticaDetail() {
               {note.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessuna nota</Text> :
               note.map((n) => (
                 <View key={n.id} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
-                {n.titolo ? <Text style={{ color: t.onSurface, fontWeight: "700", marginBottom: 4 }}>{n.titolo}</Text> : null}
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                  {n.titolo ? <Text style={{ flex: 1, color: t.onSurface, fontWeight: "700", marginBottom: 4 }}>{n.titolo}</Text> : <View style={{ flex: 1 }} />}
+                  <Pressable testID={`modifica-nota-${n.id}`} onPress={() => apriModificaNota(n)} hitSlop={8} style={{ padding: 2 }}>
+                    <Feather name="edit-2" size={15} color={t.onSurfaceTertiary} />
+                  </Pressable>
+                </View>
                 {n.contenuto ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{n.contenuto}</Text> : null}
                 {(n.checklist || []).length > 0 ? (
-                  <View style={{ marginTop: SPACING.sm, gap: 6 }}>
+                  <View style={{ marginTop: SPACING.sm, gap: 2 }}>
+                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 10, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+                      Da fare ({n.checklist.filter((c: any) => c.fatto).length}/{n.checklist.length})
+                    </Text>
                     {n.checklist.map((c: any, i: number) => (
-                      <Pressable key={i} onPress={() => toggleChecklistItem(n, i)} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                        <Feather name={c.fatto ? "check-square" : "square"} size={16} color={c.fatto ? t.success : t.onSurfaceTertiary} />
-                        <Text style={{ color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
+                      <Pressable key={i} onPress={() => toggleChecklistItem(n, i)} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
+                        <Feather name={c.fatto ? "check-square" : "square"} size={20} color={c.fatto ? t.success : t.onSurfaceTertiary} />
+                        <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -418,7 +441,7 @@ export default function PraticaDetail() {
         <SafeAreaProvider>
         <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header variant="hero" title={`Aggiungi ${tab}`} onBack={() => setShowAdd(false)} />
+            <Header variant="hero" title={editingNota ? "Modifica nota" : `Aggiungi ${tab}`} onBack={() => setShowAdd(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <Text style={s.lbl}>{tab === "Scadenze" ? "Titolo *" : "Titolo"}</Text>
               <TextInput testID="add-titolo" value={addForm.titolo || ""} onChangeText={(v) => setAddForm({ ...addForm, titolo: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
@@ -428,11 +451,11 @@ export default function PraticaDetail() {
                   <TextInput testID="add-contenuto" multiline value={addForm.contenuto || ""} onChangeText={(v) => setAddForm({ ...addForm, contenuto: v })} style={[s.input, { minHeight: 100, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
                   <Text style={[s.lbl, { marginTop: SPACING.md }]}>Checklist</Text>
                   {checklist.map((c, i) => (
-                    <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <Feather name="square" size={16} color={t.onSurfaceTertiary} />
-                      <Text style={{ flex: 1, color: t.onSurface, fontSize: 13 }}>{c.testo}</Text>
-                      <Pressable onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))}><Feather name="x" size={14} color={t.error} /></Pressable>
-                    </View>
+                    <Pressable key={i} onPress={() => setChecklist(checklist.map((it, idx) => idx === i ? { ...it, fatto: !it.fatto } : it))} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
+                      <Feather name={c.fatto ? "check-square" : "square"} size={18} color={c.fatto ? t.success : t.onSurfaceTertiary} />
+                      <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
+                      <Pressable onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))} hitSlop={8} style={{ padding: 4 }}><Feather name="x" size={14} color={t.error} /></Pressable>
+                    </Pressable>
                   ))}
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <TextInput testID="add-checklist-item" value={nuovaVoce} onChangeText={setNuovaVoce} placeholder="Nuova voce checklist" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
