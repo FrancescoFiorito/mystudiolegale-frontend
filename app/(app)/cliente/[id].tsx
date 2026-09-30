@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
@@ -21,6 +22,13 @@ export default function ClienteDettaglio() {
   const [showEdit, setShowEdit] = React.useState(false);
   const [editForm, setEditForm] = React.useState<any>({});
   const [saving, setSaving] = React.useState(false);
+  const [campoCopiato, setCampoCopiato] = React.useState<string | null>(null);
+
+  const copiaValore = async (label: string, valore: string) => {
+    await Clipboard.setStringAsync(valore);
+    setCampoCopiato(label);
+    setTimeout(() => setCampoCopiato((c) => (c === label ? null : c)), 1500);
+  };
 
   const load = React.useCallback(async () => {
     const [c, p] = await Promise.all([
@@ -105,6 +113,18 @@ export default function ClienteDettaglio() {
   const nome = nomeCliente(cliente);
   const iniziali = inizialiCliente(cliente);
 
+  const indirizzoCompleto = [cliente.indirizzo, cliente.cap, cliente.citta].filter(Boolean).join(", ");
+  const campiInfo: { icon: string; label: string; valore: string }[] = [
+    { icon: "mail", label: "Email", valore: cliente.email },
+    { icon: "phone", label: "Telefono", valore: cliente.telefono },
+    { icon: "send", label: "PEC", valore: cliente.pec },
+    { icon: "map-pin", label: "Indirizzo", valore: indirizzoCompleto },
+    { icon: "file-text", label: "Codice Fiscale", valore: cliente.codice_fiscale },
+    { icon: "briefcase", label: "Partita IVA", valore: cliente.partita_iva },
+    { icon: "hash", label: "Codice SDI", valore: cliente.sdi },
+    { icon: "message-square", label: "Note", valore: cliente.note },
+  ].filter((c) => c.valore);
+
   const praticheFiltrate = !pratiche ? null : !q.trim() ? pratiche : pratiche.filter((p) => {
     const qq = q.trim().toLowerCase();
     return (p.oggetto || "").toLowerCase().includes(qq) || (p.controparte || "").toLowerCase().includes(qq);
@@ -136,11 +156,15 @@ export default function ClienteDettaglio() {
             </View>
             <Text style={{ color: t.onSurface, fontSize: 17, fontWeight: "800", flex: 1 }} numberOfLines={1}>{nome}</Text>
           </View>
-          {cliente.email ? <View style={s.infoRow}><Feather name="mail" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{cliente.email}</Text></View> : null}
-          {cliente.telefono ? <View style={s.infoRow}><Feather name="phone" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{cliente.telefono}</Text></View> : null}
-          {cliente.indirizzo ? <View style={s.infoRow}><Feather name="map-pin" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{cliente.indirizzo} {cliente.citta ? `- ${cliente.citta}` : ""}</Text></View> : null}
-          {cliente.codice_fiscale ? <View style={s.infoRow}><Feather name="file-text" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>CF: {cliente.codice_fiscale}</Text></View> : null}
-          {cliente.partita_iva ? <View style={s.infoRow}><Feather name="briefcase" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>P.IVA: {cliente.partita_iva}</Text></View> : null}
+          {campiInfo.length === 0 ? (
+            <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic" }}>Nessun altro dato compilato</Text>
+          ) : campiInfo.map((c) => (
+            <Pressable key={c.label} testID={`copia-${c.label}`} onPress={() => copiaValore(c.label, c.valore)} style={[s.infoRow, { paddingVertical: 4 }]}>
+              <Feather name={c.icon as any} size={14} color={t.onSurfaceTertiary} />
+              <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, flex: 1 }}>{c.valore}</Text>
+              <Feather name={campoCopiato === c.label ? "check" : "copy"} size={13} color={campoCopiato === c.label ? t.success : t.onSurfaceTertiary} />
+            </Pressable>
+          ))}
         </View>
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>PRATICHE ({pratiche?.length ?? 0})</Text>
