@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, Pressable } from "react-
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
 import { SPACING, RADIUS } from "@/src/theme";
+import { nomeCliente, inizialiCliente } from "@/src/utils/cliente";
 
 // Corpo del form "Nuova Pratica", condiviso fra le due schermate che possono
 // ospitarlo (Home e Archivio): lo stato del form resta di proprieta' di chi
@@ -79,9 +80,9 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
               ) : clientiFiltrati.map((c) => (
                 <Pressable key={c.id} testID={`cliente-opzione-${c.id}`} onPress={() => { setForm({ ...form, cliente_id: c.id }); setClienteQ(""); }} style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ color: t.brand, fontSize: 11, fontWeight: "700" }}>{(c.ragione_sociale || c.nome || "?").slice(0, 2).toUpperCase()}</Text>
+                    <Text style={{ color: t.brand, fontSize: 11, fontWeight: "700" }}>{inizialiCliente(c)}</Text>
                   </View>
-                  <Text style={{ color: t.onSurface, fontSize: 13, flex: 1 }} numberOfLines={1}>{c.ragione_sociale || `${c.nome} ${c.cognome || ""}`}</Text>
+                  <Text style={{ color: t.onSurface, fontSize: 13, flex: 1 }} numberOfLines={1}>{nomeCliente(c)}</Text>
                 </Pressable>
               ))}
             </ScrollView>

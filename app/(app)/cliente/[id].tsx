@@ -7,6 +7,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import { nomeCliente, inizialiCliente } from "@/src/utils/cliente";
 
 const statoColor = (t: any, st: string) => st === "Aperta" ? t.info : st === "Chiusa" ? t.success : t.onSurfaceTertiary;
 
@@ -54,6 +55,15 @@ export default function ClienteDettaglio() {
   };
 
   const salvaModifiche = async () => {
+    if (editForm.tipo === "azienda") {
+      if (!editForm.ragione_sociale.trim()) {
+        Alert.alert("Ragione sociale mancante", "Inserisci la ragione sociale del cliente.");
+        return;
+      }
+    } else if (!editForm.nome.trim() || !editForm.cognome.trim()) {
+      Alert.alert("Dati mancanti", "Inserisci nome e cognome del cliente.");
+      return;
+    }
     setSaving(true);
     try {
       await api.put(`/clienti/${id}`, editForm);
@@ -92,8 +102,8 @@ export default function ClienteDettaglio() {
     );
   }
 
-  const nome = cliente.ragione_sociale || `${cliente.nome} ${cliente.cognome || ""}`.trim();
-  const iniziali = nome.trim().slice(0, 2).toUpperCase();
+  const nome = nomeCliente(cliente);
+  const iniziali = inizialiCliente(cliente);
 
   const praticheFiltrate = !pratiche ? null : !q.trim() ? pratiche : pratiche.filter((p) => {
     const qq = q.trim().toLowerCase();
@@ -184,7 +194,7 @@ export default function ClienteDettaglio() {
                 {[
                   ...(editForm.tipo === "azienda"
                     ? [["ragione_sociale", "Ragione Sociale*"], ["partita_iva", "Partita IVA"]]
-                    : [["nome", "Nome*"], ["cognome", "Cognome"]]),
+                    : [["nome", "Nome*"], ["cognome", "Cognome*"]]),
                   ["codice_fiscale", "Codice Fiscale"],
                   ["email", "Email"],
                   ["telefono", "Telefono"],
