@@ -10,6 +10,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
+import { nomeCliente, inizialiCliente } from "@/src/utils/cliente";
 
 export default function Clienti() {
   const { t } = useTheme();
@@ -66,7 +67,15 @@ export default function Clienti() {
   };
 
   const create = async () => {
-    if (!form.nome && !form.ragione_sociale) return;
+    if (form.tipo === "azienda") {
+      if (!form.ragione_sociale.trim()) {
+        Alert.alert("Ragione sociale mancante", "Inserisci la ragione sociale del cliente.");
+        return;
+      }
+    } else if (!form.nome.trim() || !form.cognome.trim()) {
+      Alert.alert("Dati mancanti", "Inserisci nome e cognome del cliente.");
+      return;
+    }
     setSaving(true);
     try {
       const nuovo = await api.post("/clienti", form);
@@ -120,8 +129,8 @@ export default function Clienti() {
             <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun cliente</Text>
           </View>
         ) : items.map((c) => {
-          const name = c.ragione_sociale || `${c.nome} ${c.cognome || ""}`.trim();
-          const initials = name.slice(0, 2).toUpperCase();
+          const name = nomeCliente(c);
+          const initials = inizialiCliente(c);
           return (
             <SwipeToDelete key={c.id} testID={`cliente-${c.id}`} onDelete={() => eliminaCliente(c)}>
               <Pressable testID={`cliente-${c.id}`} onPress={() => router.push({ pathname: "/(app)/cliente/[id]", params: { id: c.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
@@ -170,7 +179,7 @@ export default function Clienti() {
                   </Pressable>
                 ))}
               </View>
-              {form.tipo === "persona" ? (<>{field("nome", "Nome*")}{field("cognome", "Cognome")}{field("codice_fiscale", "Codice Fiscale")}</>) : (<>{field("ragione_sociale", "Ragione Sociale*")}{field("partita_iva", "Partita IVA")}{field("codice_fiscale", "Codice Fiscale")}</>)}
+              {form.tipo === "persona" ? (<>{field("nome", "Nome*")}{field("cognome", "Cognome*")}{field("codice_fiscale", "Codice Fiscale")}</>) : (<>{field("ragione_sociale", "Ragione Sociale*")}{field("partita_iva", "Partita IVA")}{field("codice_fiscale", "Codice Fiscale")}</>)}
               {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address" })}
               {field("telefono", "Telefono", { keyboardType: "phone-pad" })}
               {field("pec", "PEC", { autoCapitalize: "none" })}
