@@ -1,6 +1,6 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -8,6 +8,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { nomeCliente, inizialiCliente } from "@/src/utils/cliente";
 
 const statoColor = (t: any, st: string) => st === "Aperta" ? t.info : st === "Chiusa" ? t.success : t.onSurfaceTertiary;
@@ -202,49 +203,47 @@ export default function ClienteDettaglio() {
         ))}
       </ScrollView>
 
-      <Modal visible={showEdit} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowEdit(false)}>
-        <SafeAreaProvider>
-          <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-              <Header variant="hero" title="Modifica cliente" onBack={() => setShowEdit(false)} />
-              <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
-                <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
-                  {["persona", "azienda"].map((tp) => (
-                    <Pressable key={tp} onPress={() => setEditForm({ ...editForm, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: editForm.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
-                      <Text style={{ color: editForm.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600" }}>{tp}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                {[
-                  ...(editForm.tipo === "azienda"
-                    ? [["ragione_sociale", "Ragione Sociale*"], ["partita_iva", "Partita IVA"]]
-                    : [["nome", "Nome*"], ["cognome", "Cognome*"]]),
-                  ["codice_fiscale", "Codice Fiscale"],
-                  ["email", "Email"],
-                  ["telefono", "Telefono"],
-                  ["pec", "PEC"],
-                  ["indirizzo", "Indirizzo"],
-                  ["citta", "Città"],
-                  ["cap", "CAP"],
-                ].map(([k, l]) => (
-                  <View key={k} style={{ marginBottom: SPACING.sm }}>
-                    <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
-                    <TextInput
-                      testID={`edit-cliente-${k}`}
-                      value={editForm[k] || ""}
-                      onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
-                      style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
-                    />
-                  </View>
+      {showEdit ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowEdit(false)}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <Header variant="hero" title="Modifica cliente" onBack={() => setShowEdit(false)} />
+            <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
+                {["persona", "azienda"].map((tp) => (
+                  <Pressable key={tp} onPress={() => setEditForm({ ...editForm, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: editForm.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
+                    <Text style={{ color: editForm.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600" }}>{tp}</Text>
+                  </Pressable>
                 ))}
-                <Pressable testID="submit-edit-cliente" onPress={salvaModifiche} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
-                  <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva modifiche"}</Text>
-                </Pressable>
-              </ScrollView>
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+              </View>
+              {[
+                ...(editForm.tipo === "azienda"
+                  ? [["ragione_sociale", "Ragione Sociale*"], ["partita_iva", "Partita IVA"]]
+                  : [["nome", "Nome*"], ["cognome", "Cognome*"]]),
+                ["codice_fiscale", "Codice Fiscale"],
+                ["email", "Email"],
+                ["telefono", "Telefono"],
+                ["pec", "PEC"],
+                ["indirizzo", "Indirizzo"],
+                ["citta", "Città"],
+                ["cap", "CAP"],
+              ].map(([k, l]) => (
+                <View key={k} style={{ marginBottom: SPACING.sm }}>
+                  <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
+                  <TextInput
+                    testID={`edit-cliente-${k}`}
+                    value={editForm[k] || ""}
+                    onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
+                    style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                  />
+                </View>
+              ))}
+              <Pressable testID="submit-edit-cliente" onPress={salvaModifiche} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva modifiche"}</Text>
+              </Pressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }

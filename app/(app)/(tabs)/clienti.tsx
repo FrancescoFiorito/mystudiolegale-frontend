@@ -1,13 +1,14 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
-import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 import { nomeCliente, inizialiCliente } from "@/src/utils/cliente";
@@ -91,6 +92,17 @@ export default function Clienti() {
     }
   };
 
+  // Se si era arrivati qui dalla creazione di una pratica e si annulla senza
+  // salvare, si torna comunque alla pratica (che riapre la sua modale)
+  // invece di lasciare l'utente sulla lista Clienti, spaesato rispetto a
+  // cio' che stava facendo.
+  const chiudiNuovoCliente = () => {
+    setShow(false);
+    if (params.returnTo === "pratica") {
+      returnToPratica();
+    }
+  };
+
   const eliminaCliente = (c: any) => {
     const name = c.ragione_sociale || `${c.nome} ${c.cognome || ""}`.trim();
     Alert.alert("Elimina cliente", `Eliminare "${name}"?`, [
@@ -151,24 +163,10 @@ export default function Clienti() {
         <Feather name="plus" size={22} color={t.onBrand} />
       </Pressable>
 
-      <Modal visible={show} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShow(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {show ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={chiudiNuovoCliente}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header
-              variant="hero"
-              title="Nuovo Cliente"
-              onBack={() => {
-                setShow(false);
-                // Se si era arrivati qui dalla creazione di una pratica e si
-                // annulla senza salvare, si torna comunque alla pratica
-                // (che riapre la sua modale) invece di lasciare l'utente
-                // sulla lista Clienti, spaesato rispetto a cio' che stava facendo.
-                if (params.returnTo === "pratica") {
-                  returnToPratica();
-                }
-              }}
-            />
+            <Header variant="hero" title="Nuovo Cliente" onBack={chiudiNuovoCliente} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
                 {["persona", "azienda"].map((tp) => (
@@ -186,9 +184,8 @@ export default function Clienti() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }
