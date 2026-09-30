@@ -1,7 +1,7 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, Modal, KeyboardAvoidingView, Platform, Alert } from "react-native";
-import { SafeAreaView, SafeAreaProvider } from "react-native-safe-area-context";
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
@@ -9,6 +9,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { api } from "@/src/api";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
 import OrarioInput from "@/src/components/OrarioInput";
@@ -395,9 +396,8 @@ export default function PraticaDetail() {
         </Pressable>
       ) : null}
 
-      <Modal visible={showEdit} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowEdit(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {showEdit ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowEdit(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title="Modifica pratica" onBack={() => setShowEdit(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
@@ -433,13 +433,11 @@ export default function PraticaDetail() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
 
-      <Modal visible={showAdd} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowAdd(false)}>
-        <SafeAreaProvider>
-        <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surface }}>
+      {showAdd ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowAdd(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title={editingNota ? "Modifica nota" : `Aggiungi ${tab}`} onBack={() => setShowAdd(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
@@ -502,9 +500,8 @@ export default function PraticaDetail() {
               </Pressable>
             </ScrollView>
           </KeyboardAvoidingView>
-        </SafeAreaView>
-        </SafeAreaProvider>
-      </Modal>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }
