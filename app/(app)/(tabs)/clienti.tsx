@@ -139,8 +139,6 @@ export default function Clienti() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: t.onSurface, fontWeight: "700" }}>{name}</Text>
-                  {c.email ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.email}</Text> : null}
-                  {c.telefono ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>{c.telefono}</Text> : null}
                 </View>
                 <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
               </Pressable>
