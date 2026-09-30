@@ -13,6 +13,8 @@ export type User = {
   ruolo?: "Amministratore" | "Avvocato" | "Collaboratore" | "Segreteria" | string;
   push_token?: string | null;
   email_verified?: boolean;
+  piano?: "free" | "no_ads" | "pro" | "studio" | "illimitato" | string;
+  pubblicita?: boolean;
 };
 
 type RegisterData = {

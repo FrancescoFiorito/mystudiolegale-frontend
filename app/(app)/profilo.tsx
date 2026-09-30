@@ -18,6 +18,8 @@ const initials = (name?: string) => {
   return (parts[0]?.[0] || "").toUpperCase() + (parts[1]?.[0] || "").toUpperCase();
 };
 
+const PIANO_LABEL: Record<string, string> = { free: "Free", no_ads: "No-Ads", pro: "Pro", studio: "Studio", illimitato: "Illimitato" };
+
 export default function Profilo() {
   const { t } = useTheme();
   const { user, logout } = useAuth();
@@ -92,6 +94,16 @@ export default function Profilo() {
       />
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         <Text testID="profilo-nome" style={{ height: 0, width: 0, opacity: 0 }}>{user?.nome ? `${user.nome} ${user.cognome || ""}`.trim() : user?.email}</Text>
+
+        <View testID="profilo-piano" style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+          <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
+            <Feather name="award" size={16} color={t.brand} />
+          </View>
+          <Text style={{ flex: 1, color: t.onSurface, fontSize: 14, fontWeight: "600" }}>Piano</Text>
+          <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: RADIUS.pill, backgroundColor: t.brandSecondary }}>
+            <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700" }}>{PIANO_LABEL[user?.piano || "free"] || user?.piano || "Free"}</Text>
+          </View>
+        </View>
 
         <Item testID="menu-modifica-profilo" icon="edit-2" label="Modifica profilo" onPress={() => setShowEditProfile(true)} />
         <Item testID="menu-cambia-password" icon="lock" label="Cambia password" onPress={() => setShowChangePw(true)} />
