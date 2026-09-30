@@ -15,6 +15,8 @@ export type User = {
   email_verified?: boolean;
   piano?: "free" | "no_ads" | "pro" | "studio" | "illimitato" | string;
   pubblicita?: boolean;
+  piano_programmato?: "free" | "no_ads" | "pro" | "studio" | null;
+  rinnovo_il?: string | null;
 };
 
 type RegisterData = {
