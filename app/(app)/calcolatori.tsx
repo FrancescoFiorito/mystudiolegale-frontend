@@ -231,7 +231,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
 // scritto dall'avvocato, non generato automaticamente.
 type AttoId = "diffida_ad_adempiere" | "messa_in_mora" | "incarico_professionale" | "procura_alle_liti" | "disdetta_locazione";
 
-type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean };
+type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean; opzioni?: { value: string; label: string }[] };
 
 const ATTI: { id: AttoId; titolo: string; sottotitolo: string; icona: string }[] = [
   { id: "diffida_ad_adempiere", titolo: "Diffida ad adempiere", sottotitolo: "Art. 1454 c.c.", icona: "alert-circle" },
@@ -288,7 +288,11 @@ const CAMPI_ATTI: Record<AttoId, CampoAtto[]> = {
     { key: "indirizzo_immobile", label: "Indirizzo dell'immobile", obbligatorio: true },
     { key: "data_contratto", label: "Data del contratto", dataIso: true },
     { key: "data_scadenza_contratto", label: "Data di scadenza del contratto", obbligatorio: true, dataIso: true },
-    { key: "tipo_locazione", label: "Tipo di locazione (abitativo/commerciale)", obbligatorio: true },
+    { key: "tipo_locazione", label: "Tipo di locazione", obbligatorio: true, opzioni: [
+      { value: "abitativo", label: "Abitativa (6 mesi prima)" },
+      { value: "commerciale", label: "Commerciale (12 mesi prima)" },
+      { value: "commerciale_alberghiero", label: "Commerciale con attività alberghiera (18 mesi prima)" },
+    ] },
     { key: "luogo", label: "Luogo" },
     { key: "data", label: "Data", dataIso: true },
   ],
@@ -689,7 +693,9 @@ export default function Calcolatori() {
   const apriAtto = (id: AttoId) => {
     setAttoAperto(id);
     const f: Record<string, string> = {};
-    CAMPI_ATTI[id].forEach((c) => { f[c.key] = c.dataIso && c.key === "data" ? new Date().toISOString().slice(0, 10) : ""; });
+    CAMPI_ATTI[id].forEach((c) => {
+      f[c.key] = c.dataIso && c.key === "data" ? new Date().toISOString().slice(0, 10) : c.opzioni ? c.opzioni[0].value : "";
+    });
     setAttoForm(f);
     setAttoGenerato(null);
   };
@@ -921,13 +927,23 @@ export default function Calcolatori() {
               {attoAperto && CAMPI_ATTI[attoAperto].map((c) => (
                 <View key={c.key}>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.obbligatorio ? " *" : ""}</Text>
-                  <TextInput
-                    testID={`atto-campo-${c.key}`}
-                    value={attoForm[c.key] || ""}
-                    onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
-                    multiline={c.multiline}
-                    style={[st.input, c.multiline ? { minHeight: 80, textAlignVertical: "top" } : null, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
-                  />
+                  {c.opzioni ? (
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
+                      {c.opzioni.map((o) => (
+                        <Pressable key={o.value} testID={`atto-campo-${c.key}-${o.value}`} onPress={() => setAttoForm({ ...attoForm, [c.key]: o.value })} style={[st.pill, { backgroundColor: attoForm[c.key] === o.value ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
+                          <Text style={{ color: attoForm[c.key] === o.value ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{o.label}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : (
+                    <TextInput
+                      testID={`atto-campo-${c.key}`}
+                      value={attoForm[c.key] || ""}
+                      onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
+                      multiline={c.multiline}
+                      style={[st.input, c.multiline ? { minHeight: 80, textAlignVertical: "top" } : null, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                    />
+                  )}
                 </View>
               ))}
               <PraticaPicker

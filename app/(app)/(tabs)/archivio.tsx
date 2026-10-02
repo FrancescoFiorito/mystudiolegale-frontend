@@ -38,7 +38,7 @@ export default function Archivio() {
   const { t } = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string; stato?: string; selectCliente?: string; reopenNew?: string; _t?: string }>();
-  const [tab, setTab] = React.useState<"pratiche" | "documenti" | "parcelle">(params.tab === "documenti" ? "documenti" : params.tab === "parcelle" ? "parcelle" : "pratiche");
+  const [tab, setTab] = React.useState<"pratiche" | "documenti" | "parcelle" | "atti">(params.tab === "documenti" ? "documenti" : params.tab === "parcelle" ? "parcelle" : params.tab === "atti" ? "atti" : "pratiche");
 
   // La schermata resta montata quando si cambia tab (e' una delle 3 tab
   // principali): se si arriva qui di nuovo con parametri diversi (es. dalle
@@ -50,6 +50,7 @@ export default function Archivio() {
   React.useEffect(() => {
     if (params.tab === "documenti") setTab("documenti");
     else if (params.tab === "parcelle") setTab("parcelle");
+    else if (params.tab === "atti") setTab("atti");
     else if (params.tab === "pratiche") setTab("pratiche");
   }, [params.tab, params._t]);
 
@@ -83,6 +84,9 @@ export default function Archivio() {
         <Pressable testID="archivio-tab-parcelle" onPress={() => setTab("parcelle")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "parcelle" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "parcelle" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Parcelle</Text>
         </Pressable>
+        <Pressable testID="archivio-tab-atti" onPress={() => setTab("atti")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "atti" ? t.brand : t.surfaceSecondary }}>
+          <Text style={{ color: tab === "atti" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Atti</Text>
+        </Pressable>
       </View>
       {tab === "pratiche" ? (
         <SezionePratiche
@@ -93,8 +97,10 @@ export default function Archivio() {
         />
       ) : tab === "documenti" ? (
         <SezioneDocumenti />
-      ) : (
+      ) : tab === "parcelle" ? (
         <SezioneParcelle />
+      ) : (
+        <SezioneAtti />
       )}
     </SafeAreaView>
   );
@@ -474,6 +480,59 @@ function SezioneParcelle() {
 
       <Pressable
         testID="calcolatori-fab"
+        onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })}
+        style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
+      >
+        <Feather name="plus" size={22} color={t.onBrand} />
+      </Pressable>
+    </>
+  );
+}
+
+function SezioneAtti() {
+  const { t } = useTheme();
+  const router = useRouter();
+  const [items, setItems] = React.useState<any[] | null>(null);
+
+  const load = React.useCallback(async () => setItems(await api.get("/atti")), []);
+  useFocusEffect(React.useCallback(() => { load(); }, [load]));
+
+  const apriAtto = (a: any) => {
+    scegliAperturaDocumento(`/atti/${a.id}/docx`, `/atti/${a.id}/docx/view-link`, `${a.tipo}.docx`);
+  };
+
+  const eliminaAtto = (a: any) => {
+    Alert.alert("Elimina atto", `Eliminare "${a.titolo}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/atti/${a.id}`); load(); } },
+    ]);
+  };
+
+  return (
+    <>
+      <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
+        {!items ? <ActivityIndicator color={t.brand} /> : items.length === 0 ? (
+          <View style={s.emptyBox}>
+            <Feather name="file-text" size={40} color={t.onSurfaceTertiary} />
+            <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun atto generato</Text>
+          </View>
+        ) : items.map((a) => (
+          <SwipeToDelete key={a.id} testID={`atto-${a.id}`} onDelete={() => eliminaAtto(a)}>
+            <Pressable onPress={() => apriAtto(a)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+              <View style={[s.rowIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={18} color={t.brand} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>
+                {a.pratica ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{a.pratica.oggetto}</Text> : null}
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>Bozza · {a.created_at?.slice(0, 10)}</Text>
+              </View>
+              <Feather name="download" size={16} color={t.onSurfaceTertiary} />
+            </Pressable>
+          </SwipeToDelete>
+        ))}
+      </ScrollView>
+
+      <Pressable
+        testID="calcolatori-fab-atti"
         onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })}
         style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
       >
