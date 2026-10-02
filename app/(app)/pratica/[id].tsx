@@ -14,7 +14,7 @@ import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra } from "@/src/utils/orario";
 
-const TABS = ["Note", "Scadenze", "Parcelle", "Documenti"] as const;
+const TABS = ["Note", "Scadenze", "Parcelle", "Atti", "Documenti"] as const;
 type Tab = typeof TABS[number];
 
 export default function PraticaDetail() {
@@ -26,6 +26,7 @@ export default function PraticaDetail() {
   const [note, setNote] = React.useState<any[]>([]);
   const [scadenze, setScadenze] = React.useState<any[]>([]);
   const [parcelle, setParcelle] = React.useState<any[]>([]);
+  const [atti, setAtti] = React.useState<any[]>([]);
   const [documenti, setDocumenti] = React.useState<any[]>([]);
   const [showAdd, setShowAdd] = React.useState(false);
   const [addForm, setAddForm] = React.useState<any>({});
@@ -41,14 +42,15 @@ export default function PraticaDetail() {
 
   const load = React.useCallback(async () => {
     if (!id) return;
-    const [p, n, sc, par, doc] = await Promise.all([
+    const [p, n, sc, par, att, doc] = await Promise.all([
       api.get(`/pratiche/${id}`),
       api.get(`/pratiche/${id}/note`),
       api.get(`/scadenze?pratica_id=${id}`),
       api.get(`/parcelle?pratica_id=${id}`),
+      api.get(`/atti?pratica_id=${id}`),
       api.get(`/documenti?pratica_id=${id}`),
     ]);
-    setPratica(p); setNote(n); setScadenze(sc); setParcelle(par); setDocumenti(doc);
+    setPratica(p); setNote(n); setScadenze(sc); setParcelle(par); setAtti(att); setDocumenti(doc);
   }, [id]);
 
   // useFocusEffect invece di useEffect: tornando indietro su questa
@@ -199,6 +201,17 @@ export default function PraticaDetail() {
     Alert.alert("Elimina scadenza", `Eliminare "${sc.titolo}"?`, [
       { text: "Annulla", style: "cancel" },
       { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/scadenze/${sc.id}`); sincronizzaSeConnesso(); load(); } },
+    ]);
+  };
+
+  const apriAtto = (a: any) => {
+    scegliAperturaDocumento(`/atti/${a.id}/docx`, `/atti/${a.id}/docx/view-link`, `${a.tipo}.docx`);
+  };
+
+  const eliminaAtto = (a: any) => {
+    Alert.alert("Elimina atto", `Eliminare "${a.titolo}"?`, [
+      { text: "Annulla", style: "cancel" },
+      { text: "Elimina", style: "destructive", onPress: async () => { await api.del(`/atti/${a.id}`); load(); } },
     ]);
   };
 
@@ -358,6 +371,21 @@ export default function PraticaDetail() {
               </View>
             ))
           )}
+          {tab === "Atti" && (
+            <>
+              {atti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun atto generato</Text> :
+                atti.map((a) => (
+                  <Pressable key={a.id} onPress={() => apriAtto(a)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
+                    <View style={[s.docIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={16} color={t.brand} /></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>
+                      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>Bozza · {a.created_at?.slice(0, 10)}</Text>
+                    </View>
+                    <Pressable onPress={() => eliminaAtto(a)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
+                  </Pressable>
+                ))}
+            </>
+          )}
           {tab === "Documenti" && (
             <>
               {documenti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun documento nel fascicolo</Text> :
@@ -377,7 +405,7 @@ export default function PraticaDetail() {
         <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
           {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
         </Pressable>
-      ) : tab === "Scadenze" || tab === "Parcelle" ? (
+      ) : tab === "Scadenze" || tab === "Parcelle" || tab === "Atti" ? (
         <Pressable testID="fab-add" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { praticaId: id, _t: String(Date.now()) } })} style={[s.fab, { backgroundColor: t.brand }]}>
           <Feather name="plus" size={24} color={t.onBrand} />
         </Pressable>
