@@ -17,7 +17,224 @@ import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 type CalcId =
   | "scadenze" | "parcelle"
   | "termini-memorie" | "interessi-legali" | "interessi-mora" | "contributo-unificato"
-  | "rivalutazione-istat" | "imposta-successione" | "compenso-ctu";
+  | "rivalutazione-istat" | "imposta-successione" | "compenso-ctu"
+  | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
+  | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
+  | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione";
+
+// Campo di un calcolatore "generico": una lista di questi descrive un intero
+// form (date, numeri, booleani, scelte multiple) senza dover scrivere una
+// nuova schermata JSX per ciascuno. Usato dai 12 calcolatori sotto, che sono
+// tutti un piccolo form -> un POST -> un risultato da mostrare (ed
+// eventualmente da salvare come scadenza), senza logica particolare propria
+// che giustifichi una schermata dedicata come quelle storiche sopra.
+type CampoGenerico =
+  | { tipo: "data"; key: string; label: string }
+  | { tipo: "data_opzionale"; key: string; label: string }
+  | { tipo: "numero"; key: string; label: string; default?: string }
+  | { tipo: "bool"; key: string; label: string; default?: boolean }
+  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[]; default?: string };
+
+type ConfigGenerico = {
+  campi: CampoGenerico[];
+  endpoint: string;
+  buildBody?: (form: Record<string, any>) => any;
+  risultato: (r: any) => [string, string][];
+  scadenze?: (r: any) => { titolo: string; data: string }[];
+};
+
+const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
+  "termini-impugnazione": {
+    campi: [
+      { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: [
+        { value: "appello", label: "Appello" }, { value: "cassazione", label: "Cassazione" },
+      ] },
+      { tipo: "data", key: "data_pubblicazione", label: "Data pubblicazione sentenza" },
+      { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza (se notificata)" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
+    ],
+    endpoint: "/calc/termini-impugnazione",
+    risultato: (r) => [
+      ["Termine applicabile", r.termine_applicabile],
+      ["Termine lungo (6 mesi da pubblicazione)", r.termine_lungo],
+      ...(r.termine_breve ? ([["Termine breve (da notificazione)", r.termine_breve]] as [string, string][]) : []),
+    ],
+    scadenze: (r) => [{ titolo: `Scadenza impugnazione (${r.tipo})`, data: r.termine_applicabile }],
+  },
+  "opposizione-decreto-ingiuntivo": {
+    campi: [
+      { tipo: "data", key: "data_notifica_decreto", label: "Data notifica del decreto" },
+      { tipo: "numero", key: "giorni_concessi", label: "Giorni concessi dal giudice (vedi il decreto)", default: "40" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
+    ],
+    endpoint: "/calc/opposizione-decreto-ingiuntivo",
+    risultato: (r) => [
+      ["Scadenza opposizione", r.scadenza_opposizione],
+      ["Giorni di sospensione applicati", String(r.giorni_sospensione_applicati)],
+    ],
+    scadenze: (r) => [{ titolo: "Scadenza opposizione a decreto ingiuntivo", data: r.scadenza_opposizione }],
+  },
+  "prescrizione": {
+    campi: [
+      { tipo: "data", key: "data_decorrenza", label: "Data di decorrenza" },
+      { tipo: "scelta", key: "tipo_termine", label: "Tipo di termine", default: "ordinaria_10", opzioni: [
+        { value: "ordinaria_10", label: "Ordinaria - 10 anni (art. 2946 c.c.)" },
+        { value: "fatto_illecito_5", label: "Fatto illecito - 5 anni (art. 2947 c.1 c.c.)" },
+        { value: "circolazione_veicoli_2", label: "Circolazione veicoli - 2 anni (art. 2947 c.2 c.c.)" },
+        { value: "canoni_periodici_5", label: "Canoni periodici - 5 anni (art. 2948 c.c.)" },
+        { value: "trasporto_1", label: "Trasporto - 1 anno (art. 2951 c.c.)" },
+        { value: "assicurazione_2", label: "Assicurazione danni - 2 anni (art. 2952 c.c.)" },
+      ] },
+      { tipo: "data_opzionale", key: "ultimo_atto_interruttivo", label: "Data ultimo atto interruttivo (se presente)" },
+    ],
+    endpoint: "/calc/prescrizione",
+    buildBody: (f) => ({
+      data_decorrenza: f.data_decorrenza,
+      tipo_termine: f.tipo_termine,
+      atti_interruttivi: f.ultimo_atto_interruttivo ? [f.ultimo_atto_interruttivo] : [],
+    }),
+    risultato: (r) => [["Data di prescrizione", r.data_prescrizione], ["Decorrenza effettiva", r.decorrenza_effettiva]],
+    scadenze: (r) => [{ titolo: `Prescrizione (${r.label})`, data: r.data_prescrizione }],
+  },
+  "termini-citazione": {
+    campi: [
+      { tipo: "scelta", key: "direzione", label: "Calcola...", default: "da_notifica", opzioni: [
+        { value: "da_notifica", label: "Udienza minima (da una notifica)" },
+        { value: "da_udienza", label: "Termine ultimo di notifica (da un'udienza)" },
+      ] },
+      { tipo: "data", key: "data", label: "Data" },
+      { tipo: "bool", key: "estero", label: "Notifica all'estero (150gg anziché 90gg)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
+    ],
+    endpoint: "/calc/termini-citazione",
+    risultato: (r) => r.direzione === "da_notifica"
+      ? [["Udienza minima", r.udienza_minima], ["Giorni liberi", String(r.giorni_liberi)]]
+      : [["Notifica entro", r.notifica_entro], ["Giorni liberi", String(r.giorni_liberi)]],
+    scadenze: (r) => r.direzione === "da_notifica"
+      ? [{ titolo: "Udienza minima di comparizione", data: r.udienza_minima }]
+      : [{ titolo: "Termine ultimo notifica citazione", data: r.notifica_entro }],
+  },
+  "precetto": {
+    campi: [
+      { tipo: "data", key: "data_notifica_precetto", label: "Data notifica del precetto" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (dibattuto per l'esecutivo)", default: false },
+    ],
+    endpoint: "/calc/precetto",
+    risultato: (r) => [
+      ["Data minima pignoramento", r.data_minima_pignoramento],
+      ["Scadenza efficacia precetto", r.scadenza_efficacia_precetto],
+    ],
+    scadenze: (r) => [
+      { titolo: "Data minima per il pignoramento", data: r.data_minima_pignoramento },
+      { titolo: "Scadenza efficacia del precetto", data: r.scadenza_efficacia_precetto },
+    ],
+  },
+  "impugnazione-licenziamento": {
+    campi: [
+      { tipo: "data", key: "data_licenziamento", label: "Data di ricezione del licenziamento" },
+    ],
+    endpoint: "/calc/impugnazione-licenziamento",
+    risultato: (r) => [
+      ["Termine impugnazione stragiudiziale", r.termine_impugnazione_stragiudiziale],
+      ["Termine deposito ricorso/conciliazione", r.termine_deposito_ricorso_o_richiesta_conciliazione],
+    ],
+    scadenze: (r) => [
+      { titolo: "Termine impugnazione licenziamento", data: r.termine_impugnazione_stragiudiziale },
+      { titolo: "Termine deposito ricorso o richiesta conciliazione", data: r.termine_deposito_ricorso_o_richiesta_conciliazione },
+    ],
+  },
+  "ricorso-tributario": {
+    campi: [
+      { tipo: "data", key: "data_notifica_atto", label: "Data notifica dell'atto impositivo" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
+    ],
+    endpoint: "/calc/ricorso-tributario",
+    risultato: (r) => [["Scadenza ricorso", r.scadenza_ricorso]],
+    scadenze: (r) => [{ titolo: "Scadenza ricorso tributario", data: r.scadenza_ricorso }],
+  },
+  "ricorso-tar": {
+    campi: [
+      { tipo: "scelta", key: "tipo", label: "Tipo di ricorso", default: "giurisdizionale", opzioni: [
+        { value: "giurisdizionale", label: "Giurisdizionale al TAR (60gg)" },
+        { value: "straordinario", label: "Straordinario al Capo dello Stato (120gg)" },
+      ] },
+      { tipo: "data", key: "data_notifica_o_conoscenza", label: "Data notifica o piena conoscenza" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
+    ],
+    endpoint: "/calc/ricorso-tar",
+    risultato: (r) => [["Scadenza ricorso", r.scadenza_ricorso]],
+    scadenze: (r) => [{ titolo: "Scadenza ricorso TAR", data: r.scadenza_ricorso }],
+  },
+  "termine-querela": {
+    campi: [
+      { tipo: "data", key: "data_notizia_del_fatto", label: "Data della notizia del fatto" },
+      { tipo: "bool", key: "reato_sessuale", label: "Reato contro la libertà sessuale (12 mesi anziché 3)", default: false },
+    ],
+    endpoint: "/calc/termine-querela",
+    risultato: (r) => [["Scadenza querela", r.scadenza_querela]],
+    scadenze: (r) => [{ titolo: "Termine per la querela", data: r.scadenza_querela }],
+  },
+  "disdetta-locazione": {
+    campi: [
+      { tipo: "data", key: "data_scadenza_contratto", label: "Data di scadenza del contratto" },
+      { tipo: "scelta", key: "tipo", label: "Tipo di locazione", default: "abitativo", opzioni: [
+        { value: "abitativo", label: "Abitativa (6 mesi prima)" },
+        { value: "commerciale", label: "Commerciale (12 mesi prima)" },
+        { value: "commerciale_alberghiero", label: "Commerciale con attività alberghiera (18 mesi prima)" },
+      ] },
+    ],
+    endpoint: "/calc/disdetta-locazione",
+    risultato: (r) => [["Termine ultimo per la disdetta", r.termine_ultimo_disdetta]],
+    scadenze: (r) => [{ titolo: "Termine ultimo per la disdetta di locazione", data: r.termine_ultimo_disdetta }],
+  },
+  "parametri-forensi": {
+    campi: [
+      { tipo: "bool", key: "valore_indeterminabile", label: "Valore della causa indeterminabile", default: false },
+      { tipo: "numero", key: "valore_causa", label: "Valore della causa € (fino a 520.000)", default: "" },
+      { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (riduzione del 50%)", default: false },
+    ],
+    endpoint: "/calc/parametri-forensi",
+    risultato: (r) => [
+      ["Fase di studio", `€ ${Number(r.fasi.studio).toFixed(2)}`],
+      ["Fase introduttiva", `€ ${Number(r.fasi.introduttiva).toFixed(2)}`],
+      ["Fase istruttoria", `€ ${Number(r.fasi.istruttoria).toFixed(2)}`],
+      ["Fase decisionale", `€ ${Number(r.fasi.decisionale).toFixed(2)}`],
+      ["Totale medio", `€ ${Number(r.totale_medio).toFixed(2)}`],
+      ...(r.totale_minimo_discrezionale != null
+        ? ([["Range discrezionale del giudice", `€ ${Number(r.totale_minimo_discrezionale).toFixed(2)} - € ${Number(r.totale_massimo_discrezionale).toFixed(2)}`]] as [string, string][])
+        : []),
+    ],
+  },
+  "compenso-mediazione": {
+    campi: [
+      { tipo: "bool", key: "valore_indeterminabile", label: "Valore della lite indeterminabile", default: false },
+      { tipo: "numero", key: "valore_lite", label: "Valore della lite €", default: "" },
+      { tipo: "bool", key: "condizione_procedibilita", label: "Condizione di procedibilità / demandata dal giudice (-1/5)", default: false },
+    ],
+    endpoint: "/calc/compenso-mediazione",
+    risultato: (r) => [
+      ["Spese di avvio (1° incontro)", `€ ${Number(r.spese_avvio_primo_incontro).toFixed(2)}`],
+      ["Spese mediazione (1° incontro)", `€ ${Number(r.spese_mediazione_primo_incontro).toFixed(2)}`],
+      ["Spese mediazione oltre il 1° incontro", `€ ${Number(r.spese_mediazione_minimo_oltre_primo_incontro).toFixed(2)} - € ${Number(r.spese_mediazione_massimo_oltre_primo_incontro).toFixed(2)}`],
+      ["Maggiorazione se accordo al 1° incontro", `+${r.maggiorazione_accordo_primo_incontro_pct}%`],
+      ["Maggiorazione se accordo in incontri successivi", `+${r.maggiorazione_accordo_incontri_successivi_pct}%`],
+    ],
+  },
+};
+
+function defaultGenForm(idc: string): Record<string, any> {
+  const cfg = CONFIG_GENERICI[idc];
+  if (!cfg) return {};
+  const f: Record<string, any> = {};
+  cfg.campi.forEach((c) => {
+    if (c.tipo === "data") f[c.key] = new Date().toISOString().slice(0, 10);
+    else if (c.tipo === "data_opzionale") f[c.key] = "";
+    else if (c.tipo === "numero") f[c.key] = c.default ?? "";
+    else if (c.tipo === "bool") f[c.key] = c.default ?? false;
+    else if (c.tipo === "scelta") f[c.key] = c.default ?? c.opzioni[0]?.value;
+  });
+  return f;
+}
 
 // Hub unico per tutti i calcolatori: sostituisce i vecchi pulsanti separati
 // "Aggiungi scadenza" e "Crea parcella" sparsi per l'app (Dashboard,
@@ -35,6 +252,18 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
   { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
+  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello e Cassazione, artt. 325-327 c.p.c.", icona: "flag" },
+  { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield" },
+  { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw" },
+  { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass" },
+  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Artt. 481-482 c.p.c.", icona: "alert-triangle" },
+  { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x" },
+  { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus" },
+  { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map" },
+  { id: "termine-querela", titolo: "Termine per la querela", sottotitolo: "Art. 124 c.p.", icona: "alert-octagon" },
+  { id: "disdetta-locazione", titolo: "Disdetta di locazione", sottotitolo: "Abitativa o commerciale", icona: "key" },
+  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "DM 147/2022, con gratuito patrocinio", icona: "bar-chart-2" },
+  { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users" },
 ];
 
 const GRADI_SUCCESSIONE = [
@@ -122,6 +351,12 @@ export default function Calcolatori() {
   const [risCtu, setRisCtu] = React.useState<any>(null);
   const [calcolandoCtu, setCalcolandoCtu] = React.useState(false);
   const [savingCtu, setSavingCtu] = React.useState(false);
+  // Calcolatori "generici" (termini di scadenza e parametri forensi, vedi CONFIG_GENERICI)
+  const [genForm, setGenForm] = React.useState<Record<string, any>>({});
+  const [genRisultato, setGenRisultato] = React.useState<any>(null);
+  const [genCalcolando, setGenCalcolando] = React.useState(false);
+  const [genSaving, setGenSaving] = React.useState(false);
+  const [genSalvata, setGenSalvata] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
@@ -333,6 +568,45 @@ export default function Calcolatori() {
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true);
     setRisSucc(null); setSuccValoreQuota(""); setSuccGrado("coniuge_parenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuVacazioni(""); setCtuTariffa(""); setCtuSpese("0"); setCtuMaggiorazione("0"); setTitoloCtu("Compenso CTU");
+    setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
+  };
+
+  const calcolaGenerico = async () => {
+    const cfg = CONFIG_GENERICI[calcAperto as string];
+    if (!cfg) return;
+    Keyboard.dismiss();
+    setGenCalcolando(true);
+    setGenRisultato(null);
+    try {
+      const body = cfg.buildBody
+        ? cfg.buildBody(genForm)
+        : Object.fromEntries(cfg.campi.map((c) => [c.key, c.tipo === "numero" ? (Number(genForm[c.key]) || 0) : genForm[c.key]]));
+      const r = await api.post(cfg.endpoint, body);
+      setGenRisultato(r);
+      setGenSalvata(false);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    } finally {
+      setGenCalcolando(false);
+    }
+  };
+
+  const salvaGenerico = async () => {
+    const cfg = CONFIG_GENERICI[calcAperto as string];
+    if (!cfg?.scadenze || !genRisultato) return;
+    setGenSaving(true);
+    try {
+      const voci = cfg.scadenze(genRisultato);
+      for (const v of voci) {
+        await api.post("/scadenze", { pratica_id: praticaId, titolo: v.titolo, data: v.data, ora: null, categoria: "generale", priorita: "media", promemoria: [1] });
+      }
+      sincronizzaSeConnesso();
+      setGenSalvata(true);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile salvare. Riprova.");
+    } finally {
+      setGenSaving(false);
+    }
   };
 
   const calcolatoreCorrente = CALCOLATORI.find((c) => c.id === calcAperto);
@@ -705,6 +979,79 @@ export default function Calcolatori() {
                           </Pressable>
                         </>
                       ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvata come parcella (in Archivio &gt; Parcelle puoi emetterla e scaricarne il PDF)</Text>}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {calcAperto && CONFIG_GENERICI[calcAperto] ? (
+                <View>
+                  {CONFIG_GENERICI[calcAperto].campi.map((c) => {
+                    if (c.tipo === "data" || c.tipo === "data_opzionale") {
+                      return (
+                        <View key={c.key}>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.tipo === "data" ? " (YYYY-MM-DD)" : " (YYYY-MM-DD, opzionale)"}</Text>
+                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                        </View>
+                      );
+                    }
+                    if (c.tipo === "numero") {
+                      return (
+                        <View key={c.key}>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                        </View>
+                      );
+                    }
+                    if (c.tipo === "bool") {
+                      return (
+                        <Pressable key={c.key} testID={`gen-${c.key}`} onPress={() => setGenForm({ ...genForm, [c.key]: !genForm[c.key] })} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}>
+                          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: genForm[c.key] ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                            {genForm[c.key] ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                          </View>
+                          <Text style={{ color: t.onSurface, flex: 1 }}>{c.label}</Text>
+                        </Pressable>
+                      );
+                    }
+                    return (
+                      <View key={c.key}>
+                        <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
+                          {c.opzioni.map((o) => (
+                            <Pressable key={o.value} testID={`gen-${c.key}-${o.value}`} onPress={() => setGenForm({ ...genForm, [c.key]: o.value })} style={[st.pill, { backgroundColor: genForm[c.key] === o.value ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
+                              <Text style={{ color: genForm[c.key] === o.value ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{o.label}</Text>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  })}
+                  <Pressable testID="btn-calc-gen" onPress={calcolaGenerico} disabled={genCalcolando} style={[st.submit, { backgroundColor: t.brand, opacity: genCalcolando ? 0.6 : 1 }]}>
+                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>{genCalcolando ? "Calcolo..." : "Calcola"}</Text>
+                  </Pressable>
+                  {genRisultato ? (
+                    <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                      {CONFIG_GENERICI[calcAperto].risultato(genRisultato).map(([l, v], i) => (
+                        <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, gap: 8 }}>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 12, flex: 1 }}>{l}</Text>
+                          <Text testID={i === 0 ? "gen-result" : undefined} style={{ color: t.onBrandSecondary, fontSize: 13, fontWeight: "800" }}>{v}</Text>
+                        </View>
+                      ))}
+                      {CONFIG_GENERICI[calcAperto].scadenze ? (
+                        !genSalvata ? (
+                          <>
+                            <PraticaPicker
+                              pratiche={pratiche}
+                              praticaId={praticaId}
+                              onChange={setPraticaId}
+                              helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui e nel calendario."}
+                            />
+                            <Pressable testID="save-gen" onPress={salvaGenerico} disabled={genSaving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: genSaving ? 0.6 : 1 }}>
+                              <Text style={{ color: t.onBrand, fontWeight: "700" }}>{genSaving ? "Salvataggio..." : "Salva come scadenza"}</Text>
+                            </Pressable>
+                          </>
+                        ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvata</Text>
+                      ) : null}
                     </View>
                   ) : null}
                 </View>
