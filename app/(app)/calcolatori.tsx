@@ -11,9 +11,11 @@ import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
+import DataInput from "@/src/components/DataInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
+import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
 
 type CalcId =
   | "scadenze" | "parcelle"
@@ -56,9 +58,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/termini-impugnazione",
     risultato: (r) => [
-      ["Termine applicabile", r.termine_applicabile],
-      ["Termine lungo (6 mesi da pubblicazione)", r.termine_lungo],
-      ...(r.termine_breve ? ([["Termine breve (da notificazione)", r.termine_breve]] as [string, string][]) : []),
+      ["Termine applicabile", isoToDataIt(r.termine_applicabile)],
+      ["Termine lungo (6 mesi da pubblicazione)", isoToDataIt(r.termine_lungo)],
+      ...(r.termine_breve ? ([["Termine breve (da notificazione)", isoToDataIt(r.termine_breve)]] as [string, string][]) : []),
     ],
     scadenze: (r) => [{ titolo: `Scadenza impugnazione (${r.tipo})`, data: r.termine_applicabile }],
   },
@@ -70,7 +72,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/opposizione-decreto-ingiuntivo",
     risultato: (r) => [
-      ["Scadenza opposizione", r.scadenza_opposizione],
+      ["Scadenza opposizione", isoToDataIt(r.scadenza_opposizione)],
       ["Giorni di sospensione applicati", String(r.giorni_sospensione_applicati)],
     ],
     scadenze: (r) => [{ titolo: "Scadenza opposizione a decreto ingiuntivo", data: r.scadenza_opposizione }],
@@ -94,7 +96,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       tipo_termine: f.tipo_termine,
       atti_interruttivi: f.ultimo_atto_interruttivo ? [f.ultimo_atto_interruttivo] : [],
     }),
-    risultato: (r) => [["Data di prescrizione", r.data_prescrizione], ["Decorrenza effettiva", r.decorrenza_effettiva]],
+    risultato: (r) => [["Data di prescrizione", isoToDataIt(r.data_prescrizione)], ["Decorrenza effettiva", isoToDataIt(r.decorrenza_effettiva)]],
     scadenze: (r) => [{ titolo: `Prescrizione (${r.label})`, data: r.data_prescrizione }],
   },
   "termini-citazione": {
@@ -109,8 +111,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/termini-citazione",
     risultato: (r) => r.direzione === "da_notifica"
-      ? [["Udienza minima", r.udienza_minima], ["Giorni liberi", String(r.giorni_liberi)]]
-      : [["Notifica entro", r.notifica_entro], ["Giorni liberi", String(r.giorni_liberi)]],
+      ? [["Udienza minima", isoToDataIt(r.udienza_minima)], ["Giorni liberi", String(r.giorni_liberi)]]
+      : [["Notifica entro", isoToDataIt(r.notifica_entro)], ["Giorni liberi", String(r.giorni_liberi)]],
     scadenze: (r) => r.direzione === "da_notifica"
       ? [{ titolo: "Udienza minima di comparizione", data: r.udienza_minima }]
       : [{ titolo: "Termine ultimo notifica citazione", data: r.notifica_entro }],
@@ -122,8 +124,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/precetto",
     risultato: (r) => [
-      ["Data minima pignoramento", r.data_minima_pignoramento],
-      ["Scadenza efficacia precetto", r.scadenza_efficacia_precetto],
+      ["Data minima pignoramento", isoToDataIt(r.data_minima_pignoramento)],
+      ["Scadenza efficacia precetto", isoToDataIt(r.scadenza_efficacia_precetto)],
     ],
     scadenze: (r) => [
       { titolo: "Data minima per il pignoramento", data: r.data_minima_pignoramento },
@@ -136,8 +138,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/impugnazione-licenziamento",
     risultato: (r) => [
-      ["Termine impugnazione stragiudiziale", r.termine_impugnazione_stragiudiziale],
-      ["Termine deposito ricorso/conciliazione", r.termine_deposito_ricorso_o_richiesta_conciliazione],
+      ["Termine impugnazione stragiudiziale", isoToDataIt(r.termine_impugnazione_stragiudiziale)],
+      ["Termine deposito ricorso/conciliazione", isoToDataIt(r.termine_deposito_ricorso_o_richiesta_conciliazione)],
     ],
     scadenze: (r) => [
       { titolo: "Termine impugnazione licenziamento", data: r.termine_impugnazione_stragiudiziale },
@@ -150,7 +152,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/ricorso-tributario",
-    risultato: (r) => [["Scadenza ricorso", r.scadenza_ricorso]],
+    risultato: (r) => [["Scadenza ricorso", isoToDataIt(r.scadenza_ricorso)]],
     scadenze: (r) => [{ titolo: "Scadenza ricorso tributario", data: r.scadenza_ricorso }],
   },
   "ricorso-tar": {
@@ -163,7 +165,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/ricorso-tar",
-    risultato: (r) => [["Scadenza ricorso", r.scadenza_ricorso]],
+    risultato: (r) => [["Scadenza ricorso", isoToDataIt(r.scadenza_ricorso)]],
     scadenze: (r) => [{ titolo: "Scadenza ricorso TAR", data: r.scadenza_ricorso }],
   },
   "termine-querela": {
@@ -172,7 +174,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "reato_sessuale", label: "Reato contro la libertà sessuale (12 mesi anziché 3)", default: false },
     ],
     endpoint: "/calc/termine-querela",
-    risultato: (r) => [["Scadenza querela", r.scadenza_querela]],
+    risultato: (r) => [["Scadenza querela", isoToDataIt(r.scadenza_querela)]],
     scadenze: (r) => [{ titolo: "Termine per la querela", data: r.scadenza_querela }],
   },
   "disdetta-locazione": {
@@ -185,7 +187,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
     ],
     endpoint: "/calc/disdetta-locazione",
-    risultato: (r) => [["Termine ultimo per la disdetta", r.termine_ultimo_disdetta]],
+    risultato: (r) => [["Termine ultimo per la disdetta", isoToDataIt(r.termine_ultimo_disdetta)]],
     scadenze: (r) => [{ titolo: "Termine ultimo per la disdetta di locazione", data: r.termine_ultimo_disdetta }],
   },
   "parametri-forensi": {
@@ -196,13 +198,13 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/parametri-forensi",
     risultato: (r) => [
-      ["Fase di studio", `€ ${Number(r.fasi.studio).toFixed(2)}`],
-      ["Fase introduttiva", `€ ${Number(r.fasi.introduttiva).toFixed(2)}`],
-      ["Fase istruttoria", `€ ${Number(r.fasi.istruttoria).toFixed(2)}`],
-      ["Fase decisionale", `€ ${Number(r.fasi.decisionale).toFixed(2)}`],
-      ["Totale medio", `€ ${Number(r.totale_medio).toFixed(2)}`],
+      ["Fase di studio", formatEuro(r.fasi.studio)],
+      ["Fase introduttiva", formatEuro(r.fasi.introduttiva)],
+      ["Fase istruttoria", formatEuro(r.fasi.istruttoria)],
+      ["Fase decisionale", formatEuro(r.fasi.decisionale)],
+      ["Totale medio", formatEuro(r.totale_medio)],
       ...(r.totale_minimo_discrezionale != null
-        ? ([["Range discrezionale del giudice", `€ ${Number(r.totale_minimo_discrezionale).toFixed(2)} - € ${Number(r.totale_massimo_discrezionale).toFixed(2)}`]] as [string, string][])
+        ? ([["Range discrezionale del giudice", `${formatEuro(r.totale_minimo_discrezionale)} - ${formatEuro(r.totale_massimo_discrezionale)}`]] as [string, string][])
         : []),
     ],
   },
@@ -214,9 +216,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/compenso-mediazione",
     risultato: (r) => [
-      ["Spese di avvio (1° incontro)", `€ ${Number(r.spese_avvio_primo_incontro).toFixed(2)}`],
-      ["Spese mediazione (1° incontro)", `€ ${Number(r.spese_mediazione_primo_incontro).toFixed(2)}`],
-      ["Spese mediazione oltre il 1° incontro", `€ ${Number(r.spese_mediazione_minimo_oltre_primo_incontro).toFixed(2)} - € ${Number(r.spese_mediazione_massimo_oltre_primo_incontro).toFixed(2)}`],
+      ["Spese di avvio (1° incontro)", formatEuro(r.spese_avvio_primo_incontro)],
+      ["Spese mediazione (1° incontro)", formatEuro(r.spese_mediazione_primo_incontro)],
+      ["Spese mediazione oltre il 1° incontro", `${formatEuro(r.spese_mediazione_minimo_oltre_primo_incontro)} - ${formatEuro(r.spese_mediazione_massimo_oltre_primo_incontro)}`],
       ["Maggiorazione se accordo al 1° incontro", `+${r.maggiorazione_accordo_primo_incontro_pct}%`],
       ["Maggiorazione se accordo in incontri successivi", `+${r.maggiorazione_accordo_incontri_successivi_pct}%`],
     ],
@@ -318,28 +320,31 @@ function defaultGenForm(idc: string): Record<string, any> {
 // voci "storiche" (form a pagina intera, invariati nella logica); gli
 // altri sono i nuovi calcolatori legali aggiunti dopo aver studiato
 // avvocatoandreani.it.
-const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string }[] = [
-  { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock" },
-  { id: "parcelle", titolo: "Parcelle", sottotitolo: "Compensi, spese, CPA, IVA", icona: "dollar-sign" },
-  { id: "termini-memorie", titolo: "Termini memorie ex art. 171-ter c.p.c.", sottotitolo: "Riforma Cartabia, da una data di udienza", icona: "calendar" },
-  { id: "interessi-legali", titolo: "Interessi legali", sottotitolo: "Art. 1284 c.c.", icona: "percent" },
-  { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle" },
-  { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text" },
-  { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
-  { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
-  { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
-  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello e Cassazione, artt. 325-327 c.p.c.", icona: "flag" },
-  { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield" },
-  { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw" },
-  { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass" },
-  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Artt. 481-482 c.p.c.", icona: "alert-triangle" },
-  { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x" },
-  { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus" },
-  { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map" },
-  { id: "termine-querela", titolo: "Termine per la querela", sottotitolo: "Art. 124 c.p.", icona: "alert-octagon" },
-  { id: "disdetta-locazione", titolo: "Disdetta di locazione", sottotitolo: "Abitativa o commerciale", icona: "key" },
-  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "DM 147/2022, con gratuito patrocinio", icona: "bar-chart-2" },
-  { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users" },
+// Ogni calcolatore produce o una data (scadenza/termine) o un importo in
+// euro: la categoria serve solo a raggruppare il picker in due sezioni,
+// cosi' l'utente trova subito il tipo di calcolo che gli serve.
+const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string; categoria: "data" | "euro" }[] = [
+  { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock", categoria: "data" },
+  { id: "termini-memorie", titolo: "Termini memorie ex art. 171-ter c.p.c.", sottotitolo: "Riforma Cartabia, da una data di udienza", icona: "calendar", categoria: "data" },
+  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello e Cassazione, artt. 325-327 c.p.c.", icona: "flag", categoria: "data" },
+  { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield", categoria: "data" },
+  { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw", categoria: "data" },
+  { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass", categoria: "data" },
+  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Artt. 481-482 c.p.c.", icona: "alert-triangle", categoria: "data" },
+  { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x", categoria: "data" },
+  { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus", categoria: "data" },
+  { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map", categoria: "data" },
+  { id: "termine-querela", titolo: "Termine per la querela", sottotitolo: "Art. 124 c.p.", icona: "alert-octagon", categoria: "data" },
+  { id: "disdetta-locazione", titolo: "Disdetta di locazione", sottotitolo: "Abitativa o commerciale", icona: "key", categoria: "data" },
+  { id: "parcelle", titolo: "Parcelle", sottotitolo: "Compensi, spese, CPA, IVA", icona: "dollar-sign", categoria: "euro" },
+  { id: "interessi-legali", titolo: "Interessi legali", sottotitolo: "Art. 1284 c.c.", icona: "percent", categoria: "euro" },
+  { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle", categoria: "euro" },
+  { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text", categoria: "euro" },
+  { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up", categoria: "euro" },
+  { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home", categoria: "euro" },
+  { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase", categoria: "euro" },
+  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "DM 147/2022, con gratuito patrocinio", icona: "bar-chart-2", categoria: "euro" },
+  { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users", categoria: "euro" },
 ];
 
 const GRADI_SUCCESSIONE = [
@@ -477,7 +482,7 @@ export default function Calcolatori() {
   };
   const calcPar = async () => {
     const body: any = {};
-    Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
+    Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
     // In modifica il ricalcolo raffina la stessa parcella: non si deve
@@ -494,7 +499,7 @@ export default function Calcolatori() {
     }
     setSaving(true);
     try {
-      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim(), data: risScad.data_calcolata, ora: oraScad || null, categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${dataPartenza}, ${tipoS}` });
+      await api.post("/scadenze", { pratica_id: praticaId, titolo: titoloScad.trim(), data: risScad.data_calcolata, ora: oraScad || null, categoria: "generale", priorita: "media", promemoria, descrizione: `Partenza: ${isoToDataIt(dataPartenza)}, ${tipoS}` });
       sincronizzaSeConnesso();
       setRisScad({ ...risScad, salvata: true });
     } catch (e: any) {
@@ -507,7 +512,7 @@ export default function Calcolatori() {
     setSaving(true);
     try {
       const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim() };
-      Object.entries(par).forEach(([k, v]) => body[k] = Number(v) || 0);
+      Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       if (params.editId) {
         await api.put(`/parcelle/${params.editId}`, body);
       } else {
@@ -526,8 +531,8 @@ export default function Calcolatori() {
     setCalcolandoTassi(true);
     setRisTassi(null);
     try {
-      const body: any = { capitale: Number(tassiCapitale) || 0, data_inizio: tassiDataInizio, data_fine: tassiDataFine };
-      if (tipo === "interessi-mora") body.maggiorazione_pct = Number(tassiMaggiorazione) || 8;
+      const body: any = { capitale: parseNumeroIt(tassiCapitale), data_inizio: tassiDataInizio, data_fine: tassiDataFine };
+      if (tipo === "interessi-mora") body.maggiorazione_pct = parseNumeroIt(tassiMaggiorazione) || 8;
       const r = await api.post(`/calc/${tipo}`, body);
       setRisTassi(r);
     } catch (e: any) {
@@ -542,7 +547,7 @@ export default function Calcolatori() {
     setCalcolandoCu(true);
     setRisCu(null);
     try {
-      const r = await api.post("/calc/contributo-unificato", { valore_causa: Number(cuValoreCausa) || 0 });
+      const r = await api.post("/calc/contributo-unificato", { valore_causa: parseNumeroIt(cuValoreCausa) });
       setRisCu(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -556,7 +561,7 @@ export default function Calcolatori() {
     setCalcolandoIstat(true);
     setRisIstat(null);
     try {
-      const r = await api.post("/calc/rivalutazione-istat", { capitale: Number(istatCapitale) || 0, indice_iniziale: Number(istatIndiceIniziale) || 0, indice_finale: Number(istatIndiceFinale) || 0 });
+      const r = await api.post("/calc/rivalutazione-istat", { capitale: parseNumeroIt(istatCapitale), indice_iniziale: parseNumeroIt(istatIndiceIniziale), indice_finale: parseNumeroIt(istatIndiceFinale) });
       setRisIstat(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -588,7 +593,7 @@ export default function Calcolatori() {
         { titolo: "3ª memoria ex art. 171-ter c.p.c. (sole repliche)", data: risMem.terza_memoria },
       ];
       for (const v of voci) {
-        await api.post("/scadenze", { pratica_id: praticaId, titolo: v.titolo, data: v.data, ora: null, categoria: "deposito", priorita: "media", promemoria: [1], descrizione: `Udienza del ${risMem.data_udienza}` });
+        await api.post("/scadenze", { pratica_id: praticaId, titolo: v.titolo, data: v.data, ora: null, categoria: "deposito", priorita: "media", promemoria: [1], descrizione: `Udienza del ${isoToDataIt(risMem.data_udienza)}` });
       }
       sincronizzaSeConnesso();
       setRisMem({ ...risMem, salvata: true });
@@ -604,7 +609,7 @@ export default function Calcolatori() {
     setCalcolandoSucc(true);
     setRisSucc(null);
     try {
-      const r = await api.post("/calc/imposta-successione", { valore_quota: Number(succValoreQuota) || 0, grado_parentela: succGrado, disabile_grave: succDisabile });
+      const r = await api.post("/calc/imposta-successione", { valore_quota: parseNumeroIt(succValoreQuota), grado_parentela: succGrado, disabile_grave: succDisabile });
       setRisSucc(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -618,7 +623,7 @@ export default function Calcolatori() {
     setCalcolandoCtu(true);
     setRisCtu(null);
     try {
-      const r = await api.post("/calc/compenso-ctu", { vacazioni: Number(ctuVacazioni) || 0, tariffa_oraria: Number(ctuTariffa) || 0, spese_rimborso: Number(ctuSpese) || 0, maggiorazione_pct: Number(ctuMaggiorazione) || 0 });
+      const r = await api.post("/calc/compenso-ctu", { vacazioni: parseNumeroIt(ctuVacazioni), tariffa_oraria: parseNumeroIt(ctuTariffa), spese_rimborso: parseNumeroIt(ctuSpese), maggiorazione_pct: parseNumeroIt(ctuMaggiorazione) });
       setRisCtu(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -661,7 +666,7 @@ export default function Calcolatori() {
     try {
       const body = cfg.buildBody
         ? cfg.buildBody(genForm)
-        : Object.fromEntries(cfg.campi.map((c) => [c.key, c.tipo === "numero" ? (Number(genForm[c.key]) || 0) : genForm[c.key]]));
+        : Object.fromEntries(cfg.campi.map((c) => [c.key, c.tipo === "numero" ? parseNumeroIt(genForm[c.key]) : genForm[c.key]]));
       const r = await api.post(cfg.endpoint, body);
       setGenRisultato(r);
       setGenSalvata(false);
@@ -728,8 +733,8 @@ export default function Calcolatori() {
   // sia nel caso "locked" sia dentro l'overlay aperto dal picker.
   const contenutoScadenze = (
     <View>
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza (YYYY-MM-DD)</Text>
-      <TextInput testID="scad-data" value={dataPartenza} onChangeText={setDataPartenza} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza</Text>
+      <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita})</Text>
       <TextInput testID="scad-giorni" value={giorni} onChangeText={setGiorni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Unità</Text>
@@ -762,7 +767,7 @@ export default function Calcolatori() {
           {risScad.error ? <Text style={{ color: t.error }}>{risScad.error}</Text> : (
             <>
               <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>DATA CALCOLATA</Text>
-              <Text testID="scad-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{risScad.data_calcolata}</Text>
+              <Text testID="scad-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{isoToDataIt(risScad.data_calcolata)}</Text>
               {risScad.giorni_sospensione_applicati ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Giorni di sospensione feriale: {risScad.giorni_sospensione_applicati}</Text> : null}
               {risScad.prorogato_a_prossimo_feriale ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Prorogato al prossimo giorno feriale</Text> : null}
               {!risScad.salvata ? (
@@ -835,12 +840,12 @@ export default function Calcolatori() {
           ].map(([l, v]) => (
             <View key={l as string} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
               <Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{l}</Text>
-              <Text style={{ color: t.onSurface, fontSize: 13, fontVariant: ["tabular-nums"] }}>€ {Number(v).toFixed(2)}</Text>
+              <Text style={{ color: t.onSurface, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatEuro(v as number)}</Text>
             </View>
           ))}
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingTop: SPACING.sm, marginTop: SPACING.sm, borderTopWidth: 1, borderTopColor: t.border }}>
             <Text style={{ color: t.onSurface, fontSize: 15, fontWeight: "800" }}>TOTALE</Text>
-            <Text testID="par-totale" style={{ color: t.brand, fontSize: 22, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risPar.totale).toFixed(2)}</Text>
+            <Text testID="par-totale" style={{ color: t.brand, fontSize: 22, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risPar.totale)}</Text>
           </View>
           {!risPar.salvata ? (
             <>
@@ -886,7 +891,26 @@ export default function Calcolatori() {
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calcolatori" onBack={() => router.back()} />
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
-        {CALCOLATORI.map((c) => (
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: SPACING.sm }}>
+          Date e scadenze
+        </Text>
+        {CALCOLATORI.filter((c) => c.categoria === "data").map((c) => (
+          <Pressable key={c.id} testID={`calc-${c.id}`} onPress={() => apriCalcolatore(c.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+              <Feather name={c.icona as any} size={18} color={t.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{c.titolo}</Text>
+              <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{c.sottotitolo}</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+          </Pressable>
+        ))}
+
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
+          Importi e compensi
+        </Text>
+        {CALCOLATORI.filter((c) => c.categoria === "euro").map((c) => (
           <Pressable key={c.id} testID={`calc-${c.id}`} onPress={() => apriCalcolatore(c.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
             <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
               <Feather name={c.icona as any} size={18} color={t.brand} />
@@ -935,6 +959,8 @@ export default function Calcolatori() {
                         </Pressable>
                       ))}
                     </View>
+                  ) : c.dataIso ? (
+                    <DataInput testID={`atto-campo-${c.key}`} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
                   ) : (
                     <TextInput
                       testID={`atto-campo-${c.key}`}
@@ -984,8 +1010,8 @@ export default function Calcolatori() {
 
               {calcAperto === "termini-memorie" ? (
                 <View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data udienza di trattazione (YYYY-MM-DD)</Text>
-                  <TextInput testID="mem-udienza" value={memUdienza} onChangeText={setMemUdienza} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data udienza di trattazione</Text>
+                  <DataInput testID="mem-udienza" value={memUdienza} onChange={setMemUdienza} />
                   <Pressable testID="mem-toggle-feriale" onPress={() => setMemEscludiFer(!memEscludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.md }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: memEscludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {memEscludiFer ? <Feather name="check" size={14} color={t.onBrand} /> : null}
@@ -999,9 +1025,9 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>MEMORIE EX ART. 171-TER C.P.C.</Text>
                       <View style={{ marginTop: SPACING.sm, gap: 4 }}>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>1ª memoria (-40 gg): <Text style={{ fontWeight: "800" }}>{risMem.prima_memoria}</Text></Text>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>2ª memoria (-20 gg): <Text style={{ fontWeight: "800" }}>{risMem.seconda_memoria}</Text></Text>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>3ª memoria (-10 gg): <Text style={{ fontWeight: "800" }}>{risMem.terza_memoria}</Text></Text>
+                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>1ª memoria (-40 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
+                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>2ª memoria (-20 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
+                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>3ª memoria (-10 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.terza_memoria)}</Text></Text>
                       </View>
                       {!risMem.salvata ? (
                         <>
@@ -1025,10 +1051,10 @@ export default function Calcolatori() {
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
                   <TextInput testID="tassi-capitale" value={tassiCapitale} onChangeText={setTassiCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal (YYYY-MM-DD)</Text>
-                  <TextInput testID="tassi-data-inizio" value={tassiDataInizio} onChangeText={setTassiDataInizio} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al (YYYY-MM-DD)</Text>
-                  <TextInput testID="tassi-data-fine" value={tassiDataFine} onChangeText={setTassiDataFine} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
+                  <DataInput testID="tassi-data-inizio" value={tassiDataInizio} onChange={setTassiDataInizio} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
+                  <DataInput testID="tassi-data-fine" value={tassiDataFine} onChange={setTassiDataFine} />
                   {calcAperto === "interessi-mora" ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
@@ -1041,12 +1067,12 @@ export default function Calcolatori() {
                   {risTassi ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>INTERESSI MATURATI</Text>
-                      <Text testID="tassi-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risTassi.interessi).toFixed(2)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Totale (capitale + interessi): € {Number(risTassi.totale).toFixed(2)}</Text>
+                      <Text testID="tassi-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risTassi.interessi)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Totale (capitale + interessi): {formatEuro(risTassi.totale)}</Text>
                       {(risTassi.dettaglio || []).map((d: any, i: number) => (
                         <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
-                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{d.dal} → {d.al} ({d.tasso_pct ?? d.tasso_applicato_pct}%)</Text>
-                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>€ {Number(d.interesse).toFixed(2)}</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.tasso_pct ?? d.tasso_applicato_pct}%)</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.interesse)}</Text>
                         </View>
                       ))}
                     </View>
@@ -1064,7 +1090,7 @@ export default function Calcolatori() {
                   {risCu ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CONTRIBUTO UNIFICATO</Text>
-                      <Text testID="cu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risCu.contributo_unificato).toFixed(2)}</Text>
+                      <Text testID="cu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCu.contributo_unificato)}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1087,8 +1113,8 @@ export default function Calcolatori() {
                   {risIstat ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CAPITALE RIVALUTATO</Text>
-                      <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risIstat.capitale_rivalutato).toFixed(2)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Rivalutazione: € {Number(risIstat.rivalutazione).toFixed(2)}</Text>
+                      <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risIstat.capitale_rivalutato)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Rivalutazione: {formatEuro(risIstat.rivalutazione)}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1119,8 +1145,8 @@ export default function Calcolatori() {
                   {risSucc ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>IMPOSTA DI SUCCESSIONE</Text>
-                      <Text testID="succ-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risSucc.imposta).toFixed(2)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Franchigia: € {Number(risSucc.franchigia).toLocaleString("it-IT")} · Aliquota: {risSucc.aliquota_pct}% · Imponibile: € {Number(risSucc.imponibile).toFixed(2)}</Text>
+                      <Text testID="succ-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposta)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Franchigia: {formatEuro(risSucc.franchigia)} · Aliquota: {risSucc.aliquota_pct}% · Imponibile: {formatEuro(risSucc.imponibile)}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -1142,7 +1168,7 @@ export default function Calcolatori() {
                   {risCtu ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>COMPENSO TOTALE</Text>
-                      <Text testID="ctu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risCtu.totale).toFixed(2)}</Text>
+                      <Text testID="ctu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCtu.totale)}</Text>
                       {!risCtu.salvata ? (
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome parcella</Text>
@@ -1175,8 +1201,8 @@ export default function Calcolatori() {
                     if (c.tipo === "data" || c.tipo === "data_opzionale") {
                       return (
                         <View key={c.key}>
-                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.tipo === "data" ? " (YYYY-MM-DD)" : " (YYYY-MM-DD, opzionale)"}</Text>
-                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.tipo === "data_opzionale" ? " (opzionale)" : ""}</Text>
+                          <DataInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
                         </View>
                       );
                     }

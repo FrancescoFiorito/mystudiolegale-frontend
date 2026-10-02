@@ -13,6 +13,7 @@ import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra } from "@/src/utils/orario";
+import { formatEuro } from "@/src/utils/formatoItaliano";
 
 const TABS = ["Note", "Scadenze", "Parcelle", "Atti", "Documenti"] as const;
 type Tab = typeof TABS[number];
@@ -271,7 +272,7 @@ export default function PraticaDetail() {
               {pratica.cliente ? <View style={s.infoRow}><Feather name="user" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{pratica.cliente.ragione_sociale || `${pratica.cliente.nome} ${pratica.cliente.cognome || ""}`}</Text></View> : null}
               {pratica.controparte ? <View style={s.infoRow}><Feather name="users" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>vs {pratica.controparte}</Text></View> : null}
               {pratica.tribunale ? <View style={s.infoRow}><Feather name="home" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{pratica.tribunale}</Text></View> : null}
-              {pratica.valore_causa ? <View style={s.infoRow}><Feather name="euro" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>€ {pratica.valore_causa.toLocaleString("it-IT")}</Text></View> : null}
+              {pratica.valore_causa ? <View style={s.infoRow}><Feather name="euro" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatEuro(pratica.valore_causa)}</Text></View> : null}
             </View>
           </View>
         </View>
