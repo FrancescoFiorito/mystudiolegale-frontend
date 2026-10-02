@@ -23,7 +23,8 @@ type CalcId =
   | "rivalutazione-istat" | "imposta-successione" | "compenso-ctu"
   | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
   | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
-  | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione";
+  | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione"
+  | "giorni-tra-date";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -121,15 +122,33 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "data", key: "data_notifica_precetto", label: "Data notifica del precetto" },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (dibattuto per l'esecutivo)", default: false },
+      { tipo: "scelta", key: "tipo_pignoramento", label: "Termini successivi al pignoramento (facoltativo)", default: "", opzioni: [
+        { value: "", label: "Nessuno" },
+        { value: "mobiliare_immobiliare", label: "Mobiliare/immobiliare (istanza di vendita)" },
+        { value: "presso_terzi", label: "Presso terzi (iscrizione a ruolo)" },
+      ] },
+      { tipo: "data_opzionale", key: "data_pignoramento", label: "Data del pignoramento (se calcoli i termini successivi)" },
     ],
     endpoint: "/calc/precetto",
+    buildBody: (f) => ({
+      data_notifica_precetto: f.data_notifica_precetto,
+      escludi_feriale: f.escludi_feriale,
+      ...(f.tipo_pignoramento ? { tipo_pignoramento: f.tipo_pignoramento, data_pignoramento: f.data_pignoramento } : {}),
+    }),
     risultato: (r) => [
       ["Data minima pignoramento", isoToDataIt(r.data_minima_pignoramento)],
       ["Scadenza efficacia precetto", isoToDataIt(r.scadenza_efficacia_precetto)],
+      ...(r.termine_minimo_istanza_vendita ? ([
+        ["Istanza di vendita - dal", isoToDataIt(r.termine_minimo_istanza_vendita)],
+        ["Istanza di vendita - entro", isoToDataIt(r.termine_massimo_istanza_vendita)],
+      ] as [string, string][]) : []),
+      ...(r.termine_iscrizione_ruolo ? ([["Iscrizione a ruolo entro", isoToDataIt(r.termine_iscrizione_ruolo)]] as [string, string][]) : []),
     ],
     scadenze: (r) => [
       { titolo: "Data minima per il pignoramento", data: r.data_minima_pignoramento },
       { titolo: "Scadenza efficacia del precetto", data: r.scadenza_efficacia_precetto },
+      ...(r.termine_massimo_istanza_vendita ? [{ titolo: "Termine istanza di vendita", data: r.termine_massimo_istanza_vendita }] : []),
+      ...(r.termine_iscrizione_ruolo ? [{ titolo: "Termine iscrizione a ruolo (pignoramento presso terzi)", data: r.termine_iscrizione_ruolo }] : []),
     ],
   },
   "impugnazione-licenziamento": {
@@ -222,6 +241,14 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ["Maggiorazione se accordo al 1° incontro", `+${r.maggiorazione_accordo_primo_incontro_pct}%`],
       ["Maggiorazione se accordo in incontri successivi", `+${r.maggiorazione_accordo_incontri_successivi_pct}%`],
     ],
+  },
+  "giorni-tra-date": {
+    campi: [
+      { tipo: "data", key: "data_iniziale", label: "Data iniziale" },
+      { tipo: "data", key: "data_finale", label: "Data finale" },
+    ],
+    endpoint: "/calc/giorni-tra-date",
+    risultato: (r) => [["Giorni di calendario", String(r.giorni)]],
   },
 };
 
@@ -325,6 +352,7 @@ function defaultGenForm(idc: string): Record<string, any> {
 // cosi' l'utente trova subito il tipo di calcolo che gli serve.
 const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string; categoria: "data" | "euro" }[] = [
   { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock", categoria: "data" },
+  { id: "giorni-tra-date", titolo: "Giorni tra due date", sottotitolo: "Conteggio giorni di calendario", icona: "calendar", categoria: "data" },
   { id: "termini-memorie", titolo: "Termini memorie ex art. 171-ter c.p.c.", sottotitolo: "Riforma Cartabia, da una data di udienza", icona: "calendar", categoria: "data" },
   { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello e Cassazione, artt. 325-327 c.p.c.", icona: "flag", categoria: "data" },
   { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield", categoria: "data" },
@@ -383,6 +411,7 @@ export default function Calcolatori() {
   const [tipoS, setTipoS] = React.useState<"avanti" | "ritroso">("avanti");
   const [unita, setUnita] = React.useState<"giorni" | "mesi" | "anni">("giorni");
   const [escludiFer, setEscludiFer] = React.useState(true);
+  const [escludiCovid, setEscludiCovid] = React.useState(false);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
   const [oraScad, setOraScad] = React.useState<string | null>(null);
@@ -475,7 +504,7 @@ export default function Calcolatori() {
   const calcScad = async () => {
     Keyboard.dismiss();
     try {
-      const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer });
+      const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer, escludi_covid: escludiCovid });
       setRisScad(r);
       setTitoloScad("");
     } catch (e: any) { setRisScad({ error: e.message }); }
@@ -758,6 +787,12 @@ export default function Calcolatori() {
           {escludiFer ? <Feather name="check" size={14} color={t.onBrand} /> : null}
         </View>
         <Text style={{ color: t.onSurface }}>Applica sospensione feriale (1-31 agosto)</Text>
+      </Pressable>
+      <Pressable testID="toggle-covid" onPress={() => setEscludiCovid(!escludiCovid)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
+        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: escludiCovid ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+          {escludiCovid ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+        </View>
+        <Text style={{ color: t.onSurface, flex: 1 }}>Applica sospensione straordinaria COVID-19 (9 marzo - 11 maggio 2020)</Text>
       </Pressable>
       <Pressable testID="btn-calc-scad" onPress={calcScad} style={[st.submit, { backgroundColor: t.brand }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>Calcola</Text>
