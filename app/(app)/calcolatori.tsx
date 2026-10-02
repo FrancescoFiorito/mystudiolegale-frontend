@@ -13,6 +13,7 @@ import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
+import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 
 type CalcId =
   | "scadenze" | "parcelle"
@@ -222,6 +223,77 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
 };
 
+// Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
+// una data ma si genera una bozza di documento Word a partire da campi di
+// testo libero. Solo i 5 atti più standardizzati e meno rischiosi (nessuna
+// argomentazione di merito caso per caso): atto di citazione, comparse e
+// ricorsi restano fuori perché richiederebbero contenuto sostanziale che va
+// scritto dall'avvocato, non generato automaticamente.
+type AttoId = "diffida_ad_adempiere" | "messa_in_mora" | "incarico_professionale" | "procura_alle_liti" | "disdetta_locazione";
+
+type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean };
+
+const ATTI: { id: AttoId; titolo: string; sottotitolo: string; icona: string }[] = [
+  { id: "diffida_ad_adempiere", titolo: "Diffida ad adempiere", sottotitolo: "Art. 1454 c.c.", icona: "alert-circle" },
+  { id: "messa_in_mora", titolo: "Messa in mora", sottotitolo: "Art. 1219 c.c.", icona: "clock" },
+  { id: "incarico_professionale", titolo: "Lettera di incarico professionale", sottotitolo: "Conferimento e accettazione", icona: "file-text" },
+  { id: "procura_alle_liti", titolo: "Procura alle liti", sottotitolo: "Nomina del difensore", icona: "edit-3" },
+  { id: "disdetta_locazione", titolo: "Disdetta di locazione (lettera)", sottotitolo: "Abitativa o commerciale", icona: "key" },
+];
+
+const CAMPI_ATTI: Record<AttoId, CampoAtto[]> = {
+  diffida_ad_adempiere: [
+    { key: "mittente", label: "Mittente (nome/ragione sociale)", obbligatorio: true },
+    { key: "mittente_indirizzo", label: "Indirizzo mittente" },
+    { key: "destinatario", label: "Destinatario", obbligatorio: true },
+    { key: "destinatario_indirizzo", label: "Indirizzo destinatario" },
+    { key: "oggetto_obbligazione", label: "Descrizione dell'obbligazione inadempiuta", obbligatorio: true, multiline: true },
+    { key: "termine_giorni", label: "Termine concesso (giorni)", obbligatorio: true },
+    { key: "luogo", label: "Luogo" },
+    { key: "data", label: "Data", dataIso: true },
+  ],
+  messa_in_mora: [
+    { key: "mittente", label: "Mittente (nome/ragione sociale)", obbligatorio: true },
+    { key: "mittente_indirizzo", label: "Indirizzo mittente" },
+    { key: "destinatario", label: "Destinatario", obbligatorio: true },
+    { key: "destinatario_indirizzo", label: "Indirizzo destinatario" },
+    { key: "descrizione_credito", label: "Descrizione del credito", obbligatorio: true, multiline: true },
+    { key: "data_scadenza_originaria", label: "Data scadenza originaria", dataIso: true },
+    { key: "importo", label: "Importo dovuto €" },
+    { key: "luogo", label: "Luogo" },
+    { key: "data", label: "Data", dataIso: true },
+  ],
+  incarico_professionale: [
+    { key: "avvocato_studio", label: "Avvocato / Studio", obbligatorio: true },
+    { key: "cliente", label: "Cliente", obbligatorio: true },
+    { key: "oggetto_incarico", label: "Oggetto dell'incarico", obbligatorio: true, multiline: true },
+    { key: "compenso_pattuito", label: "Compenso pattuito", obbligatorio: true, multiline: true },
+    { key: "modalita_pagamento", label: "Modalità di pagamento" },
+    { key: "luogo", label: "Luogo" },
+    { key: "data", label: "Data", dataIso: true },
+  ],
+  procura_alle_liti: [
+    { key: "parte_nome", label: "Nome della parte", obbligatorio: true },
+    { key: "parte_cf", label: "Codice fiscale della parte" },
+    { key: "parte_indirizzo", label: "Indirizzo/sede della parte" },
+    { key: "oggetto_procedimento", label: "Oggetto del procedimento", obbligatorio: true, multiline: true },
+    { key: "avvocato_nome", label: "Nome dell'avvocato", obbligatorio: true },
+    { key: "avvocato_foro", label: "Foro di iscrizione dell'avvocato", obbligatorio: true },
+    { key: "luogo", label: "Luogo" },
+    { key: "data", label: "Data", dataIso: true },
+  ],
+  disdetta_locazione: [
+    { key: "mittente", label: "Mittente (nome/ragione sociale)", obbligatorio: true },
+    { key: "destinatario", label: "Destinatario", obbligatorio: true },
+    { key: "indirizzo_immobile", label: "Indirizzo dell'immobile", obbligatorio: true },
+    { key: "data_contratto", label: "Data del contratto", dataIso: true },
+    { key: "data_scadenza_contratto", label: "Data di scadenza del contratto", obbligatorio: true, dataIso: true },
+    { key: "tipo_locazione", label: "Tipo di locazione (abitativo/commerciale)", obbligatorio: true },
+    { key: "luogo", label: "Luogo" },
+    { key: "data", label: "Data", dataIso: true },
+  ],
+};
+
 function defaultGenForm(idc: string): Record<string, any> {
   const cfg = CONFIG_GENERICI[idc];
   if (!cfg) return {};
@@ -357,6 +429,11 @@ export default function Calcolatori() {
   const [genCalcolando, setGenCalcolando] = React.useState(false);
   const [genSaving, setGenSaving] = React.useState(false);
   const [genSalvata, setGenSalvata] = React.useState(false);
+  // Atti (bozze di documenti)
+  const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
+  const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
+  const [attoGenerato, setAttoGenerato] = React.useState<any>(null);
+  const [attoGenerando, setAttoGenerando] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
@@ -609,6 +686,34 @@ export default function Calcolatori() {
     }
   };
 
+  const apriAtto = (id: AttoId) => {
+    setAttoAperto(id);
+    const f: Record<string, string> = {};
+    CAMPI_ATTI[id].forEach((c) => { f[c.key] = c.dataIso && c.key === "data" ? new Date().toISOString().slice(0, 10) : ""; });
+    setAttoForm(f);
+    setAttoGenerato(null);
+  };
+
+  const generaAtto = async () => {
+    if (!attoAperto) return;
+    const mancanti = CAMPI_ATTI[attoAperto].filter((c) => c.obbligatorio && !attoForm[c.key]?.trim());
+    if (mancanti.length) {
+      Alert.alert("Campi mancanti", `Compila: ${mancanti.map((c) => c.label).join(", ")}`);
+      return;
+    }
+    setAttoGenerando(true);
+    try {
+      const r = await api.post("/atti", { tipo: attoAperto, pratica_id: praticaId, campi: attoForm });
+      setAttoGenerato(r);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile generare il documento. Riprova.");
+    } finally {
+      setAttoGenerando(false);
+    }
+  };
+
+  const attoCorrente = ATTI.find((a) => a.id === attoAperto);
+
   const calcolatoreCorrente = CALCOLATORI.find((c) => c.id === calcAperto);
   const headerTitle = locked ? "Modifica parcella" : calcolatoreCorrente ? calcolatoreCorrente.titolo : "Calcolatori";
 
@@ -787,7 +892,71 @@ export default function Calcolatori() {
             <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
           </Pressable>
         ))}
+
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
+          Atti (bozze di documenti)
+        </Text>
+        {ATTI.map((a) => (
+          <Pressable key={a.id} testID={`atto-${a.id}`} onPress={() => apriAtto(a.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
+            <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+              <Feather name={a.icona as any} size={18} color={t.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{a.titolo}</Text>
+              <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{a.sottotitolo}</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+          </Pressable>
+        ))}
       </ScrollView>
+
+      {attoAperto ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setAttoAperto(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <Header variant="hero" title={attoCorrente?.titolo || "Atto"} onBack={() => setAttoAperto(null)} />
+            <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }} keyboardShouldPersistTaps="handled">
+              <Text style={{ color: t.warning, fontSize: 12, marginBottom: SPACING.md }}>
+                Il documento generato è una bozza: va rivista e personalizzata prima dell&apos;invio.
+              </Text>
+              {attoAperto && CAMPI_ATTI[attoAperto].map((c) => (
+                <View key={c.key}>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.obbligatorio ? " *" : ""}</Text>
+                  <TextInput
+                    testID={`atto-campo-${c.key}`}
+                    value={attoForm[c.key] || ""}
+                    onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
+                    multiline={c.multiline}
+                    style={[st.input, c.multiline ? { minHeight: 80, textAlignVertical: "top" } : null, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                  />
+                </View>
+              ))}
+              <PraticaPicker
+                pratiche={pratiche}
+                praticaId={praticaId}
+                onChange={setPraticaId}
+                helperText={praticaId ? "Sarà collegato a quella pratica." : "Non sarà collegato a nessuna pratica."}
+              />
+              <Pressable testID="btn-genera-atto" onPress={generaAtto} disabled={attoGenerando} style={[st.submit, { backgroundColor: t.brand, opacity: attoGenerando ? 0.6 : 1 }]}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{attoGenerando ? "Generazione..." : "Genera documento"}</Text>
+              </Pressable>
+              {attoGenerato ? (
+                <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                  <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>BOZZA GENERATA</Text>
+                  <Text style={{ color: t.onBrandSecondary, marginTop: 4 }}>{attoGenerato.titolo}</Text>
+                  <Pressable
+                    testID="apri-atto-docx"
+                    onPress={() => scegliAperturaDocumento(`/atti/${attoGenerato.id}/docx`, `/atti/${attoGenerato.id}/docx/view-link`, `${attoGenerato.tipo}.docx`)}
+                    style={{ marginTop: SPACING.md, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md }}
+                  >
+                    <Feather name="download" size={14} color={t.onBrand} />
+                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>Apri documento</Text>
+                  </Pressable>
+                </View>
+              ) : null}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SwipeBackScreen>
+      ) : null}
 
       {calcAperto ? (
         <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setCalcAperto(null)}>
