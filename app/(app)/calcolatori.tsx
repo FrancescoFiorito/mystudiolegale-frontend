@@ -11,7 +11,16 @@ import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
+
+type AltroCalcolatore = "interessi-legali" | "interessi-mora" | "contributo-unificato";
+
+const ALTRI_CALCOLATORI: { id: AltroCalcolatore; titolo: string; sottotitolo: string; icona: string }[] = [
+  { id: "interessi-legali", titolo: "Interessi legali", sottotitolo: "Art. 1284 c.c.", icona: "percent" },
+  { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle" },
+  { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text" },
+];
 
 export default function Calcolatori() {
   const { t } = useTheme();
@@ -19,7 +28,7 @@ export default function Calcolatori() {
   const params = useLocalSearchParams<{ tab?: string; _t?: string; editId?: string }>();
   const locked = params.tab === "parcelle" || params.tab === "scadenze";
   const isEditingPar = params.tab === "parcelle" && !!params.editId;
-  const [tab, setTab] = React.useState<"scadenze" | "parcelle">(params.tab === "parcelle" ? "parcelle" : "scadenze");
+  const [tab, setTab] = React.useState<"scadenze" | "parcelle" | "altro">(params.tab === "parcelle" ? "parcelle" : "scadenze");
   const scrollRef = React.useRef<ScrollView>(null);
 
   // La schermata resta montata da una visita all'altra: se si arriva qui di
@@ -49,6 +58,15 @@ export default function Calcolatori() {
   const [risPar, setRisPar] = React.useState<any>(null);
   const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  // Altri calcolatori (interessi legali/mora, contributo unificato)
+  const [altroAperto, setAltroAperto] = React.useState<AltroCalcolatore | null>(null);
+  const [altroCapitale, setAltroCapitale] = React.useState("");
+  const [altroDataInizio, setAltroDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
+  const [altroDataFine, setAltroDataFine] = React.useState(new Date().toISOString().slice(0, 10));
+  const [altroMaggiorazione, setAltroMaggiorazione] = React.useState("8");
+  const [altroValoreCausa, setAltroValoreCausa] = React.useState("");
+  const [risAltro, setRisAltro] = React.useState<any>(null);
+  const [calcolandoAltro, setCalcolandoAltro] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
@@ -132,6 +150,36 @@ export default function Calcolatori() {
     }
   };
 
+  const apriAltro = (tipo: AltroCalcolatore) => {
+    setAltroAperto(tipo);
+    setAltroCapitale("");
+    setAltroDataInizio(new Date().toISOString().slice(0, 10));
+    setAltroDataFine(new Date().toISOString().slice(0, 10));
+    setAltroMaggiorazione("8");
+    setAltroValoreCausa("");
+    setRisAltro(null);
+  };
+
+  const calcolaAltro = async () => {
+    Keyboard.dismiss();
+    setCalcolandoAltro(true);
+    setRisAltro(null);
+    try {
+      let r: any;
+      if (altroAperto === "interessi-legali") {
+        r = await api.post("/calc/interessi-legali", { capitale: Number(altroCapitale) || 0, data_inizio: altroDataInizio, data_fine: altroDataFine });
+      } else if (altroAperto === "interessi-mora") {
+        r = await api.post("/calc/interessi-mora", { capitale: Number(altroCapitale) || 0, data_inizio: altroDataInizio, data_fine: altroDataFine, maggiorazione_pct: Number(altroMaggiorazione) || 8 });
+      } else if (altroAperto === "contributo-unificato") {
+        r = await api.post("/calc/contributo-unificato", { valore_causa: Number(altroValoreCausa) || 0 });
+      }
+      setRisAltro(r);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    } finally {
+      setCalcolandoAltro(false);
+    }
+  };
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
@@ -145,6 +193,10 @@ export default function Calcolatori() {
           <Pressable testID="calc-tab-parcelle" onPress={() => setTab("parcelle")} style={[st.tab, { backgroundColor: tab === "parcelle" ? t.brand : t.surfaceSecondary }]}>
             <Feather name="dollar-sign" size={16} color={tab === "parcelle" ? t.onBrand : t.onSurfaceSecondary} />
             <Text style={{ color: tab === "parcelle" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700" }}>Parcelle</Text>
+          </Pressable>
+          <Pressable testID="calc-tab-altro" onPress={() => setTab("altro")} style={[st.tab, { backgroundColor: tab === "altro" ? t.brand : t.surfaceSecondary }]}>
+            <Feather name="grid" size={16} color={tab === "altro" ? t.onBrand : t.onSurfaceSecondary} />
+            <Text style={{ color: tab === "altro" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700" }}>Altro</Text>
           </Pressable>
         </View>
       )}
@@ -218,7 +270,7 @@ export default function Calcolatori() {
               </View>
             ) : null}
           </View>
-        ) : (
+        ) : tab === "parcelle" ? (
           <View>
             {[
               ["fase_studio", "Fase studio €"],
@@ -289,9 +341,80 @@ export default function Calcolatori() {
               </View>
             ) : null}
           </View>
+        ) : (
+          <View>
+            {ALTRI_CALCOLATORI.map((c) => (
+              <Pressable key={c.id} testID={`altro-${c.id}`} onPress={() => apriAltro(c.id)} style={[st.altroCard, { backgroundColor: t.surface, borderColor: t.border }]}>
+                <View style={[st.altroIcon, { backgroundColor: t.brandSecondary }]}>
+                  <Feather name={c.icona as any} size={18} color={t.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{c.titolo}</Text>
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{c.sottotitolo}</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+              </Pressable>
+            ))}
+          </View>
         )}
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {altroAperto ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setAltroAperto(null)}>
+          <Header variant="hero" title={ALTRI_CALCOLATORI.find((c) => c.id === altroAperto)?.titolo || "Calcolatore"} onBack={() => setAltroAperto(null)} />
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
+              {altroAperto === "contributo-unificato" ? (
+                <>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della causa €</Text>
+                  <TextInput testID="altro-valore-causa" value={altroValoreCausa} onChangeText={setAltroValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                </>
+              ) : (
+                <>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
+                  <TextInput testID="altro-capitale" value={altroCapitale} onChangeText={setAltroCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal (YYYY-MM-DD)</Text>
+                  <TextInput testID="altro-data-inizio" value={altroDataInizio} onChangeText={setAltroDataInizio} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al (YYYY-MM-DD)</Text>
+                  <TextInput testID="altro-data-fine" value={altroDataFine} onChangeText={setAltroDataFine} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  {altroAperto === "interessi-mora" ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
+                      <TextInput testID="altro-maggiorazione" value={altroMaggiorazione} onChangeText={setAltroMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+                </>
+              )}
+              <Pressable testID="btn-calc-altro" onPress={calcolaAltro} disabled={calcolandoAltro} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoAltro ? 0.6 : 1 }]}>
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoAltro ? "Calcolo..." : "Calcola"}</Text>
+              </Pressable>
+              {risAltro ? (
+                <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                  {altroAperto === "contributo-unificato" ? (
+                    <>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CONTRIBUTO UNIFICATO</Text>
+                      <Text testID="altro-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risAltro.contributo_unificato).toFixed(2)}</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>INTERESSI MATURATI</Text>
+                      <Text testID="altro-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>€ {Number(risAltro.interessi).toFixed(2)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Totale (capitale + interessi): € {Number(risAltro.totale).toFixed(2)}</Text>
+                      {(risAltro.dettaglio || []).map((d: any, i: number) => (
+                        <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{d.dal} → {d.al} ({d.tasso_pct ?? d.tasso_applicato_pct}%)</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>€ {Number(d.interesse).toFixed(2)}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
+                </View>
+              ) : null}
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -303,4 +426,6 @@ const st = StyleSheet.create({
   pill: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.pill, borderWidth: 1 },
   submit: { marginTop: SPACING.lg, paddingVertical: SPACING.md, borderRadius: RADIUS.md, alignItems: "center" },
   result: { marginTop: SPACING.lg, padding: SPACING.md, borderRadius: RADIUS.lg, borderWidth: 0 },
+  altroCard: { flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, borderWidth: 1, marginBottom: SPACING.sm },
+  altroIcon: { width: 38, height: 38, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center" },
 });
