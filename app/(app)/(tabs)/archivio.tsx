@@ -473,8 +473,8 @@ function SezioneParcelle() {
     </ScrollView>
 
       <Pressable
-        testID="new-parcella-fab"
-        onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", _t: String(Date.now()) } })}
+        testID="calcolatori-fab"
+        onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })}
         style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
       >
         <Feather name="plus" size={22} color={t.onBrand} />

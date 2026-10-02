@@ -11,8 +11,6 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
-import PromemoriaInput from "@/src/components/PromemoriaInput";
-import OrarioInput from "@/src/components/OrarioInput";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra } from "@/src/utils/orario";
 
@@ -33,7 +31,6 @@ export default function PraticaDetail() {
   const [addForm, setAddForm] = React.useState<any>({});
   const [checklist, setChecklist] = React.useState<{ testo: string; fatto: boolean }[]>([]);
   const [editingNota, setEditingNota] = React.useState<any>(null);
-  const [promemoria, setPromemoria] = React.useState<number[]>([1]);
   const [nuovaVoce, setNuovaVoce] = React.useState("");
   const [uploading, setUploading] = React.useState(false);
   const [showEdit, setShowEdit] = React.useState(false);
@@ -103,11 +100,10 @@ export default function PraticaDetail() {
   };
 
   const openAdd = () => {
-    setAddForm({ tipo: "nota", titolo: "", descrizione: "", data: new Date().toISOString().slice(0, 10), categoria: "generale", priorita: "media", ora: null, contenuto: "" });
+    setAddForm({ titolo: "", contenuto: "" });
     setChecklist([]);
     setEditingNota(null);
     setNuovaVoce("");
-    setPromemoria([1]);
     setShowAdd(true);
   };
 
@@ -127,21 +123,12 @@ export default function PraticaDetail() {
   };
 
   const submitAdd = async () => {
-    if (tab === "Scadenze" && !addForm.titolo?.trim()) {
-      Alert.alert("Nome mancante", "Inserisci un nome per la scadenza.");
-      return;
-    }
     setSavingAdd(true);
     try {
-      if (tab === "Note") {
-        if (editingNota) {
-          await api.put(`/note/${editingNota.id}`, { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist, allegati: editingNota.allegati || [] });
-        } else {
-          await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
-        }
-      } else if (tab === "Scadenze") {
-        await api.post("/scadenze", { pratica_id: id, titolo: addForm.titolo, descrizione: addForm.descrizione, data: addForm.data, ora: addForm.ora || null, categoria: addForm.categoria, priorita: addForm.priorita, promemoria });
-        sincronizzaSeConnesso();
+      if (editingNota) {
+        await api.put(`/note/${editingNota.id}`, { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist, allegati: editingNota.allegati || [] });
+      } else {
+        await api.post("/note", { pratica_id: id, titolo: addForm.titolo, contenuto: addForm.contenuto, checklist });
       }
       setShowAdd(false); load();
     } catch (e: any) {
@@ -390,8 +377,8 @@ export default function PraticaDetail() {
         <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
           {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
         </Pressable>
-      ) : tab === "Scadenze" ? (
-        <Pressable testID="fab-add" onPress={openAdd} style={[s.fab, { backgroundColor: t.brand }]}>
+      ) : tab === "Scadenze" || tab === "Parcelle" ? (
+        <Pressable testID="fab-add" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { praticaId: id, _t: String(Date.now()) } })} style={[s.fab, { backgroundColor: t.brand }]}>
           <Feather name="plus" size={24} color={t.onBrand} />
         </Pressable>
       ) : null}
@@ -439,62 +426,29 @@ export default function PraticaDetail() {
       {showAdd ? (
         <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowAdd(false)}>
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <Header variant="hero" title={editingNota ? "Modifica nota" : `Aggiungi ${tab}`} onBack={() => setShowAdd(false)} />
+            <Header variant="hero" title={editingNota ? "Modifica nota" : "Aggiungi nota"} onBack={() => setShowAdd(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
-              <Text style={s.lbl}>{tab === "Scadenze" ? "Titolo *" : "Titolo"}</Text>
+              <Text style={s.lbl}>Titolo</Text>
               <TextInput testID="add-titolo" value={addForm.titolo || ""} onChangeText={(v) => setAddForm({ ...addForm, titolo: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-              {tab === "Note" ? (
-                <>
-                  <Text style={s.lbl}>Contenuto</Text>
-                  <TextInput testID="add-contenuto" multiline value={addForm.contenuto || ""} onChangeText={(v) => setAddForm({ ...addForm, contenuto: v })} style={[s.input, { minHeight: 100, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
-                  <Text style={[s.lbl, { marginTop: SPACING.md }]}>Checklist</Text>
-                  {checklist.map((c, i) => (
-                    <Pressable key={i} onPress={() => setChecklist(checklist.map((it, idx) => idx === i ? { ...it, fatto: !it.fatto } : it))} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
-                      <Feather name={c.fatto ? "check-square" : "square"} size={18} color={c.fatto ? t.success : t.onSurfaceTertiary} />
-                      <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
-                      <Pressable onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))} hitSlop={8} style={{ padding: 4 }}><Feather name="x" size={14} color={t.error} /></Pressable>
-                    </Pressable>
-                  ))}
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    <TextInput testID="add-checklist-item" value={nuovaVoce} onChangeText={setNuovaVoce} placeholder="Nuova voce checklist" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                    <Pressable onPress={aggiungiVoceChecklist} style={{ paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, alignItems: "center", justifyContent: "center" }}>
-                      <Feather name="plus" size={18} color={t.onBrandSecondary} />
-                    </Pressable>
-                  </View>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
-                    Per allegare un file a questa pratica usa la tab "Documenti".
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={s.lbl}>Descrizione</Text>
-                  <TextInput testID="add-descrizione" multiline value={addForm.descrizione || ""} onChangeText={(v) => setAddForm({ ...addForm, descrizione: v })} style={[s.input, { minHeight: 80, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
-                  <Text style={s.lbl}>Data (YYYY-MM-DD)</Text>
-                  <TextInput testID="add-data" value={addForm.data || ""} onChangeText={(v) => setAddForm({ ...addForm, data: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  {tab === "Scadenze" && (
-                    <>
-                      <OrarioInput value={addForm.ora ?? null} onChange={(v) => setAddForm({ ...addForm, ora: v })} />
-                      <Text style={[s.lbl, { marginTop: SPACING.md }]}>Categoria</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                        {["udienza", "deposito", "notifica", "riunione", "generale"].map((c) => (
-                          <Pressable key={c} onPress={() => setAddForm({ ...addForm, categoria: c })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: addForm.categoria === c ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
-                            <Text style={{ color: addForm.categoria === c ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{c}</Text>
-                          </Pressable>
-                        ))}
-                      </ScrollView>
-                      <Text style={[s.lbl, { marginTop: SPACING.md }]}>Priorità</Text>
-                      <View style={{ flexDirection: "row", gap: 8 }}>
-                        {["bassa", "media", "alta"].map((p) => (
-                          <Pressable key={p} onPress={() => setAddForm({ ...addForm, priorita: p })} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: addForm.priorita === p ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
-                            <Text style={{ color: addForm.priorita === p ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, textTransform: "capitalize" }}>{p}</Text>
-                          </Pressable>
-                        ))}
-                      </View>
-                      <PromemoriaInput value={promemoria} onChange={setPromemoria} />
-                    </>
-                  )}
-                </>
-              )}
+              <Text style={s.lbl}>Contenuto</Text>
+              <TextInput testID="add-contenuto" multiline value={addForm.contenuto || ""} onChangeText={(v) => setAddForm({ ...addForm, contenuto: v })} style={[s.input, { minHeight: 100, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
+              <Text style={[s.lbl, { marginTop: SPACING.md }]}>Checklist</Text>
+              {checklist.map((c, i) => (
+                <Pressable key={i} onPress={() => setChecklist(checklist.map((it, idx) => idx === i ? { ...it, fatto: !it.fatto } : it))} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
+                  <Feather name={c.fatto ? "check-square" : "square"} size={18} color={c.fatto ? t.success : t.onSurfaceTertiary} />
+                  <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
+                  <Pressable onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))} hitSlop={8} style={{ padding: 4 }}><Feather name="x" size={14} color={t.error} /></Pressable>
+                </Pressable>
+              ))}
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TextInput testID="add-checklist-item" value={nuovaVoce} onChangeText={setNuovaVoce} placeholder="Nuova voce checklist" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                <Pressable onPress={aggiungiVoceChecklist} style={{ paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, alignItems: "center", justifyContent: "center" }}>
+                  <Feather name="plus" size={18} color={t.onBrandSecondary} />
+                </Pressable>
+              </View>
+              <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
+                Per allegare un file a questa pratica usa la tab "Documenti".
+              </Text>
               <Pressable testID="submit-add" onPress={submitAdd} disabled={savingAdd} style={{ marginTop: SPACING.xl, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingAdd ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingAdd ? "Salvataggio..." : "Salva"}</Text>
               </Pressable>

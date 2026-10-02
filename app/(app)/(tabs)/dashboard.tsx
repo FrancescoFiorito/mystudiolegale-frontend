@@ -247,15 +247,9 @@ export default function Dashboard() {
           <Feather name="chevron-right" size={20} color={t.onBrand} />
         </Pressable>
 
-        <Pressable testID="crea-parcella-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "parcelle", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
-          <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={22} color={t.brand} /></View>
-          <Text style={[s.bannerTitle, { color: t.onSurface }]}>Crea parcella</Text>
-          <Feather name="chevron-right" size={20} color={t.onSurfaceTertiary} />
-        </Pressable>
-
-        <Pressable testID="aggiungi-scadenza-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { tab: "scadenze", _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
-          <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="calendar" size={22} color={t.brand} /></View>
-          <Text style={[s.bannerTitle, { color: t.onSurface }]}>Aggiungi scadenza</Text>
+        <Pressable testID="calcolatori-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
+          <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="percent" size={22} color={t.brand} /></View>
+          <Text style={[s.bannerTitle, { color: t.onSurface }]}>Calcolatori</Text>
           <Feather name="chevron-right" size={20} color={t.onSurfaceTertiary} />
         </Pressable>
 
