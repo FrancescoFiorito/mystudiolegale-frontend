@@ -419,7 +419,19 @@ export default function Calcolatori() {
   const [pratiche, setPratiche] = React.useState<any[]>([]);
   const [praticaId, setPraticaId] = React.useState<string | null>(params.praticaId || null);
   // Parcelle
-  const [par, setPar] = React.useState<any>({ fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "", fase_esecutiva: "", diritti: "", anticipazioni: "", spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0" });
+  const [par, setPar] = React.useState<any>({ fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "", fase_esecutiva: "", diritti: "", maggiorazione_discrezionale_pct: "0", spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0" });
+  // Campi non numerici del preventivo (sezioni Avvocato/Parte
+  // assistita/Procedimento/Altri dati di Andreani): tenuti separati da `par`
+  // perché quest'ultimo viene convertito in blocco con parseNumeroIt prima
+  // di ogni calcolo/salvataggio, il che corromperebbe un testo libero.
+  const [parDati, setParDati] = React.useState<any>({
+    avvocato_nome: "", studio_indirizzo: "", studio_cf: "", ordine_avvocati: "", studio_assicurazione: "",
+    parte_persona_giuridica: false, parte_rappresentante_legale: "",
+    competenza: "", ufficio_giudiziario: "Tribunale", sede_ufficio: "",
+    accessori_di_legge: true, intestazione_studio: "", luogo: "",
+    data_preventivo: new Date().toISOString().slice(0, 10),
+  });
+  const [vociSpese, setVociSpese] = React.useState<{ descrizione: string; importo: string; esente: boolean }[]>([]);
   const [risPar, setRisPar] = React.useState<any>(null);
   const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -475,6 +487,15 @@ export default function Calcolatori() {
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
 
+  // Precompila "persona giuridica" dal tipo del cliente collegato alla
+  // pratica scelta, invece di richiederlo di nuovo: resta comunque
+  // modificabile a mano subito dopo.
+  React.useEffect(() => {
+    if (!praticaId) return;
+    const p = pratiche.find((pp) => pp.id === praticaId);
+    if (p?.cliente?.tipo === "azienda") setParDati((prev: any) => ({ ...prev, parte_persona_giuridica: true }));
+  }, [praticaId, pratiche]);
+
   // Modifica di una parcella esistente (arrivo qui da Archivio o dalla
   // scheda pratica con ?editId=...): precarica i campi e il calcolo gia'
   // salvato, cosi' il modulo si presenta gia' compilato invece di dover
@@ -489,12 +510,36 @@ export default function Calcolatori() {
         fase_decisionale: String(doc.fase_decisionale ?? 0),
         fase_esecutiva: String(doc.fase_esecutiva ?? 0),
         diritti: String(doc.diritti ?? 0),
-        anticipazioni: String(doc.anticipazioni ?? 0),
+        maggiorazione_discrezionale_pct: String(doc.maggiorazione_discrezionale_pct ?? 0),
         spese_generali_pct: String(doc.spese_generali_pct ?? 15),
         cpa_pct: String(doc.cpa_pct ?? 4),
         iva_pct: String(doc.iva_pct ?? 22),
         ritenuta_pct: String(doc.ritenuta_pct ?? 0),
       });
+      setParDati({
+        avvocato_nome: doc.avvocato_nome || "",
+        studio_indirizzo: doc.studio_indirizzo || "",
+        studio_cf: doc.studio_cf || "",
+        ordine_avvocati: doc.ordine_avvocati || "",
+        studio_assicurazione: doc.studio_assicurazione || "",
+        parte_persona_giuridica: !!doc.parte_persona_giuridica,
+        parte_rappresentante_legale: doc.parte_rappresentante_legale || "",
+        competenza: doc.competenza || "",
+        ufficio_giudiziario: doc.ufficio_giudiziario || "Tribunale",
+        sede_ufficio: doc.sede_ufficio || "",
+        accessori_di_legge: doc.accessori_di_legge ?? true,
+        intestazione_studio: doc.intestazione_studio || "",
+        luogo: doc.luogo || "",
+        data_preventivo: doc.data_preventivo || new Date().toISOString().slice(0, 10),
+      });
+      // Le parcelle salvate prima dell'introduzione delle spese itemizzate
+      // hanno solo "anticipazioni": si traduce in un'unica voce esente per
+      // non perdere il dato in modifica.
+      setVociSpese(
+        doc.voci_spese && doc.voci_spese.length > 0
+          ? doc.voci_spese.map((v: any) => ({ descrizione: v.descrizione || "", importo: String(v.importo ?? 0), esente: v.esente ?? true }))
+          : doc.anticipazioni ? [{ descrizione: "Anticipazioni", importo: String(doc.anticipazioni), esente: true }] : []
+      );
       setTitoloPar(doc.titolo || "");
       setPraticaId(doc.pratica_id || null);
       setRisPar(doc.calcolo || null);
@@ -509,9 +554,15 @@ export default function Calcolatori() {
       setTitoloScad("");
     } catch (e: any) { setRisScad({ error: e.message }); }
   };
+  const buildVociSpeseBody = () =>
+    vociSpese
+      .filter((v) => v.descrizione.trim() || parseNumeroIt(v.importo))
+      .map((v) => ({ descrizione: v.descrizione.trim(), importo: parseNumeroIt(v.importo), esente: v.esente }));
+
   const calcPar = async () => {
-    const body: any = {};
+    const body: any = { ...parDati };
     Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
+    body.voci_spese = buildVociSpeseBody();
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
     // In modifica il ricalcolo raffina la stessa parcella: non si deve
@@ -540,8 +591,9 @@ export default function Calcolatori() {
   const savePar = async () => {
     setSaving(true);
     try {
-      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim() };
+      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati };
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
+      body.voci_spese = buildVociSpeseBody();
       if (params.editId) {
         await api.put(`/parcelle/${params.editId}`, body);
       } else {
@@ -836,8 +888,76 @@ export default function Calcolatori() {
     </View>
   );
 
+  const praticaParSelezionata = pratiche.find((p) => p.id === praticaId);
+  const clienteParSelezionato = praticaParSelezionata?.cliente;
+
+  const sezioneLbl = { color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm };
+  const checkbox = (checked: boolean, onToggle: () => void, label: string, testID: string) => (
+    <Pressable testID={testID} onPress={onToggle} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
+      <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: checked ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+        {checked ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+      </View>
+      <Text style={{ color: t.onSurface, flex: 1 }}>{label}</Text>
+    </Pressable>
+  );
+  const campoTesto = (campo: string, label: string, placeholder?: string) => (
+    <View key={campo}>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{label}</Text>
+      <TextInput
+        testID={`par-${campo}`}
+        value={parDati[campo]}
+        onChangeText={(v) => setParDati({ ...parDati, [campo]: v })}
+        placeholder={placeholder}
+        placeholderTextColor={t.onSurfaceTertiary}
+        style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+      />
+    </View>
+  );
+
   const contenutoParcelle = (
     <View>
+      <PraticaPicker
+        pratiche={pratiche}
+        praticaId={praticaId}
+        onChange={setPraticaId}
+        helperText="Precompila parte assistita e dati del procedimento dalla pratica collegata."
+      />
+
+      <Text style={sezioneLbl}>Avvocato</Text>
+      {campoTesto("avvocato_nome", "Nome e cognome")}
+      {campoTesto("studio_indirizzo", "Indirizzo studio")}
+      {campoTesto("studio_cf", "Codice fiscale")}
+      {campoTesto("ordine_avvocati", "Ordine degli avvocati di")}
+      {campoTesto("studio_assicurazione", "Assicurazione professionale")}
+
+      <Text style={sezioneLbl}>Parte assistita</Text>
+      {clienteParSelezionato ? (
+        <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          <Text style={{ color: t.onSurface, fontWeight: "700" }}>
+            {clienteParSelezionato.ragione_sociale || `${clienteParSelezionato.nome || ""} ${clienteParSelezionato.cognome || ""}`.trim()}
+          </Text>
+          {clienteParSelezionato.codice_fiscale ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>CF: {clienteParSelezionato.codice_fiscale}</Text> : null}
+          {clienteParSelezionato.partita_iva ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>P.IVA: {clienteParSelezionato.partita_iva}</Text> : null}
+        </View>
+      ) : (
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic" }}>Collega una pratica per precompilare i dati del cliente.</Text>
+      )}
+      {checkbox(parDati.parte_persona_giuridica, () => setParDati({ ...parDati, parte_persona_giuridica: !parDati.parte_persona_giuridica }), "Persona giuridica", "par-persona-giuridica")}
+      {parDati.parte_persona_giuridica ? campoTesto("parte_rappresentante_legale", "Rappresentante legale") : null}
+
+      <Text style={sezioneLbl}>Dati del procedimento</Text>
+      {praticaParSelezionata ? (
+        <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }}>
+          <Text style={{ color: t.onSurface, fontWeight: "700" }}>{praticaParSelezionata.oggetto}</Text>
+          {praticaParSelezionata.controparte ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>Contro: {praticaParSelezionata.controparte}</Text> : null}
+          {praticaParSelezionata.valore_causa ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>Valore della controversia: {formatEuro(praticaParSelezionata.valore_causa)}</Text> : null}
+        </View>
+      ) : null}
+      {campoTesto("competenza", "Competenza per giurisdizione o materia", "Es. Tribunale")}
+      {campoTesto("ufficio_giudiziario", "Ufficio giudiziario")}
+      {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario", praticaParSelezionata?.tribunale || undefined)}
+
+      <Text style={sezioneLbl}>Attività e compensi</Text>
       {[
         ["fase_studio", "Fase studio €"],
         ["fase_introduttiva", "Fase introduttiva €"],
@@ -845,7 +965,63 @@ export default function Calcolatori() {
         ["fase_decisionale", "Fase decisionale €"],
         ["fase_esecutiva", "Fase esecutiva €"],
         ["diritti", "Diritti €"],
-        ["anticipazioni", "Anticipazioni (esenti) €"],
+        ["maggiorazione_discrezionale_pct", "Maggiorazione discrezionale %"],
+      ].map(([k, l]) => (
+        <View key={k as string}>
+          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
+          <TextInput testID={`par-${k}`} value={par[k as string]} onChangeText={(v) => setPar({ ...par, [k as string]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+        </View>
+      ))}
+
+      <Text style={sezioneLbl}>Spese preventivate</Text>
+      {vociSpese.map((v, i) => (
+        <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              testID={`par-spesa-descrizione-${i}`}
+              value={v.descrizione}
+              onChangeText={(val) => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, descrizione: val } : x))}
+              placeholder="Voce di spesa"
+              placeholderTextColor={t.onSurfaceTertiary}
+              style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+            />
+            <Pressable testID={`par-spesa-rimuovi-${i}`} onPress={() => setVociSpese(vociSpese.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+              <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
+            <TextInput
+              testID={`par-spesa-importo-${i}`}
+              value={v.importo}
+              onChangeText={(val) => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, importo: val } : x))}
+              keyboardType="numeric"
+              placeholder="Importo €"
+              placeholderTextColor={t.onSurfaceTertiary}
+              style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+            />
+            <Pressable
+              testID={`par-spesa-esente-${i}`}
+              onPress={() => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, esente: !x.esente } : x))}
+              style={[st.pill, { backgroundColor: v.esente ? t.brand : t.surface, borderColor: t.border }]}
+            >
+              <Text style={{ color: v.esente ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }}>{v.esente ? "Esente" : "Non esente"}</Text>
+            </Pressable>
+          </View>
+        </View>
+      ))}
+      <Pressable
+        testID="par-spesa-aggiungi"
+        onPress={() => setVociSpese([...vociSpese, { descrizione: "", importo: "", esente: true }])}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
+      >
+        <Feather name="plus-circle" size={16} color={t.brand} />
+        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi voce di spesa</Text>
+      </Pressable>
+
+      <Text style={sezioneLbl}>Altri dati</Text>
+      {campoTesto("intestazione_studio", "Intestazione studio")}
+      {checkbox(parDati.accessori_di_legge, () => setParDati({ ...parDati, accessori_di_legge: !parDati.accessori_di_legge }), "Oltre accessori di legge (spese generali, CPA, IVA)", "par-accessori-di-legge")}
+      {[
         ["spese_generali_pct", "Spese generali %"],
         ["cpa_pct", "CPA %"],
         ["iva_pct", "IVA %"],
@@ -856,6 +1032,10 @@ export default function Calcolatori() {
           <TextInput testID={`par-${k}`} value={par[k as string]} onChangeText={(v) => setPar({ ...par, [k as string]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
         </View>
       ))}
+      {campoTesto("luogo", "Luogo")}
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data</Text>
+      <DataInput testID="par-data-preventivo" value={parDati.data_preventivo} onChange={(iso) => setParDati({ ...parDati, data_preventivo: iso })} />
+
       <Pressable testID="btn-calc-par" onPress={calcPar} style={[st.submit, { backgroundColor: t.brand }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>Calcola</Text>
       </Pressable>
@@ -865,12 +1045,14 @@ export default function Calcolatori() {
             ["Compensi fasi", risPar.compensi_fasi],
             ["Voci custom", risPar.voci_custom_totale],
             ["Diritti", risPar.diritti],
+            ["Maggiorazione discrezionale", risPar.maggiorazione],
             ["Spese generali", risPar.spese_generali],
             ["Imp. previdenza", risPar.imponibile_previdenza],
             ["CPA", risPar.cpa],
             ["Imp. IVA", risPar.imponibile_iva],
             ["IVA", risPar.iva],
-            ["Anticipazioni", risPar.anticipazioni],
+            ["Spese esenti IVA", risPar.spese_esenti],
+            ["Spese non esenti", risPar.spese_imponibili],
             ["Ritenuta", -Math.abs(risPar.ritenuta_acconto || 0)],
           ].map(([l, v]) => (
             <View key={l as string} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
@@ -892,12 +1074,6 @@ export default function Calcolatori() {
                 placeholder="Es. Acconto fase istruttoria"
                 placeholderTextColor={t.onSurfaceTertiary}
                 style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
-              />
-              <PraticaPicker
-                pratiche={pratiche}
-                praticaId={praticaId}
-                onChange={setPraticaId}
-                helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui in Archivio."}
               />
               <Pressable testID="save-par" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : isEditingPar ? "Salva modifiche" : "Salva parcella"}</Text>
