@@ -470,6 +470,13 @@ export default function Calcolatori() {
   const [risPar, setRisPar] = React.useState<any>(null);
   const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
+  // Per precompilare "Attività e compensi" dalla tabella dei parametri
+  // forensi (come fa Andreani, che calcola i compensi dallo scaglione di
+  // valore invece di farli digitare da zero): rito scelto + stato del
+  // suggerimento, separati da `par` perché non vengono salvati con la
+  // parcella (sono solo un punto di partenza, poi modificabile a mano).
+  const [ritoPar, setRitoPar] = React.useState<"giudice_di_pace" | "tribunale" | "appello" | "cassazione">("tribunale");
+  const [suggerendoPar, setSuggerendoPar] = React.useState(false);
   // Interessi legali / di mora
   const [tassiCapitale, setTassiCapitale] = React.useState("");
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
@@ -594,6 +601,34 @@ export default function Calcolatori() {
     vociSpese
       .filter((v) => v.descrizione.trim() || parseNumeroIt(v.importo))
       .map((v) => ({ descrizione: v.descrizione.trim(), importo: parseNumeroIt(v.importo), esente: v.esente }));
+
+  // Precompila i 4 importi di fase con i valori medi della tabella dei
+  // parametri forensi per il rito e il valore causa scelti, cosi' come fa
+  // Andreani (che parte sempre dallo scaglione invece che da zero): restano
+  // comunque modificabili a mano subito dopo, per i casi in cui l'avvocato
+  // voglia pattuire un compenso diverso da quello tabellare.
+  const suggerisciDaParametriForensi = async () => {
+    const valoreCausa = praticaParSelezionata?.valore_causa;
+    if (!valoreCausa) {
+      Alert.alert("Valore causa mancante", "Collega una pratica con un valore della causa impostato, oppure inserisci gli importi di fase manualmente.");
+      return;
+    }
+    setSuggerendoPar(true);
+    try {
+      const r = await api.post("/calc/parametri-forensi", { rito: ritoPar, valore_causa: valoreCausa });
+      setPar({
+        ...par,
+        fase_studio: String(r.fasi.studio ?? 0),
+        fase_introduttiva: String(r.fasi.introduttiva ?? 0),
+        fase_istruttoria: String(r.fasi.istruttoria ?? 0),
+        fase_decisionale: String(r.fasi.decisionale ?? 0),
+      });
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare i parametri forensi per questo valore causa/rito.");
+    } finally {
+      setSuggerendoPar(false);
+    }
+  };
 
   const calcPar = async () => {
     const body: any = { ...parDati };
@@ -998,6 +1033,28 @@ export default function Calcolatori() {
       {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario", praticaParSelezionata?.tribunale || undefined)}
 
       <Text style={sezioneLbl}>Attività e compensi</Text>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito/grado (per il suggerimento dai parametri forensi)</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
+        {([["giudice_di_pace", "Giudice di pace"], ["tribunale", "Tribunale"], ["appello", "Appello"], ["cassazione", "Cassazione"]] as const).map(([v, l]) => (
+          <Pressable key={v} testID={`par-rito-${v}`} onPress={() => setRitoPar(v)} style={[st.pill, { backgroundColor: ritoPar === v ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
+            <Text style={{ color: ritoPar === v ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{l}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Pressable
+        testID="par-suggerisci-parametri-forensi"
+        onPress={suggerisciDaParametriForensi}
+        disabled={suggerendoPar}
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, opacity: suggerendoPar ? 0.6 : 1, marginBottom: SPACING.sm }}
+      >
+        <Feather name="zap" size={14} color={t.brand} />
+        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{suggerendoPar ? "Calcolo..." : "Calcola compensi dai parametri forensi"}</Text>
+      </Pressable>
+      {!praticaParSelezionata?.valore_causa ? (
+        <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
+          Richiede una pratica collegata con un valore della causa impostato.
+        </Text>
+      ) : null}
       {[
         ["fase_studio", "Fase studio €"],
         ["fase_introduttiva", "Fase introduttiva €"],
