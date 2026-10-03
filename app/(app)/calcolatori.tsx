@@ -454,7 +454,15 @@ export default function Calcolatori() {
   const [pratiche, setPratiche] = React.useState<any[]>([]);
   const [praticaId, setPraticaId] = React.useState<string | null>(params.praticaId || null);
   // Parcelle
-  const [par, setPar] = React.useState<any>({ fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "", fase_esecutiva: "", diritti: "", maggiorazione_discrezionale_pct: "0", spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0" });
+  const [par, setPar] = React.useState<any>({
+    fase_studio: "", fase_introduttiva: "", fase_istruttoria: "", fase_decisionale: "",
+    adj_studio_pct: "0", adj_introduttiva_pct: "0", adj_istruttoria_pct: "0", adj_decisionale_pct: "0",
+    spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0",
+  });
+  // Sezione "personalizzata": voci libere descrizione+importo, come il form
+  // originale prima dell'allineamento ad Andreani — tenute separate dalla
+  // sezione automatica (le 4 fasi dei parametri forensi).
+  const [vociCustom, setVociCustom] = React.useState<{ descrizione: string; importo: string }[]>([]);
   // Campi non numerici del preventivo (sezioni Avvocato/Parte
   // assistita/Procedimento/Altri dati di Andreani): tenuti separati da `par`
   // perché quest'ultimo viene convertito in blocco con parseNumeroIt prima
@@ -551,14 +559,22 @@ export default function Calcolatori() {
         fase_introduttiva: String(doc.fase_introduttiva ?? 0),
         fase_istruttoria: String(doc.fase_istruttoria ?? 0),
         fase_decisionale: String(doc.fase_decisionale ?? 0),
-        fase_esecutiva: String(doc.fase_esecutiva ?? 0),
-        diritti: String(doc.diritti ?? 0),
-        maggiorazione_discrezionale_pct: String(doc.maggiorazione_discrezionale_pct ?? 0),
+        adj_studio_pct: String(doc.adj_studio_pct ?? 0),
+        adj_introduttiva_pct: String(doc.adj_introduttiva_pct ?? 0),
+        adj_istruttoria_pct: String(doc.adj_istruttoria_pct ?? 0),
+        adj_decisionale_pct: String(doc.adj_decisionale_pct ?? 0),
         spese_generali_pct: String(doc.spese_generali_pct ?? 15),
         cpa_pct: String(doc.cpa_pct ?? 4),
         iva_pct: String(doc.iva_pct ?? 22),
         ritenuta_pct: String(doc.ritenuta_pct ?? 0),
       });
+      // Le parcelle salvate prima di questa suddivisione avevano "diritti" e
+      // "fase_esecutiva" come campi dedicati: si traducono in voci
+      // personalizzate per non perdere il dato in modifica.
+      const vociCustomEsistenti = (doc.voci_custom || []).map((v: any) => ({ descrizione: v.descrizione || "", importo: String(v.importo ?? 0) }));
+      if (doc.fase_esecutiva) vociCustomEsistenti.push({ descrizione: "Fase esecutiva", importo: String(doc.fase_esecutiva) });
+      if (doc.diritti) vociCustomEsistenti.push({ descrizione: "Diritti", importo: String(doc.diritti) });
+      setVociCustom(vociCustomEsistenti);
       setParDati({
         avvocato_nome: doc.avvocato_nome || "",
         studio_indirizzo: doc.studio_indirizzo || "",
@@ -601,6 +617,10 @@ export default function Calcolatori() {
     vociSpese
       .filter((v) => v.descrizione.trim() || parseNumeroIt(v.importo))
       .map((v) => ({ descrizione: v.descrizione.trim(), importo: parseNumeroIt(v.importo), esente: v.esente }));
+  const buildVociCustomBody = () =>
+    vociCustom
+      .filter((v) => v.descrizione.trim() || parseNumeroIt(v.importo))
+      .map((v) => ({ descrizione: v.descrizione.trim(), importo: parseNumeroIt(v.importo) }));
 
   // Precompila i 4 importi di fase con i valori medi della tabella dei
   // parametri forensi per il rito e il valore causa scelti, cosi' come fa
@@ -634,6 +654,7 @@ export default function Calcolatori() {
     const body: any = { ...parDati };
     Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
     body.voci_spese = buildVociSpeseBody();
+    body.voci_custom = buildVociCustomBody();
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
     // In modifica il ricalcolo raffina la stessa parcella: non si deve
@@ -665,6 +686,7 @@ export default function Calcolatori() {
       const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati };
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       body.voci_spese = buildVociSpeseBody();
+      body.voci_custom = buildVociCustomBody();
       if (params.editId) {
         await api.put(`/parcelle/${params.editId}`, body);
       } else {
@@ -803,7 +825,7 @@ export default function Calcolatori() {
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
     setRisScad(null); setTitoloScad("");
-    setRisPar(null); setTitoloPar("");
+    setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]); setRitoPar("tribunale");
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatIndiceIniziale(""); setIstatIndiceFinale("");
@@ -1032,7 +1054,10 @@ export default function Calcolatori() {
       {campoTesto("ufficio_giudiziario", "Ufficio giudiziario")}
       {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario", praticaParSelezionata?.tribunale || undefined)}
 
-      <Text style={sezioneLbl}>Attività e compensi</Text>
+      <Text style={sezioneLbl}>Attività e compensi — sezione automatica</Text>
+      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
+        Le stesse 4 fasi del preventivo di Andreani: un importo (dai parametri forensi) con un aggiustamento percentuale discrezionale per fase.
+      </Text>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito/grado (per il suggerimento dai parametri forensi)</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
         {([["giudice_di_pace", "Giudice di pace"], ["tribunale", "Tribunale"], ["appello", "Appello"], ["cassazione", "Cassazione"]] as const).map(([v, l]) => (
@@ -1048,27 +1073,70 @@ export default function Calcolatori() {
         style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, opacity: suggerendoPar ? 0.6 : 1, marginBottom: SPACING.sm }}
       >
         <Feather name="zap" size={14} color={t.brand} />
-        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{suggerendoPar ? "Calcolo..." : "Calcola compensi dai parametri forensi"}</Text>
+        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{suggerendoPar ? "Calcolo..." : "Calcola importi dai parametri forensi"}</Text>
       </Pressable>
       {!praticaParSelezionata?.valore_causa ? (
         <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
           Richiede una pratica collegata con un valore della causa impostato.
         </Text>
       ) : null}
-      {[
-        ["fase_studio", "Fase studio €"],
-        ["fase_introduttiva", "Fase introduttiva €"],
-        ["fase_istruttoria", "Fase istruttoria €"],
-        ["fase_decisionale", "Fase decisionale €"],
-        ["fase_esecutiva", "Fase esecutiva €"],
-        ["diritti", "Diritti €"],
-        ["maggiorazione_discrezionale_pct", "Maggiorazione discrezionale %"],
-      ].map(([k, l]) => (
-        <View key={k as string}>
-          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
-          <TextInput testID={`par-${k}`} value={par[k as string]} onChangeText={(v) => setPar({ ...par, [k as string]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+      {([
+        ["fase_studio", "adj_studio_pct", "Fase di studio"],
+        ["fase_introduttiva", "adj_introduttiva_pct", "Fase introduttiva"],
+        ["fase_istruttoria", "adj_istruttoria_pct", "Fase istruttoria"],
+        ["fase_decisionale", "adj_decisionale_pct", "Fase decisionale"],
+      ] as const).map(([kImporto, kPct, label]) => (
+        <View key={kImporto} style={{ marginTop: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 13, marginBottom: SPACING.xs }}>{label}</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: 0 }]}>Importo €</Text>
+              <TextInput testID={`par-${kImporto}`} value={par[kImporto]} onChangeText={(v) => setPar({ ...par, [kImporto]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: 0 }]}>Aggiustamento %</Text>
+              <TextInput testID={`par-${kPct}`} value={par[kPct]} onChangeText={(v) => setPar({ ...par, [kPct]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+            </View>
+          </View>
         </View>
       ))}
+
+      <Text style={sezioneLbl}>Attività e compensi — sezione personalizzata</Text>
+      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
+        Voci aggiuntive a importo libero (come il &quot;Compensi personalizzati&quot; di Andreani): usale anche per diritti o fase esecutiva, non previsti dalle 4 fasi sopra.
+      </Text>
+      {vociCustom.map((v, i) => (
+        <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TextInput
+            testID={`par-voce-custom-descrizione-${i}`}
+            value={v.descrizione}
+            onChangeText={(val) => setVociCustom(vociCustom.map((x, j) => j === i ? { ...x, descrizione: val } : x))}
+            placeholder="Descrizione"
+            placeholderTextColor={t.onSurfaceTertiary}
+            style={[st.input, { flex: 2, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+          />
+          <TextInput
+            testID={`par-voce-custom-importo-${i}`}
+            value={v.importo}
+            onChangeText={(val) => setVociCustom(vociCustom.map((x, j) => j === i ? { ...x, importo: val } : x))}
+            keyboardType="numeric"
+            placeholder="Importo €"
+            placeholderTextColor={t.onSurfaceTertiary}
+            style={[st.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+          />
+          <Pressable testID={`par-voce-custom-rimuovi-${i}`} onPress={() => setVociCustom(vociCustom.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+            <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+          </Pressable>
+        </View>
+      ))}
+      <Pressable
+        testID="par-voce-custom-aggiungi"
+        onPress={() => setVociCustom([...vociCustom, { descrizione: "", importo: "" }])}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
+      >
+        <Feather name="plus-circle" size={16} color={t.brand} />
+        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi voce personalizzata</Text>
+      </Pressable>
 
       <Text style={sezioneLbl}>Spese preventivate</Text>
       {vociSpese.map((v, i) => (
@@ -1138,11 +1206,11 @@ export default function Calcolatori() {
       </Pressable>
       {risPar ? (
         <View style={[st.result, { backgroundColor: t.surfaceSecondary, borderColor: t.border }]}>
-          {[
-            ["Compensi fasi", risPar.compensi_fasi],
-            ["Voci custom", risPar.voci_custom_totale],
-            ["Diritti", risPar.diritti],
-            ["Maggiorazione discrezionale", risPar.maggiorazione],
+          {([
+            ["A) Totale compensi per fase", risPar.compensi_fasi],
+            ["B) Totale voci personalizzate", risPar.voci_custom_totale],
+            ...(risPar.diritti ? [["Diritti", risPar.diritti]] : []),
+            ...(risPar.maggiorazione ? [["Maggiorazione discrezionale", risPar.maggiorazione]] : []),
             ["Spese generali", risPar.spese_generali],
             ["Imp. previdenza", risPar.imponibile_previdenza],
             ["CPA", risPar.cpa],
@@ -1151,7 +1219,7 @@ export default function Calcolatori() {
             ["Spese esenti IVA", risPar.spese_esenti],
             ["Spese non esenti", risPar.spese_imponibili],
             ["Ritenuta", -Math.abs(risPar.ritenuta_acconto || 0)],
-          ].map(([l, v]) => (
+          ] as [string, number][]).map(([l, v]) => (
             <View key={l as string} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 }}>
               <Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{l}</Text>
               <Text style={{ color: t.onSurface, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatEuro(v as number)}</Text>
@@ -1203,54 +1271,58 @@ export default function Calcolatori() {
   const vociCategoria = (catId: "data" | "euro" | "atti") =>
     catId === "atti" ? ATTI : CALCOLATORI.filter((c) => c.categoria === catId);
 
+  const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
+
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calcolatori" onBack={() => router.back()} />
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         {CATEGORIE_CALC.map((cat) => {
           const voci = vociCategoria(cat.id);
-          const aperta = categoriaCalc === cat.id;
           return (
-            <View key={cat.id} style={{ marginBottom: SPACING.sm }}>
-              <Pressable
-                testID={`categoria-${cat.id}`}
-                onPress={() => setCategoriaCalc(aperta ? null : cat.id)}
-                style={[st.calcCard, { backgroundColor: t.surface, borderColor: aperta ? t.brand : t.border }]}
-              >
-                <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
-                  <Feather name={cat.icona as any} size={18} color={t.brand} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{cat.titolo}</Text>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{voci.length} {voci.length === 1 ? "voce" : "voci"}</Text>
-                </View>
-                <Feather name={aperta ? "chevron-up" : "chevron-down"} size={18} color={t.onSurfaceTertiary} />
-              </Pressable>
-              {aperta ? (
-                <View style={{ marginTop: SPACING.sm, gap: SPACING.sm }}>
-                  {voci.map((v: any) => (
-                    <Pressable
-                      key={v.id}
-                      testID={cat.id === "atti" ? `atto-${v.id}` : `calc-${v.id}`}
-                      onPress={() => (cat.id === "atti" ? apriAtto(v.id) : apriCalcolatore(v.id))}
-                      style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginLeft: SPACING.md }]}
-                    >
-                      <View style={[st.calcIcon, { backgroundColor: t.surface }]}>
-                        <Feather name={v.icona as any} size={16} color={t.brand} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.titolo}</Text>
-                        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{v.sottotitolo}</Text>
-                      </View>
-                      <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-                    </Pressable>
-                  ))}
-                </View>
-              ) : null}
-            </View>
+            <Pressable
+              key={cat.id}
+              testID={`categoria-${cat.id}`}
+              onPress={() => setCategoriaCalc(cat.id)}
+              style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
+            >
+              <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+                <Feather name={cat.icona as any} size={18} color={t.brand} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{cat.titolo}</Text>
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{voci.length} {voci.length === 1 ? "voce" : "voci"}</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+            </Pressable>
           );
         })}
       </ScrollView>
+
+      {categoriaCalc ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto}>
+          <Header variant="hero" title={categoriaCorrente?.titolo || "Calcolatori"} onBack={() => setCategoriaCalc(null)} />
+          <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
+            {vociCategoria(categoriaCalc).map((v: any) => (
+              <Pressable
+                key={v.id}
+                testID={categoriaCalc === "atti" ? `atto-${v.id}` : `calc-${v.id}`}
+                onPress={() => (categoriaCalc === "atti" ? apriAtto(v.id) : apriCalcolatore(v.id))}
+                style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
+              >
+                <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+                  <Feather name={v.icona as any} size={18} color={t.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.titolo}</Text>
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{v.sottotitolo}</Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+              </Pressable>
+            ))}
+          </ScrollView>
+        </SwipeBackScreen>
+      ) : null}
 
       {attoAperto ? (
         <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setAttoAperto(null)}>
