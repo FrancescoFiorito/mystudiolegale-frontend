@@ -393,6 +393,7 @@ export default function Calcolatori() {
   const locked = params.tab === "parcelle" && !!params.editId;
   const isEditingPar = !!params.editId;
   const [calcAperto, setCalcAperto] = React.useState<CalcId | null>(locked ? "parcelle" : null);
+  const [categoriaCalc, setCategoriaCalc] = React.useState<"data" | "euro" | "atti" | null>(null);
   const scrollRef = React.useRef<ScrollView>(null);
 
   // La schermata resta montata da una visita all'altra: se si arriva qui di
@@ -1098,57 +1099,61 @@ export default function Calcolatori() {
     );
   }
 
+  const CATEGORIE_CALC: { id: "data" | "euro" | "atti"; titolo: string; icona: string }[] = [
+    { id: "data", titolo: "Date e scadenze", icona: "calendar" },
+    { id: "euro", titolo: "Importi e compensi", icona: "dollar-sign" },
+    { id: "atti", titolo: "Atti (bozze di documenti)", icona: "file-text" },
+  ];
+  const vociCategoria = (catId: "data" | "euro" | "atti") =>
+    catId === "atti" ? ATTI : CALCOLATORI.filter((c) => c.categoria === catId);
+
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calcolatori" onBack={() => router.back()} />
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: SPACING.sm }}>
-          Date e scadenze
-        </Text>
-        {CALCOLATORI.filter((c) => c.categoria === "data").map((c) => (
-          <Pressable key={c.id} testID={`calc-${c.id}`} onPress={() => apriCalcolatore(c.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
-              <Feather name={c.icona as any} size={18} color={t.brand} />
+        {CATEGORIE_CALC.map((cat) => {
+          const voci = vociCategoria(cat.id);
+          const aperta = categoriaCalc === cat.id;
+          return (
+            <View key={cat.id} style={{ marginBottom: SPACING.sm }}>
+              <Pressable
+                testID={`categoria-${cat.id}`}
+                onPress={() => setCategoriaCalc(aperta ? null : cat.id)}
+                style={[st.calcCard, { backgroundColor: t.surface, borderColor: aperta ? t.brand : t.border }]}
+              >
+                <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+                  <Feather name={cat.icona as any} size={18} color={t.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{cat.titolo}</Text>
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{voci.length} {voci.length === 1 ? "voce" : "voci"}</Text>
+                </View>
+                <Feather name={aperta ? "chevron-up" : "chevron-down"} size={18} color={t.onSurfaceTertiary} />
+              </Pressable>
+              {aperta ? (
+                <View style={{ marginTop: SPACING.sm, gap: SPACING.sm }}>
+                  {voci.map((v: any) => (
+                    <Pressable
+                      key={v.id}
+                      testID={cat.id === "atti" ? `atto-${v.id}` : `calc-${v.id}`}
+                      onPress={() => (cat.id === "atti" ? apriAtto(v.id) : apriCalcolatore(v.id))}
+                      style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginLeft: SPACING.md }]}
+                    >
+                      <View style={[st.calcIcon, { backgroundColor: t.surface }]}>
+                        <Feather name={v.icona as any} size={16} color={t.brand} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.titolo}</Text>
+                        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{v.sottotitolo}</Text>
+                      </View>
+                      <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{c.titolo}</Text>
-              <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{c.sottotitolo}</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-          </Pressable>
-        ))}
-
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
-          Importi e compensi
-        </Text>
-        {CALCOLATORI.filter((c) => c.categoria === "euro").map((c) => (
-          <Pressable key={c.id} testID={`calc-${c.id}`} onPress={() => apriCalcolatore(c.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
-              <Feather name={c.icona as any} size={18} color={t.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{c.titolo}</Text>
-              <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{c.sottotitolo}</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-          </Pressable>
-        ))}
-
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm }}>
-          Atti (bozze di documenti)
-        </Text>
-        {ATTI.map((a) => (
-          <Pressable key={a.id} testID={`atto-${a.id}`} onPress={() => apriAtto(a.id)} style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border }]}>
-            <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
-              <Feather name={a.icona as any} size={18} color={t.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{a.titolo}</Text>
-              <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{a.sottotitolo}</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-          </Pressable>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {attoAperto ? (
