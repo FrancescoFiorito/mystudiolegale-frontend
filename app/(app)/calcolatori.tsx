@@ -52,18 +52,27 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: [
         { value: "appello", label: "Appello" }, { value: "cassazione", label: "Cassazione" },
+        { value: "revocazione_ordinaria", label: "Revocazione ordinaria (errore di fatto / giudicato contrario, art. 395 nn. 4-5)" },
+        { value: "revocazione_straordinaria", label: "Revocazione straordinaria (dolo, falsità, documenti, art. 395 nn. 1-3-6)" },
+        { value: "opposizione_terzo_revocatoria", label: "Opposizione di terzo revocatoria (art. 404 c.2)" },
+        { value: "opposizione_terzo_ordinaria", label: "Opposizione di terzo ordinaria (art. 404 c.1 — nessun termine)" },
       ] },
-      { tipo: "data", key: "data_pubblicazione", label: "Data pubblicazione sentenza" },
-      { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza (se notificata)" },
+      { tipo: "data_opzionale", key: "data_pubblicazione", label: "Data pubblicazione sentenza (appello/cassazione/revocazione ordinaria)" },
+      { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza, se notificata (appello/cassazione/revocazione ordinaria)" },
+      { tipo: "data_opzionale", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo (revocazione straordinaria/opposizione di terzo revocatoria)" },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/termini-impugnazione",
-    risultato: (r) => [
-      ["Termine applicabile", isoToDataIt(r.termine_applicabile)],
-      ["Termine lungo (6 mesi da pubblicazione)", isoToDataIt(r.termine_lungo)],
-      ...(r.termine_breve ? ([["Termine breve (da notificazione)", isoToDataIt(r.termine_breve)]] as [string, string][]) : []),
-    ],
-    scadenze: (r) => [{ titolo: `Scadenza impugnazione (${r.tipo})`, data: r.termine_applicabile }],
+    risultato: (r) => r.tipo === "opposizione_terzo_ordinaria"
+      ? [["Nota", r.nota]]
+      : r.tipo === "revocazione_straordinaria" || r.tipo === "opposizione_terzo_revocatoria"
+      ? [["Termine applicabile (30gg dalla scoperta)", isoToDataIt(r.termine_applicabile)]]
+      : [
+          ["Termine applicabile", isoToDataIt(r.termine_applicabile)],
+          ["Termine lungo (6 mesi da pubblicazione)", isoToDataIt(r.termine_lungo)],
+          ...(r.termine_breve ? ([["Termine breve (da notificazione)", isoToDataIt(r.termine_breve)]] as [string, string][]) : []),
+        ],
+    scadenze: (r) => r.termine_applicabile ? [{ titolo: `Scadenza impugnazione (${r.tipo})`, data: r.termine_applicabile }] : [],
   },
   "opposizione-decreto-ingiuntivo": {
     campi: [
@@ -126,14 +135,24 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "", label: "Nessuno" },
         { value: "mobiliare_immobiliare", label: "Mobiliare/immobiliare (istanza di vendita)" },
         { value: "presso_terzi", label: "Presso terzi (iscrizione a ruolo)" },
+        { value: "autoveicoli", label: "Autoveicoli/motoveicoli/rimorchi (art. 521-bis)" },
       ] },
       { tipo: "data_opzionale", key: "data_pignoramento", label: "Data del pignoramento (se calcoli i termini successivi)" },
+      { tipo: "data_opzionale", key: "data_comunicazione_ivg", label: "Data comunicazione IVG di avvenuta consegna (solo autoveicoli)" },
+      { tipo: "data_opzionale", key: "data_iscrizione_ruolo", label: "Data iscrizione a ruolo (solo autoveicoli, se già avvenuta)" },
     ],
     endpoint: "/calc/precetto",
     buildBody: (f) => ({
       data_notifica_precetto: f.data_notifica_precetto,
       escludi_feriale: f.escludi_feriale,
-      ...(f.tipo_pignoramento ? { tipo_pignoramento: f.tipo_pignoramento, data_pignoramento: f.data_pignoramento } : {}),
+      ...(f.tipo_pignoramento ? {
+        tipo_pignoramento: f.tipo_pignoramento,
+        data_pignoramento: f.data_pignoramento,
+        ...(f.tipo_pignoramento === "autoveicoli" ? {
+          data_comunicazione_ivg: f.data_comunicazione_ivg || null,
+          data_iscrizione_ruolo: f.data_iscrizione_ruolo || null,
+        } : {}),
+      } : {}),
     }),
     risultato: (r) => [
       ["Data minima pignoramento", isoToDataIt(r.data_minima_pignoramento)],
@@ -142,13 +161,19 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         ["Istanza di vendita - dal", isoToDataIt(r.termine_minimo_istanza_vendita)],
         ["Istanza di vendita - entro", isoToDataIt(r.termine_massimo_istanza_vendita)],
       ] as [string, string][]) : []),
-      ...(r.termine_iscrizione_ruolo ? ([["Iscrizione a ruolo entro", isoToDataIt(r.termine_iscrizione_ruolo)]] as [string, string][]) : []),
+      ...(r.termine_iscrizione_ruolo && !r.termine_consegna_volontaria ? ([["Iscrizione a ruolo entro", isoToDataIt(r.termine_iscrizione_ruolo)]] as [string, string][]) : []),
+      ...(r.termine_consegna_volontaria ? ([["Consegna volontaria veicolo entro", isoToDataIt(r.termine_consegna_volontaria)]] as [string, string][]) : []),
+      ...(r.termine_consegna_volontaria && r.termine_iscrizione_ruolo ? ([["Iscrizione a ruolo entro (da comunicazione IVG)", isoToDataIt(r.termine_iscrizione_ruolo)]] as [string, string][]) : []),
+      ...(r.termine_istanza_vendita ? ([["Istanza di vendita entro (da iscrizione a ruolo)", isoToDataIt(r.termine_istanza_vendita)]] as [string, string][]) : []),
     ],
     scadenze: (r) => [
       { titolo: "Data minima per il pignoramento", data: r.data_minima_pignoramento },
       { titolo: "Scadenza efficacia del precetto", data: r.scadenza_efficacia_precetto },
       ...(r.termine_massimo_istanza_vendita ? [{ titolo: "Termine istanza di vendita", data: r.termine_massimo_istanza_vendita }] : []),
-      ...(r.termine_iscrizione_ruolo ? [{ titolo: "Termine iscrizione a ruolo (pignoramento presso terzi)", data: r.termine_iscrizione_ruolo }] : []),
+      ...(r.termine_iscrizione_ruolo && !r.termine_consegna_volontaria ? [{ titolo: "Termine iscrizione a ruolo (pignoramento presso terzi)", data: r.termine_iscrizione_ruolo }] : []),
+      ...(r.termine_consegna_volontaria ? [{ titolo: "Consegna volontaria veicolo (IVG)", data: r.termine_consegna_volontaria }] : []),
+      ...(r.termine_consegna_volontaria && r.termine_iscrizione_ruolo ? [{ titolo: "Iscrizione a ruolo (pignoramento autoveicoli)", data: r.termine_iscrizione_ruolo }] : []),
+      ...(r.termine_istanza_vendita ? [{ titolo: "Istanza di vendita (pignoramento autoveicoli)", data: r.termine_istanza_vendita }] : []),
     ],
   },
   "impugnazione-licenziamento": {
@@ -211,16 +236,25 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "parametri-forensi": {
     campi: [
+      { tipo: "scelta", key: "rito", label: "Rito/grado", default: "tribunale", opzioni: [
+        { value: "giudice_di_pace", label: "Giudice di pace (fino a 26.000€)" },
+        { value: "tribunale", label: "Tribunale (giudizio ordinario)" },
+        { value: "appello", label: "Corte d'Appello" },
+        { value: "cassazione", label: "Corte di Cassazione" },
+      ] },
       { tipo: "bool", key: "valore_indeterminabile", label: "Valore della causa indeterminabile", default: false },
-      { tipo: "numero", key: "valore_causa", label: "Valore della causa € (fino a 520.000)", default: "" },
+      { tipo: "numero", key: "valore_causa", label: "Valore della causa €", default: "" },
+      { tipo: "numero", key: "numero_parti_stessa_posizione", label: "N. parti assistite con la stessa posizione", default: "1" },
       { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (riduzione del 50%)", default: false },
     ],
     endpoint: "/calc/parametri-forensi",
     risultato: (r) => [
       ["Fase di studio", formatEuro(r.fasi.studio)],
       ["Fase introduttiva", formatEuro(r.fasi.introduttiva)],
-      ["Fase istruttoria", formatEuro(r.fasi.istruttoria)],
+      ...(r.fasi.istruttoria != null ? ([["Fase istruttoria", formatEuro(r.fasi.istruttoria)]] as [string, string][]) : []),
       ["Fase decisionale", formatEuro(r.fasi.decisionale)],
+      ...(r.maggiorazione_parti_pct ? ([["Maggiorazione pluralità parti", `+${r.maggiorazione_parti_pct}%`]] as [string, string][]) : []),
+      ...(r.incremento_oltre_520k_pct ? ([["Incremento oltre 520.000€ (fino a)", `+${r.incremento_oltre_520k_pct}%`]] as [string, string][]) : []),
       ["Totale medio", formatEuro(r.totale_medio)],
       ...(r.totale_minimo_discrezionale != null
         ? ([["Range discrezionale del giudice", `${formatEuro(r.totale_minimo_discrezionale)} - ${formatEuro(r.totale_massimo_discrezionale)}`]] as [string, string][])
@@ -353,12 +387,12 @@ function defaultGenForm(idc: string): Record<string, any> {
 const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string; categoria: "data" | "euro" }[] = [
   { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock", categoria: "data" },
   { id: "giorni-tra-date", titolo: "Giorni tra due date", sottotitolo: "Conteggio giorni di calendario", icona: "calendar", categoria: "data" },
-  { id: "termini-memorie", titolo: "Termini memorie ex art. 171-ter c.p.c.", sottotitolo: "Riforma Cartabia, da una data di udienza", icona: "calendar", categoria: "data" },
-  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello e Cassazione, artt. 325-327 c.p.c.", icona: "flag", categoria: "data" },
+  { id: "termini-memorie", titolo: "Termini memorie e conclusionali", sottotitolo: "Artt. 171-ter e 189 c.p.c., riforma Cartabia", icona: "calendar", categoria: "data" },
+  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello, Cassazione, revocazione, opposizione di terzo", icona: "flag", categoria: "data" },
   { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield", categoria: "data" },
   { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw", categoria: "data" },
   { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass", categoria: "data" },
-  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Artt. 481-482 c.p.c.", icona: "alert-triangle", categoria: "data" },
+  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Mobiliare, immobiliare, presso terzi, autoveicoli", icona: "alert-triangle", categoria: "data" },
   { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x", categoria: "data" },
   { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus", categoria: "data" },
   { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map", categoria: "data" },
@@ -371,7 +405,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up", categoria: "euro" },
   { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home", categoria: "euro" },
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase", categoria: "euro" },
-  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "DM 147/2022, con gratuito patrocinio", icona: "bar-chart-2", categoria: "euro" },
+  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2", categoria: "euro" },
   { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users", categoria: "euro" },
 ];
 
@@ -456,6 +490,7 @@ export default function Calcolatori() {
   // Termini memorie ex art. 171-ter c.p.c.
   const [memUdienza, setMemUdienza] = React.useState(new Date().toISOString().slice(0, 10));
   const [memEscludiFer, setMemEscludiFer] = React.useState(true);
+  const [tipoMem, setTipoMem] = React.useState<"171-ter" | "189">("171-ter");
   const [risMem, setRisMem] = React.useState<any>(null);
   const [calcolandoMem, setCalcolandoMem] = React.useState(false);
   const [savingMem, setSavingMem] = React.useState(false);
@@ -657,7 +692,7 @@ export default function Calcolatori() {
     setCalcolandoMem(true);
     setRisMem(null);
     try {
-      const r = await api.post("/calc/termini-memorie", { data_udienza: memUdienza, escludi_feriale: memEscludiFer });
+      const r = await api.post("/calc/termini-memorie", { data_udienza: memUdienza, escludi_feriale: memEscludiFer, tipo: tipoMem });
       setRisMem(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -669,7 +704,11 @@ export default function Calcolatori() {
     if (!risMem) return;
     setSavingMem(true);
     try {
-      const voci = [
+      const voci = risMem.tipo === "189" ? [
+        { titolo: "Note di precisazione delle conclusioni ex art. 189 c.p.c.", data: risMem.prima_memoria },
+        { titolo: "Comparse conclusionali ex art. 189 c.p.c.", data: risMem.seconda_memoria },
+        { titolo: "Memorie di replica ex art. 189 c.p.c.", data: risMem.terza_memoria },
+      ] : [
         { titolo: "1ª memoria ex art. 171-ter c.p.c. (istanze/produzioni)", data: risMem.prima_memoria },
         { titolo: "2ª memoria ex art. 171-ter c.p.c. (repliche/mezzi di prova)", data: risMem.seconda_memoria },
         { titolo: "3ª memoria ex art. 171-ter c.p.c. (sole repliche)", data: risMem.terza_memoria },
@@ -733,7 +772,7 @@ export default function Calcolatori() {
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatIndiceIniziale(""); setIstatIndiceFinale("");
-    setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true);
+    setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccValoreQuota(""); setSuccGrado("coniuge_parenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuVacazioni(""); setCtuTariffa(""); setCtuSpese("0"); setCtuMaggiorazione("0"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
@@ -1226,7 +1265,15 @@ export default function Calcolatori() {
 
               {calcAperto === "termini-memorie" ? (
                 <View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data udienza di trattazione</Text>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tipo di termine</Text>
+                  <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.sm }}>
+                    {([["171-ter", "Memorie integrative (art. 171-ter)"], ["189", "Conclusionali (art. 189)"]] as const).map(([v, l]) => (
+                      <Pressable key={v} testID={`mem-tipo-${v}`} onPress={() => setTipoMem(v)} style={[st.pill, { backgroundColor: tipoMem === v ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
+                        <Text style={{ color: tipoMem === v ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{l}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{tipoMem === "189" ? "Data udienza collegiale di discussione" : "Data udienza di trattazione"}</Text>
                   <DataInput testID="mem-udienza" value={memUdienza} onChange={setMemUdienza} />
                   <Pressable testID="mem-toggle-feriale" onPress={() => setMemEscludiFer(!memEscludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.md }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: memEscludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
@@ -1239,11 +1286,21 @@ export default function Calcolatori() {
                   </Pressable>
                   {risMem ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
-                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>MEMORIE EX ART. 171-TER C.P.C.</Text>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>{risMem.tipo === "189" ? "CONCLUSIONALI EX ART. 189 C.P.C." : "MEMORIE EX ART. 171-TER C.P.C."}</Text>
                       <View style={{ marginTop: SPACING.sm, gap: 4 }}>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>1ª memoria (-40 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>2ª memoria (-20 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
-                        <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>3ª memoria (-10 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.terza_memoria)}</Text></Text>
+                        {risMem.tipo === "189" ? (
+                          <>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Note precisazione conclusioni (-60 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Comparse conclusionali (-30 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Memorie di replica (-15 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.terza_memoria)}</Text></Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>1ª memoria (-40 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>2ª memoria (-20 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>3ª memoria (-10 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.terza_memoria)}</Text></Text>
+                          </>
+                        )}
                       </View>
                       {!risMem.salvata ? (
                         <>
