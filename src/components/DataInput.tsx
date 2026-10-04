@@ -62,7 +62,15 @@ export default function DataInput({
       </Pressable>
       {aperto ? (
         <View style={{ marginTop: SPACING.xs, alignItems: "flex-end" }}>
-          <DateTimePicker value={isoToDate(value)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPick} locale="it-IT" />
+          {/* Senza backgroundColor/themeVariant espliciti, su iOS il
+              selettore a rotella segue il tema CHIARO/SCURO DI SISTEMA
+              invece di quello scelto nell'app: se i due non coincidono il
+              testo risulta dello stesso colore dello sfondo sottostante
+              (invisibile, ma funzionante — si continua a poter scorrere
+              "alla cieca" e il valore cambia comunque). */}
+          <View style={{ backgroundColor: t.surface, borderRadius: RADIUS.md }}>
+            <DateTimePicker value={isoToDate(value)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPick} locale="it-IT" themeVariant={(t.mode as string) === "dark" ? "dark" : "light"} />
+          </View>
           {Platform.OS === "ios" ? (
             <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={() => setAperto(false)} style={{ paddingVertical: 6, paddingHorizontal: SPACING.md }}>
               <Text style={{ color: t.brand, fontWeight: "700" }}>Fatto</Text>
