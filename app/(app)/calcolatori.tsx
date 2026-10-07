@@ -12,6 +12,7 @@ import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
 import DataInput from "@/src/components/DataInput";
+import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
@@ -974,20 +975,21 @@ export default function Calcolatori() {
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita})</Text>
       <TextInput testID="scad-giorni" value={giorni} onChangeText={setGiorni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Unità</Text>
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.sm }}>
-        {(["giorni", "mesi", "anni"] as const).map((u) => (
-          <Pressable key={u} onPress={() => setUnita(u)} style={[st.pill, { backgroundColor: unita === u ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-            <Text style={{ color: unita === u ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, textTransform: "capitalize" }}>{u}</Text>
-          </Pressable>
-        ))}
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          value={unita}
+          onChange={(v) => setUnita(v as typeof unita)}
+          opzioni={[{ value: "giorni", label: "Giorni" }, { value: "mesi", label: "Mesi" }, { value: "anni", label: "Anni" }]}
+        />
       </View>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Direzione</Text>
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.sm }}>
-        {(["avanti", "ritroso"] as const).map((d) => (
-          <Pressable key={d} testID={`dir-${d}`} onPress={() => setTipoS(d)} style={[st.pill, { backgroundColor: tipoS === d ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-            <Text style={{ color: tipoS === d ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, textTransform: "capitalize" }}>{d}</Text>
-          </Pressable>
-        ))}
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          testID="dir"
+          value={tipoS}
+          onChange={(v) => setTipoS(v as typeof tipoS)}
+          opzioni={[{ value: "avanti", label: "Avanti" }, { value: "ritroso", label: "Ritroso" }]}
+        />
       </View>
       <Pressable testID="toggle-feriale" onPress={() => setEscludiFer(!escludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.sm }}>
         <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: escludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
@@ -1117,12 +1119,18 @@ export default function Calcolatori() {
         Le stesse 4 fasi del preventivo di Andreani: un importo (dai parametri forensi) con un aggiustamento percentuale discrezionale per fase.
       </Text>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito/grado (per il suggerimento dai parametri forensi)</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
-        {([["giudice_di_pace", "Giudice di pace"], ["tribunale", "Tribunale"], ["appello", "Appello"], ["cassazione", "Cassazione"]] as const).map(([v, l]) => (
-          <Pressable key={v} testID={`par-rito-${v}`} onPress={() => setRitoPar(v)} style={[st.pill, { backgroundColor: ritoPar === v ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-            <Text style={{ color: ritoPar === v ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{l}</Text>
-          </Pressable>
-        ))}
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          testID="par-rito"
+          value={ritoPar}
+          onChange={(v) => setRitoPar(v as typeof ritoPar)}
+          opzioni={[
+            { value: "giudice_di_pace", label: "Giudice di pace" },
+            { value: "tribunale", label: "Tribunale" },
+            { value: "appello", label: "Appello" },
+            { value: "cassazione", label: "Cassazione" },
+          ]}
+        />
       </View>
       <Pressable
         testID="par-suggerisci-parametri-forensi"
@@ -1394,12 +1402,13 @@ export default function Calcolatori() {
                 <View key={c.key}>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.obbligatorio ? " *" : ""}</Text>
                   {c.opzioni ? (
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
-                      {c.opzioni.map((o) => (
-                        <Pressable key={o.value} testID={`atto-campo-${c.key}-${o.value}`} onPress={() => setAttoForm({ ...attoForm, [c.key]: o.value })} style={[st.pill, { backgroundColor: attoForm[c.key] === o.value ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-                          <Text style={{ color: attoForm[c.key] === o.value ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{o.label}</Text>
-                        </Pressable>
-                      ))}
+                    <View style={{ marginBottom: SPACING.sm }}>
+                      <SelectInput
+                        testID={`atto-campo-${c.key}`}
+                        value={attoForm[c.key] || ""}
+                        onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
+                        opzioni={c.opzioni}
+                      />
                     </View>
                   ) : c.dataIso ? (
                     <DataInput testID={`atto-campo-${c.key}`} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
@@ -1453,12 +1462,16 @@ export default function Calcolatori() {
               {calcAperto === "termini-memorie" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tipo di termine</Text>
-                  <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.sm }}>
-                    {([["171-ter", "Memorie integrative (art. 171-ter)"], ["189", "Conclusionali (art. 189)"]] as const).map(([v, l]) => (
-                      <Pressable key={v} testID={`mem-tipo-${v}`} onPress={() => setTipoMem(v)} style={[st.pill, { backgroundColor: tipoMem === v ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-                        <Text style={{ color: tipoMem === v ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{l}</Text>
-                      </Pressable>
-                    ))}
+                  <View style={{ marginBottom: SPACING.sm }}>
+                    <SelectInput
+                      testID="mem-tipo"
+                      value={tipoMem}
+                      onChange={(v) => setTipoMem(v as typeof tipoMem)}
+                      opzioni={[
+                        { value: "171-ter", label: "Memorie integrative (art. 171-ter)" },
+                        { value: "189", label: "Conclusionali (art. 189)" },
+                      ]}
+                    />
                   </View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{tipoMem === "189" ? "Data udienza collegiale di discussione" : "Data udienza di trattazione"}</Text>
                   <DataInput testID="mem-udienza" value={memUdienza} onChange={setMemUdienza} />
@@ -1687,12 +1700,13 @@ export default function Calcolatori() {
                     return (
                       <View key={c.key}>
                         <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: SPACING.sm }}>
-                          {c.opzioni.map((o) => (
-                            <Pressable key={o.value} testID={`gen-${c.key}-${o.value}`} onPress={() => setGenForm({ ...genForm, [c.key]: o.value })} style={[st.pill, { backgroundColor: genForm[c.key] === o.value ? t.brand : t.surfaceSecondary, borderColor: t.border }]}>
-                              <Text style={{ color: genForm[c.key] === o.value ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{o.label}</Text>
-                            </Pressable>
-                          ))}
+                        <View style={{ marginBottom: SPACING.sm }}>
+                          <SelectInput
+                            testID={`gen-${c.key}`}
+                            value={genForm[c.key] || ""}
+                            onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
+                            opzioni={c.opzioni}
+                          />
                         </View>
                       </View>
                     );
