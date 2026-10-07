@@ -518,7 +518,7 @@ export default function Calcolatori() {
   // Termini memorie ex art. 171-ter c.p.c.
   const [memUdienza, setMemUdienza] = React.useState(new Date().toISOString().slice(0, 10));
   const [memEscludiFer, setMemEscludiFer] = React.useState(true);
-  const [tipoMem, setTipoMem] = React.useState<"171-ter" | "189">("171-ter");
+  const [tipoMem, setTipoMem] = React.useState<"171-ter" | "189" | "275-bis">("171-ter");
   const [risMem, setRisMem] = React.useState<any>(null);
   const [calcolandoMem, setCalcolandoMem] = React.useState(false);
   const [savingMem, setSavingMem] = React.useState(false);
@@ -779,6 +779,9 @@ export default function Calcolatori() {
         { titolo: "Note di precisazione delle conclusioni ex art. 189 c.p.c.", data: risMem.prima_memoria },
         { titolo: "Comparse conclusionali ex art. 189 c.p.c.", data: risMem.seconda_memoria },
         { titolo: "Memorie di replica ex art. 189 c.p.c.", data: risMem.terza_memoria },
+      ] : risMem.tipo === "275-bis" ? [
+        { titolo: "Note di precisazione delle conclusioni ex art. 275-bis c.p.c.", data: risMem.prima_memoria },
+        { titolo: "Note conclusive ex art. 275-bis c.p.c.", data: risMem.seconda_memoria },
       ] : [
         { titolo: "1ª memoria ex art. 171-ter c.p.c. (istanze/produzioni)", data: risMem.prima_memoria },
         { titolo: "2ª memoria ex art. 171-ter c.p.c. (repliche/mezzi di prova)", data: risMem.seconda_memoria },
@@ -1476,11 +1479,12 @@ export default function Calcolatori() {
                       onChange={(v) => setTipoMem(v as typeof tipoMem)}
                       opzioni={[
                         { value: "171-ter", label: "Memorie integrative (art. 171-ter)" },
-                        { value: "189", label: "Conclusionali (art. 189)" },
+                        { value: "189", label: "Conclusionali, trattazione scritta (art. 189)" },
+                        { value: "275-bis", label: "Conclusionali, discussione orale (art. 275-bis)" },
                       ]}
                     />
                   </View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{tipoMem === "189" ? "Data udienza collegiale di discussione" : "Data udienza di trattazione"}</Text>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{tipoMem === "171-ter" ? "Data udienza di trattazione" : "Data udienza collegiale di discussione"}</Text>
                   <DataInput testID="mem-udienza" value={memUdienza} onChange={setMemUdienza} />
                   <Pressable testID="mem-toggle-feriale" onPress={() => setMemEscludiFer(!memEscludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.md }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: memEscludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
@@ -1493,13 +1497,20 @@ export default function Calcolatori() {
                   </Pressable>
                   {risMem ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
-                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>{risMem.tipo === "189" ? "CONCLUSIONALI EX ART. 189 C.P.C." : "MEMORIE EX ART. 171-TER C.P.C."}</Text>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>
+                        {risMem.tipo === "189" ? "CONCLUSIONALI EX ART. 189 C.P.C." : risMem.tipo === "275-bis" ? "CONCLUSIONALI EX ART. 275-BIS C.P.C." : "MEMORIE EX ART. 171-TER C.P.C."}
+                      </Text>
                       <View style={{ marginTop: SPACING.sm, gap: 4 }}>
                         {risMem.tipo === "189" ? (
                           <>
                             <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Note precisazione conclusioni (-60 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
                             <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Comparse conclusionali (-30 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
                             <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Memorie di replica (-15 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.terza_memoria)}</Text></Text>
+                          </>
+                        ) : risMem.tipo === "275-bis" ? (
+                          <>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Note precisazione conclusioni (-30 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.prima_memoria)}</Text></Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 13 }}>Note conclusive (-15 gg): <Text style={{ fontWeight: "800" }}>{isoToDataIt(risMem.seconda_memoria)}</Text></Text>
                           </>
                         ) : (
                           <>
@@ -1518,7 +1529,7 @@ export default function Calcolatori() {
                             helperText={praticaId ? "Compariranno anche nella scheda di quella pratica." : "Compariranno solo qui e nel calendario."}
                           />
                           <Pressable testID="save-mem" onPress={salvaMemorie} disabled={savingMem} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: savingMem ? 0.6 : 1 }}>
-                            <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingMem ? "Salvataggio..." : "Salva le 3 scadenze"}</Text>
+                            <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingMem ? "Salvataggio..." : risMem.tipo === "275-bis" ? "Salva le 2 scadenze" : "Salva le 3 scadenze"}</Text>
                           </Pressable>
                         </>
                       ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvate</Text>}
