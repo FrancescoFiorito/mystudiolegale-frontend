@@ -447,6 +447,11 @@ export default function Calcolatori() {
   const [unita, setUnita] = React.useState<"giorni" | "mesi" | "anni">("giorni");
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [escludiCovid, setEscludiCovid] = React.useState(false);
+  // Voci notevoli del c.p.c. (come il selettore di avvocatoandreani.it):
+  // precompilano termine/unità/direzione, restando comunque modificabili.
+  const [terminiCpc, setTerminiCpc] = React.useState<any[]>([]);
+  const [queryCpc, setQueryCpc] = React.useState("");
+  const [voceCpcSelezionata, setVoceCpcSelezionata] = React.useState<any>(null);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
   const [oraScad, setOraScad] = React.useState<string | null>(null);
@@ -537,6 +542,7 @@ export default function Calcolatori() {
   const [attoGenerando, setAttoGenerando] = React.useState(false);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
+  React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
 
   // Precompila "persona giuridica" dal tipo del cliente collegato alla
   // pratica scelta, invece di richiederlo di nuovo: resta comunque
@@ -824,7 +830,7 @@ export default function Calcolatori() {
 
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
-    setRisScad(null); setTitoloScad("");
+    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc("");
     setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]); setRitoPar("tribunale");
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
@@ -909,8 +915,60 @@ export default function Calcolatori() {
   // Contenuto del calcolatore "Scadenze Processuali": invariato nella
   // logica, solo spostato in una funzione cosi' da poterlo renderizzare
   // sia nel caso "locked" sia dentro l'overlay aperto dal picker.
+  const terminiCpcFiltrati = queryCpc.trim()
+    ? terminiCpc.filter((v) => `${v.articolo} ${v.descrizione}`.toLowerCase().includes(queryCpc.trim().toLowerCase()))
+    : [];
+
+  const selezionaVoceCpc = (v: any) => {
+    setVoceCpcSelezionata(v);
+    setQueryCpc("");
+    setGiorni(String(v.valore));
+    setUnita(v.unita);
+    setTipoS(v.direzione);
+  };
+
   const contenutoScadenze = (
     <View>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Voce notevole del c.p.c. (facoltativo)</Text>
+      {voceCpcSelezionata ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
+          <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary }}>
+            <Text style={{ color: t.brand, fontSize: 13, fontWeight: "700" }}>{voceCpcSelezionata.articolo}</Text>
+            <Text style={{ color: t.brand, fontSize: 12 }} numberOfLines={2}>{voceCpcSelezionata.descrizione}</Text>
+          </View>
+          <Pressable testID="voce-cpc-deseleziona" onPress={() => setVoceCpcSelezionata(null)} style={{ padding: 8 }}>
+            <Feather name="x" size={16} color={t.onSurfaceTertiary} />
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          <View style={{ flexDirection: "row", alignItems: "center", borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }}>
+            <Feather name="search" size={15} color={t.onSurfaceTertiary} />
+            <TextInput
+              testID="voce-cpc-search"
+              value={queryCpc}
+              onChangeText={setQueryCpc}
+              placeholder="Cerca per articolo o descrizione (es. 325, impugnazione...)"
+              placeholderTextColor={t.onSurfaceTertiary}
+              style={{ flex: 1, marginLeft: 8, color: t.onSurface, fontSize: 13 }}
+            />
+          </View>
+          {queryCpc.trim() ? (
+            <ScrollView style={{ maxHeight: 180, marginBottom: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              {terminiCpcFiltrati.length === 0 ? (
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessuna voce trovata</Text>
+              ) : (
+                terminiCpcFiltrati.map((v, i) => (
+                  <Pressable key={i} testID={`voce-cpc-opzione-${i}`} onPress={() => selezionaVoceCpc(v)} style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: RADIUS.md }}>
+                    <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "700" }}>{v.articolo}</Text>
+                    <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }} numberOfLines={2}>{v.descrizione} — {v.valore} {v.unita} ({v.direzione})</Text>
+                  </Pressable>
+                ))
+              )}
+            </ScrollView>
+          ) : null}
+        </>
+      )}
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza</Text>
       <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita})</Text>
