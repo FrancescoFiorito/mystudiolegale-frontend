@@ -39,7 +39,7 @@ type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data_opzionale" })
   | (CampoGenericoBase & { tipo: "numero"; default?: string })
   | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
-  | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[]; default?: string });
+  | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string });
 
 type ConfigGenerico = {
   campi: CampoGenerico[];
@@ -55,18 +55,24 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "tipo_processo", label: "Tipo di processo", default: "civile", opzioni: [
         { value: "civile", label: "Civile" }, { value: "amministrativo", label: "Amministrativo" }, { value: "tributario", label: "Tributario" },
       ] },
-      { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: [
-        { value: "appello", label: "Appello" }, { value: "cassazione", label: "Cassazione" },
+      { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: (f) => [
+        { value: "appello", label: f.tipo_processo === "amministrativo" ? "Appello al Consiglio di Stato" : f.tipo_processo === "tributario" ? "Ricorso in Corte di Giustizia Tributaria di secondo grado" : "Appello" },
+        { value: "cassazione", label: "Cassazione" },
         { value: "revocazione_ordinaria", label: "Revocazione ordinaria (errore di fatto / giudicato contrario, art. 395 nn. 4-5)" },
         { value: "revocazione_straordinaria", label: "Revocazione straordinaria (dolo, falsità, documenti, art. 395 nn. 1-3-6)" },
-        { value: "opposizione_terzo_revocatoria", label: "Opposizione di terzo revocatoria (art. 404 c.2)" },
-        { value: "opposizione_terzo_ordinaria", label: "Opposizione di terzo ordinaria (art. 404 c.1 — nessun termine)" },
+        // Il processo tributario non ha un'autonoma opposizione di terzo
+        // equivalente a quella degli artt. 404 c.p.c./108 c.p.a.: Andreani
+        // stesso non la propone come opzione selezionabile per "Tributario".
+        ...(f.tipo_processo === "tributario" ? [] : [
+          { value: "opposizione_terzo_revocatoria", label: "Opposizione di terzo revocatoria (art. 404 c.2)" },
+          { value: "opposizione_terzo_ordinaria", label: "Opposizione di terzo ordinaria (art. 404 c.1 — nessun termine)" },
+        ]),
       ] },
-      { tipo: "data_opzionale", key: "data_pubblicazione", label: "Data pubblicazione sentenza",
+      { tipo: "data", key: "data_pubblicazione", label: "Data pubblicazione sentenza",
         mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
       { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza, se notificata",
         mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
-      { tipo: "data_opzionale", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo",
+      { tipo: "data", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo",
         mostraSe: (f) => ["revocazione_straordinaria", "opposizione_terzo_revocatoria"].includes(f.tipo) },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
@@ -422,7 +428,7 @@ function defaultGenForm(idc: string): Record<string, any> {
     else if (c.tipo === "data_opzionale") f[c.key] = "";
     else if (c.tipo === "numero") f[c.key] = c.default ?? "";
     else if (c.tipo === "bool") f[c.key] = c.default ?? false;
-    else if (c.tipo === "scelta") f[c.key] = c.default ?? c.opzioni[0]?.value;
+    else if (c.tipo === "scelta") f[c.key] = c.default ?? (typeof c.opzioni === "function" ? c.opzioni(f) : c.opzioni)[0]?.value;
   });
   return f;
 }
@@ -1768,7 +1774,7 @@ export default function Calcolatori() {
                             testID={`gen-${c.key}`}
                             value={genForm[c.key] || ""}
                             onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
-                            opzioni={c.opzioni}
+                            opzioni={typeof c.opzioni === "function" ? c.opzioni(genForm) : c.opzioni}
                           />
                         </View>
                       </View>
