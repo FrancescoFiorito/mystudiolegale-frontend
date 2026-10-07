@@ -55,28 +55,47 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "tipo_processo", label: "Tipo di processo", default: "civile", opzioni: [
         { value: "civile", label: "Civile" }, { value: "amministrativo", label: "Amministrativo" }, { value: "tributario", label: "Tributario" },
       ] },
-      { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: (f) => [
+      // Come Andreani: 4 voci in "Impugnazione" (Appello, Cassazione,
+      // Revocazione, Opposizione di terzo — quest'ultima assente per
+      // Tributario, che non ne ha un'autonoma equivalente agli artt. 404
+      // c.p.c./108 c.p.a.), non 6. La distinzione ordinaria/straordinaria
+      // (già presente da prima, più granulare di Andreani) si sceglie con
+      // un secondo campo mostrato solo per Revocazione/Opposizione di
+      // terzo, analogo al "Dalla data di" di Andreani.
+      { tipo: "scelta", key: "categoria_impugnazione", label: "Tipo di impugnazione", default: "appello", opzioni: (f) => [
         { value: "appello", label: f.tipo_processo === "amministrativo" ? "Appello al Consiglio di Stato" : f.tipo_processo === "tributario" ? "Ricorso in Corte di Giustizia Tributaria di secondo grado" : "Appello" },
         { value: "cassazione", label: "Cassazione" },
-        { value: "revocazione_ordinaria", label: "Revocazione ordinaria (errore di fatto / giudicato contrario, art. 395 nn. 4-5)" },
-        { value: "revocazione_straordinaria", label: "Revocazione straordinaria (dolo, falsità, documenti, art. 395 nn. 1-3-6)" },
-        // Il processo tributario non ha un'autonoma opposizione di terzo
-        // equivalente a quella degli artt. 404 c.p.c./108 c.p.a.: Andreani
-        // stesso non la propone come opzione selezionabile per "Tributario".
-        ...(f.tipo_processo === "tributario" ? [] : [
-          { value: "opposizione_terzo_revocatoria", label: "Opposizione di terzo revocatoria (art. 404 c.2)" },
-          { value: "opposizione_terzo_ordinaria", label: "Opposizione di terzo ordinaria (art. 404 c.1 — nessun termine)" },
-        ]),
+        { value: "revocazione", label: "Revocazione" },
+        ...(f.tipo_processo === "tributario" ? [] : [{ value: "opposizione_terzo", label: "Opposizione di terzo" }]),
       ] },
+      { tipo: "scelta", key: "sottotipo", label: "Motivo", default: "ordinaria",
+        mostraSe: (f) => f.categoria_impugnazione === "revocazione" || f.categoria_impugnazione === "opposizione_terzo",
+        opzioni: (f) => f.categoria_impugnazione === "opposizione_terzo" ? [
+          { value: "ordinaria", label: "Ordinaria (art. 404 c.1 — nessun termine)" },
+          { value: "revocatoria", label: "Revocatoria (art. 404 c.2 — dalla scoperta del vizio)" },
+        ] : [
+          { value: "ordinaria", label: "Ordinaria (errore di fatto / giudicato contrario, art. 395 nn. 4-5)" },
+          { value: "straordinaria", label: "Straordinaria (dolo, falsità, documenti, art. 395 nn. 1-3-6)" },
+        ] },
       { tipo: "data", key: "data_pubblicazione", label: "Data pubblicazione sentenza",
-        mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
+        mostraSe: (f) => f.categoria_impugnazione === "appello" || f.categoria_impugnazione === "cassazione" || (f.categoria_impugnazione === "revocazione" && f.sottotipo !== "straordinaria") },
       { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza, se notificata",
-        mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
+        mostraSe: (f) => f.categoria_impugnazione === "appello" || f.categoria_impugnazione === "cassazione" || (f.categoria_impugnazione === "revocazione" && f.sottotipo !== "straordinaria") },
       { tipo: "data", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo",
-        mostraSe: (f) => ["revocazione_straordinaria", "opposizione_terzo_revocatoria"].includes(f.tipo) },
+        mostraSe: (f) => (f.categoria_impugnazione === "revocazione" && f.sottotipo === "straordinaria") || (f.categoria_impugnazione === "opposizione_terzo" && f.sottotipo === "revocatoria") },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/termini-impugnazione",
+    buildBody: (f) => ({
+      tipo_processo: f.tipo_processo,
+      escludi_feriale: f.escludi_feriale,
+      tipo: f.categoria_impugnazione === "revocazione" ? (f.sottotipo === "straordinaria" ? "revocazione_straordinaria" : "revocazione_ordinaria")
+        : f.categoria_impugnazione === "opposizione_terzo" ? (f.sottotipo === "revocatoria" ? "opposizione_terzo_revocatoria" : "opposizione_terzo_ordinaria")
+        : f.categoria_impugnazione,
+      data_pubblicazione: f.data_pubblicazione || null,
+      data_notificazione: f.data_notificazione || null,
+      data_scoperta_vizio: f.data_scoperta_vizio || null,
+    }),
     risultato: (r) => r.tipo === "opposizione_terzo_ordinaria"
       ? [["Nota", r.nota]]
       : r.tipo === "revocazione_straordinaria" || r.tipo === "opposizione_terzo_revocatoria"
