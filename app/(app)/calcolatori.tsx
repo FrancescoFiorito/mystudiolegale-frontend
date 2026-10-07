@@ -33,12 +33,13 @@ type CalcId =
 // tutti un piccolo form -> un POST -> un risultato da mostrare (ed
 // eventualmente da salvare come scadenza), senza logica particolare propria
 // che giustifichi una schermata dedicata come quelle storiche sopra.
+type CampoGenericoBase = { key: string; label: string; mostraSe?: (form: Record<string, any>) => boolean };
 type CampoGenerico =
-  | { tipo: "data"; key: string; label: string }
-  | { tipo: "data_opzionale"; key: string; label: string }
-  | { tipo: "numero"; key: string; label: string; default?: string }
-  | { tipo: "bool"; key: string; label: string; default?: boolean }
-  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[]; default?: string };
+  | (CampoGenericoBase & { tipo: "data" })
+  | (CampoGenericoBase & { tipo: "data_opzionale" })
+  | (CampoGenericoBase & { tipo: "numero"; default?: string })
+  | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
+  | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[]; default?: string });
 
 type ConfigGenerico = {
   campi: CampoGenerico[];
@@ -51,6 +52,9 @@ type ConfigGenerico = {
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
     campi: [
+      { tipo: "scelta", key: "tipo_processo", label: "Tipo di processo", default: "civile", opzioni: [
+        { value: "civile", label: "Civile" }, { value: "amministrativo", label: "Amministrativo" }, { value: "tributario", label: "Tributario" },
+      ] },
       { tipo: "scelta", key: "tipo", label: "Tipo di impugnazione", default: "appello", opzioni: [
         { value: "appello", label: "Appello" }, { value: "cassazione", label: "Cassazione" },
         { value: "revocazione_ordinaria", label: "Revocazione ordinaria (errore di fatto / giudicato contrario, art. 395 nn. 4-5)" },
@@ -58,16 +62,19 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "opposizione_terzo_revocatoria", label: "Opposizione di terzo revocatoria (art. 404 c.2)" },
         { value: "opposizione_terzo_ordinaria", label: "Opposizione di terzo ordinaria (art. 404 c.1 — nessun termine)" },
       ] },
-      { tipo: "data_opzionale", key: "data_pubblicazione", label: "Data pubblicazione sentenza (appello/cassazione/revocazione ordinaria)" },
-      { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza, se notificata (appello/cassazione/revocazione ordinaria)" },
-      { tipo: "data_opzionale", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo (revocazione straordinaria/opposizione di terzo revocatoria)" },
+      { tipo: "data_opzionale", key: "data_pubblicazione", label: "Data pubblicazione sentenza",
+        mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
+      { tipo: "data_opzionale", key: "data_notificazione", label: "Data notificazione sentenza, se notificata",
+        mostraSe: (f) => ["appello", "cassazione", "revocazione_ordinaria"].includes(f.tipo) },
+      { tipo: "data_opzionale", key: "data_scoperta_vizio", label: "Data di scoperta del vizio/dolo",
+        mostraSe: (f) => ["revocazione_straordinaria", "opposizione_terzo_revocatoria"].includes(f.tipo) },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/termini-impugnazione",
     risultato: (r) => r.tipo === "opposizione_terzo_ordinaria"
       ? [["Nota", r.nota]]
       : r.tipo === "revocazione_straordinaria" || r.tipo === "opposizione_terzo_revocatoria"
-      ? [["Termine applicabile (30gg dalla scoperta)", isoToDataIt(r.termine_applicabile)]]
+      ? [[`Termine applicabile (${r.tipo_processo === "civile" ? "30" : "60"}gg dalla scoperta)`, isoToDataIt(r.termine_applicabile)]]
       : [
           ["Termine applicabile", isoToDataIt(r.termine_applicabile)],
           ["Termine lungo (6 mesi da pubblicazione)", isoToDataIt(r.termine_lungo)],
@@ -1671,6 +1678,7 @@ export default function Calcolatori() {
               {calcAperto && CONFIG_GENERICI[calcAperto] ? (
                 <View>
                   {CONFIG_GENERICI[calcAperto].campi.map((c) => {
+                    if (c.mostraSe && !c.mostraSe(genForm)) return null;
                     if (c.tipo === "data" || c.tipo === "data_opzionale") {
                       return (
                         <View key={c.key}>
