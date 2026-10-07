@@ -175,16 +175,21 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "precetto": {
     campi: [
       { tipo: "data", key: "data_notifica_precetto", label: "Data notifica del precetto" },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (dibattuto per l'esecutivo)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale", default: false },
       { tipo: "scelta", key: "tipo_pignoramento", label: "Termini successivi al pignoramento (facoltativo)", default: "", opzioni: [
         { value: "", label: "Nessuno" },
-        { value: "mobiliare_immobiliare", label: "Mobiliare/immobiliare (istanza di vendita)" },
+        { value: "mobiliare_immobiliare", label: "Mobiliare/immobiliare (iscrizione a ruolo e istanza di vendita)" },
         { value: "presso_terzi", label: "Presso terzi (iscrizione a ruolo)" },
         { value: "autoveicoli", label: "Autoveicoli/motoveicoli/rimorchi (art. 521-bis)" },
       ] },
-      { tipo: "data_opzionale", key: "data_pignoramento", label: "Data del pignoramento (se calcoli i termini successivi)" },
-      { tipo: "data_opzionale", key: "data_comunicazione_ivg", label: "Data comunicazione IVG di avvenuta consegna (solo autoveicoli)" },
-      { tipo: "data_opzionale", key: "data_iscrizione_ruolo", label: "Data iscrizione a ruolo (solo autoveicoli, se già avvenuta)" },
+      { tipo: "data_opzionale", key: "data_pignoramento", label: "Data di compimento del pignoramento (per l'istanza di vendita)",
+        mostraSe: (f) => f.tipo_pignoramento === "mobiliare_immobiliare" || f.tipo_pignoramento === "autoveicoli" },
+      { tipo: "data_opzionale", key: "data_consegna_verbale", label: "Data di consegna del verbale/atto al creditore da parte dell'ufficiale giudiziario (per l'iscrizione a ruolo)",
+        mostraSe: (f) => f.tipo_pignoramento === "mobiliare_immobiliare" || f.tipo_pignoramento === "presso_terzi" },
+      { tipo: "data_opzionale", key: "data_comunicazione_ivg", label: "Data comunicazione IVG di avvenuta consegna (solo autoveicoli)",
+        mostraSe: (f) => f.tipo_pignoramento === "autoveicoli" },
+      { tipo: "data_opzionale", key: "data_iscrizione_ruolo", label: "Data iscrizione a ruolo (solo autoveicoli, se già avvenuta)",
+        mostraSe: (f) => f.tipo_pignoramento === "autoveicoli" },
     ],
     endpoint: "/calc/precetto",
     buildBody: (f) => ({
@@ -192,11 +197,13 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       escludi_feriale: f.escludi_feriale,
       ...(f.tipo_pignoramento ? {
         tipo_pignoramento: f.tipo_pignoramento,
-        data_pignoramento: f.data_pignoramento,
-        ...(f.tipo_pignoramento === "autoveicoli" ? {
+        data_pignoramento: f.data_pignoramento || null,
+        ...(f.tipo_pignoramento !== "autoveicoli" ? {
+          data_consegna_verbale: f.data_consegna_verbale || null,
+        } : {
           data_comunicazione_ivg: f.data_comunicazione_ivg || null,
           data_iscrizione_ruolo: f.data_iscrizione_ruolo || null,
-        } : {}),
+        }),
       } : {}),
     }),
     risultato: (r) => [
@@ -215,7 +222,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { titolo: "Data minima per il pignoramento", data: r.data_minima_pignoramento },
       { titolo: "Scadenza efficacia del precetto", data: r.scadenza_efficacia_precetto },
       ...(r.termine_massimo_istanza_vendita ? [{ titolo: "Termine istanza di vendita", data: r.termine_massimo_istanza_vendita }] : []),
-      ...(r.termine_iscrizione_ruolo && !r.termine_consegna_volontaria ? [{ titolo: "Termine iscrizione a ruolo (pignoramento presso terzi)", data: r.termine_iscrizione_ruolo }] : []),
+      ...(r.termine_iscrizione_ruolo && !r.termine_consegna_volontaria ? [{ titolo: "Termine iscrizione a ruolo", data: r.termine_iscrizione_ruolo }] : []),
       ...(r.termine_consegna_volontaria ? [{ titolo: "Consegna volontaria veicolo (IVG)", data: r.termine_consegna_volontaria }] : []),
       ...(r.termine_consegna_volontaria && r.termine_iscrizione_ruolo ? [{ titolo: "Iscrizione a ruolo (pignoramento autoveicoli)", data: r.termine_iscrizione_ruolo }] : []),
       ...(r.termine_istanza_vendita ? [{ titolo: "Istanza di vendita (pignoramento autoveicoli)", data: r.termine_istanza_vendita }] : []),
