@@ -522,6 +522,16 @@ const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }
   { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
 ];
 
+// Periodicità di capitalizzazione per gli interessi legali, come Andreani
+// (4 opzioni, date fisse: 1/1 per tutte, più 1/4-1/7-1/10 a seconda della
+// periodicità — vedi MESI_CAPITALIZZAZIONE nel backend).
+const CAPITALIZZAZIONI = [
+  { value: "nessuna", label: "Nessuna capitalizzazione" },
+  { value: "trimestrale", label: "Trimestrale (1/1, 1/4, 1/7, 1/10)" },
+  { value: "semestrale", label: "Semestrale (1/1, 1/7)" },
+  { value: "annuale", label: "Annuale (1/1)" },
+];
+
 const GRADI_SUCCESSIONE = [
   { id: "coniuge_parenti_retta", label: "Coniuge e parenti in linea retta (figli, genitori)" },
   { id: "fratelli_sorelle", label: "Fratelli e sorelle" },
@@ -611,6 +621,7 @@ export default function Calcolatori() {
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiDataFine, setTassiDataFine] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("8");
+  const [tassiCapitalizzazione, setTassiCapitalizzazione] = React.useState("nessuna");
   const [risTassi, setRisTassi] = React.useState<any>(null);
   const [calcolandoTassi, setCalcolandoTassi] = React.useState(false);
   // Contributo unificato
@@ -879,6 +890,7 @@ export default function Calcolatori() {
     try {
       const body: any = { capitale: parseNumeroIt(tassiCapitale), data_inizio: tassiDataInizio, data_fine: tassiDataFine };
       if (tipo === "interessi-mora") body.maggiorazione_pct = parseNumeroIt(tassiMaggiorazione) || 8;
+      else body.capitalizzazione = tassiCapitalizzazione;
       const r = await api.post(`/calc/${tipo}`, body);
       setRisTassi(r);
     } catch (e: any) {
@@ -1749,7 +1761,12 @@ export default function Calcolatori() {
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
                       <TextInput testID="tassi-maggiorazione" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
-                  ) : null}
+                  ) : (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitalizzazione</Text>
+                      <SelectInput testID="tassi-capitalizzazione" value={tassiCapitalizzazione} onChange={setTassiCapitalizzazione} opzioni={CAPITALIZZAZIONI} />
+                    </>
+                  )}
                   <Pressable testID="btn-calc-tassi" onPress={() => calcolaTassi(calcAperto)} disabled={calcolandoTassi} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoTassi ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoTassi ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
