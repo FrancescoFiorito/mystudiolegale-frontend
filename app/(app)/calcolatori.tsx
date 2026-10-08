@@ -597,11 +597,16 @@ const MODALITA_ISTAT = [
   { value: "sola_rivalutazione", label: "Sola rivalutazione (senza interessi)" },
 ];
 
+// 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
+// etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
 const GRADI_SUCCESSIONE = [
-  { id: "coniuge_parenti_retta", label: "Coniuge e parenti in linea retta (figli, genitori)" },
-  { id: "fratelli_sorelle", label: "Fratelli e sorelle" },
-  { id: "altri_parenti_4grado", label: "Altri parenti fino al 4° grado / affini" },
-  { id: "altri_soggetti", label: "Altri soggetti" },
+  { id: "coniuge", label: "Coniuge" },
+  { id: "discendenti_retta", label: "Discendente in linea retta (figlio, nipote ecc.)" },
+  { id: "ascendenti_retta", label: "Ascendente in linea retta (genitore, nonno ecc.)" },
+  { id: "fratelli_sorelle", label: "Fratello o sorella" },
+  { id: "parenti_4grado", label: "Parente fino al quarto grado" },
+  { id: "affini_3grado", label: "Affine fino al terzo grado" },
+  { id: "altri_soggetti", label: "Altro soggetto diverso dai precedenti" },
 ] as const;
 
 export default function Calcolatori() {
@@ -729,8 +734,10 @@ export default function Calcolatori() {
   const [calcolandoMem, setCalcolandoMem] = React.useState(false);
   const [savingMem, setSavingMem] = React.useState(false);
   // Imposta di successione
-  const [succValoreQuota, setSuccValoreQuota] = React.useState("");
-  const [succGrado, setSuccGrado] = React.useState<string>("coniuge_parenti_retta");
+  const [succPrimaCasa, setSuccPrimaCasa] = React.useState("");
+  const [succAltriImmobili, setSuccAltriImmobili] = React.useState("");
+  const [succBeniMobili, setSuccBeniMobili] = React.useState("");
+  const [succGrado, setSuccGrado] = React.useState<string>("discendenti_retta");
   const [succDisabile, setSuccDisabile] = React.useState(false);
   const [risSucc, setRisSucc] = React.useState<any>(null);
   const [calcolandoSucc, setCalcolandoSucc] = React.useState(false);
@@ -1078,7 +1085,13 @@ export default function Calcolatori() {
     setCalcolandoSucc(true);
     setRisSucc(null);
     try {
-      const r = await api.post("/calc/imposta-successione", { valore_quota: parseNumeroIt(succValoreQuota), grado_parentela: succGrado, disabile_grave: succDisabile });
+      const r = await api.post("/calc/imposta-successione", {
+        grado_parentela: succGrado,
+        disabile_grave: succDisabile,
+        valore_catastale_prima_casa: parseNumeroIt(succPrimaCasa) || 0,
+        valore_catastale_altri_immobili: parseNumeroIt(succAltriImmobili) || 0,
+        beni_mobili: parseNumeroIt(succBeniMobili) || 0,
+      });
       setRisSucc(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -1122,7 +1135,7 @@ export default function Calcolatori() {
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
-    setRisSucc(null); setSuccValoreQuota(""); setSuccGrado("coniuge_parenti_retta"); setSuccDisabile(false);
+    setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuVacazioni(""); setCtuTariffa(""); setCtuSpese("0"); setCtuMaggiorazione("0"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
   };
@@ -2039,9 +2052,13 @@ export default function Calcolatori() {
 
               {calcAperto === "imposta-successione" ? (
                 <View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della quota ereditaria €</Text>
-                  <TextInput testID="succ-valore-quota" value={succValoreQuota} onChangeText={setSuccValoreQuota} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Grado di parentela</Text>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore catastale immobile adibito a prima casa €</Text>
+                  <TextInput testID="succ-prima-casa" value={succPrimaCasa} onChangeText={setSuccPrimaCasa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore catastale altri immobili €</Text>
+                  <TextInput testID="succ-altri-immobili" value={succAltriImmobili} onChangeText={setSuccAltriImmobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Beni mobili (denaro e strumenti finanziari, esclusi i titoli di Stato) €</Text>
+                  <TextInput testID="succ-beni-mobili" value={succBeniMobili} onChangeText={setSuccBeniMobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Grado di parentela/affinità dell&apos;erede rispetto al defunto</Text>
                   {GRADI_SUCCESSIONE.map((g) => (
                     <Pressable key={g.id} testID={`succ-grado-${g.id}`} onPress={() => setSuccGrado(g.id)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
                       <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: t.brand, alignItems: "center", justifyContent: "center" }}>
@@ -2061,9 +2078,26 @@ export default function Calcolatori() {
                   </Pressable>
                   {risSucc ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
-                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>IMPOSTA DI SUCCESSIONE</Text>
-                      <Text testID="succ-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposta)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Franchigia: {formatEuro(risSucc.franchigia)} · Aliquota: {risSucc.aliquota_pct}% · Imponibile: {formatEuro(risSucc.imponibile)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>IMPOSTE TOTALI DOVUTE</Text>
+                      <Text testID="succ-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposte_totali)}</Text>
+                      <View style={{ marginTop: SPACING.sm, gap: 3 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>Imposta di successione (franchigia {formatEuro(risSucc.franchigia)}, {risSucc.aliquota_pct}% su {formatEuro(risSucc.imponibile)})</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposta_successione)}</Text>
+                        </View>
+                        {risSucc.imposta_ipotecaria_prima_casa > 0 || risSucc.imposta_catastale_prima_casa > 0 ? (
+                          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>Ipotecaria + catastale prima casa</Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposta_ipotecaria_prima_casa + risSucc.imposta_catastale_prima_casa)}</Text>
+                          </View>
+                        ) : null}
+                        {risSucc.imposta_ipotecaria_altri_immobili > 0 || risSucc.imposta_catastale_altri_immobili > 0 ? (
+                          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>Ipotecaria + catastale altri immobili</Text>
+                            <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(risSucc.imposta_ipotecaria_altri_immobili + risSucc.imposta_catastale_altri_immobili)}</Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
                   ) : null}
                 </View>
