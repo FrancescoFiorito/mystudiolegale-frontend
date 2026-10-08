@@ -532,6 +532,63 @@ const CAPITALIZZAZIONI = [
   { value: "annuale", label: "Annuale (1/1)" },
 ];
 
+// Contributo unificato, come Andreani: processo (civile/tributario/
+// amministrativo) + giudizio + tipo di valore, più riduzione 50% (solo
+// civile) e procedimenti a contributo fisso indipendenti dal resto — v.
+// CU_* nel backend per le fonti verificate dietro ogni importo.
+const PROCESSI_CU = [
+  { value: "civile", label: "Civile" },
+  { value: "tributario", label: "Tributario" },
+  { value: "amministrativo", label: "Amministrativo" },
+];
+const GIUDIZI_CU = [
+  { value: "primo_grado", label: "Primo grado" },
+  { value: "impugnazione", label: "Impugnazione" },
+  { value: "cassazione", label: "Cassazione" },
+];
+// Il processo amministrativo non ha un vero grado di Cassazione ai fini del
+// contributo unificato (art. 13 comma 6-bis DPR 115/2002: solo TAR e
+// Consiglio di Stato).
+const GIUDIZI_CU_AMMINISTRATIVO = [
+  { value: "primo_grado", label: "Primo grado (TAR)" },
+  { value: "impugnazione", label: "Impugnazione (Consiglio di Stato)" },
+];
+const VALORE_TIPI_CU_CIVILE = [
+  { value: "determinato", label: "Valore determinato" },
+  { value: "indeterminabile", label: "Valore indeterminabile" },
+];
+const VALORE_TIPI_CU_TRIBUTARIO = [
+  { value: "determinato", label: "Valore determinato" },
+  { value: "indeterminabile", label: "Valore indeterminabile" },
+  { value: "non_indicato", label: "Valore non indicato" },
+];
+const VALORE_TIPI_CU_APPALTI = [
+  { value: "determinato", label: "Valore determinato" },
+  { value: "non_indicato", label: "Valore non dichiarato" },
+];
+const UFFICI_CU = [
+  { value: "tribunale", label: "Tribunale" },
+  { value: "giudice_di_pace", label: "Giudice di pace" },
+];
+// Elenco non esaustivo dei riti amministrativi a importo fisso: solo le
+// voci verificate con fonti indipendenti (v. CU_AMMINISTRATIVO_FISSO nel
+// backend).
+const RITI_AMMINISTRATIVI_CU = [
+  { value: "ricorso_ordinario", label: "Ricorso ordinario / straordinario al Presidente della Repubblica" },
+  { value: "accesso_silenzio_ottemperanza_cittadinanza", label: "Accesso agli atti, silenzio, ottemperanza, cittadinanza, residenza/soggiorno" },
+  { value: "pubblico_impiego", label: "Pubblico impiego (inclusi concorsi)" },
+  { value: "rito_abbreviato", label: "Rito abbreviato (art. 119 c.p.a.)" },
+  { value: "appalti_pubblici", label: "Appalti pubblici / Autorità indipendenti" },
+];
+// Elenco volutamente parziale: solo la procedura fallimentare è verificata
+// con fonti indipendenti concordanti (v. CU_PROCEDURE_FISSE nel backend).
+const PROCEDURE_FISSE_CU = [
+  { value: "", label: "Nessuna (usa processo/giudizio/valore)" },
+  { value: "fallimento_istanza", label: "Istanza di fallimento" },
+  { value: "fallimento_intera_procedura", label: "Intera procedura fallimentare" },
+  { value: "fallimento_insinuazione_passivo", label: "Insinuazione al passivo (esente)" },
+];
+
 const GRADI_SUCCESSIONE = [
   { id: "coniuge_parenti_retta", label: "Coniuge e parenti in linea retta (figli, genitori)" },
   { id: "fratelli_sorelle", label: "Fratelli e sorelle" },
@@ -639,6 +696,13 @@ export default function Calcolatori() {
   const [calcolandoTassi, setCalcolandoTassi] = React.useState(false);
   // Contributo unificato
   const [cuValoreCausa, setCuValoreCausa] = React.useState("");
+  const [cuProcesso, setCuProcesso] = React.useState("civile");
+  const [cuGiudizio, setCuGiudizio] = React.useState("primo_grado");
+  const [cuValoreTipo, setCuValoreTipo] = React.useState("determinato");
+  const [cuUfficio, setCuUfficio] = React.useState("tribunale");
+  const [cuRiduzione50, setCuRiduzione50] = React.useState(false);
+  const [cuRitoAmministrativo, setCuRitoAmministrativo] = React.useState("ricorso_ordinario");
+  const [cuProceduraFissa, setCuProceduraFissa] = React.useState("");
   const [risCu, setRisCu] = React.useState<any>(null);
   const [calcolandoCu, setCalcolandoCu] = React.useState(false);
   // Rivalutazione ISTAT
@@ -918,7 +982,18 @@ export default function Calcolatori() {
     setCalcolandoCu(true);
     setRisCu(null);
     try {
-      const r = await api.post("/calc/contributo-unificato", { valore_causa: parseNumeroIt(cuValoreCausa) });
+      const body: any = cuProceduraFissa
+        ? { procedura_fissa: cuProceduraFissa }
+        : {
+            processo: cuProcesso,
+            giudizio: cuGiudizio,
+            valore_tipo: cuValoreTipo,
+            valore_causa: parseNumeroIt(cuValoreCausa) || 0,
+            ufficio: cuUfficio,
+            riduzione_50: cuRiduzione50,
+            rito_amministrativo: cuRitoAmministrativo,
+          };
+      const r = await api.post("/calc/contributo-unificato", body);
       setRisCu(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -1829,8 +1904,62 @@ export default function Calcolatori() {
 
               {calcAperto === "contributo-unificato" ? (
                 <View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della causa €</Text>
-                  <TextInput testID="cu-valore-causa" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Procedimento a contributo fisso</Text>
+                  <SelectInput testID="cu-procedura-fissa" value={cuProceduraFissa} onChange={setCuProceduraFissa} opzioni={PROCEDURE_FISSE_CU} />
+                  {!cuProceduraFissa ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Processo</Text>
+                      <SelectInput
+                        testID="cu-processo"
+                        value={cuProcesso}
+                        onChange={(v) => {
+                          setCuProcesso(v);
+                          if (v === "amministrativo" && cuGiudizio === "cassazione") setCuGiudizio("primo_grado");
+                        }}
+                        opzioni={PROCESSI_CU}
+                      />
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Giudizio</Text>
+                      <SelectInput testID="cu-giudizio" value={cuGiudizio} onChange={setCuGiudizio} opzioni={cuProcesso === "amministrativo" ? GIUDIZI_CU_AMMINISTRATIVO : GIUDIZI_CU} />
+                      {cuProcesso === "amministrativo" ? (
+                        <>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito</Text>
+                          <SelectInput testID="cu-rito-amministrativo" value={cuRitoAmministrativo} onChange={setCuRitoAmministrativo} opzioni={RITI_AMMINISTRATIVI_CU} />
+                        </>
+                      ) : null}
+                      {cuProcesso !== "amministrativo" || cuRitoAmministrativo === "appalti_pubblici" ? (
+                        <>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della causa</Text>
+                          <SelectInput
+                            testID="cu-valore-tipo"
+                            value={cuValoreTipo}
+                            onChange={setCuValoreTipo}
+                            opzioni={cuProcesso === "amministrativo" ? VALORE_TIPI_CU_APPALTI : cuProcesso === "tributario" ? VALORE_TIPI_CU_TRIBUTARIO : VALORE_TIPI_CU_CIVILE}
+                          />
+                          {cuValoreTipo === "determinato" ? (
+                            <TextInput testID="cu-valore-causa" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          ) : null}
+                          {cuProcesso === "civile" && cuValoreTipo === "indeterminabile" ? (
+                            <>
+                              <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Ufficio giudiziario</Text>
+                              <SelectInput testID="cu-ufficio" value={cuUfficio} onChange={setCuUfficio} opzioni={UFFICI_CU} />
+                            </>
+                          ) : null}
+                        </>
+                      ) : null}
+                      {cuProcesso === "civile" ? (
+                        <Pressable
+                          testID="cu-riduzione-50"
+                          onPress={() => setCuRiduzione50(!cuRiduzione50)}
+                          style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                        >
+                          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: cuRiduzione50 ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                            {cuRiduzione50 ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                          </View>
+                          <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Riduzione del 50% (ingiunzione, sfratto, cautelari/possessori, ATP, lavoro/pubblico impiego)</Text>
+                        </Pressable>
+                      ) : null}
+                    </>
+                  ) : null}
                   <Pressable testID="btn-calc-cu" onPress={calcolaContributoUnificato} disabled={calcolandoCu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
@@ -1838,6 +1967,7 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CONTRIBUTO UNIFICATO</Text>
                       <Text testID="cu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCu.contributo_unificato)}</Text>
+                      {risCu.descrizione ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>{risCu.descrizione}</Text> : null}
                     </View>
                   ) : null}
                 </View>
