@@ -589,6 +589,14 @@ const PROCEDURE_FISSE_CU = [
   { value: "fallimento_insinuazione_passivo", label: "Insinuazione al passivo (esente)" },
 ];
 
+// Rivalutazione ISTAT: le 3 modalità di Andreani (nessuna capitalizzazione/
+// anatocismo in nessuna delle tre, come lui).
+const MODALITA_ISTAT = [
+  { value: "rivalutazione_interessi", label: "Rivalutazione + interessi legali" },
+  { value: "solo_interessi", label: "Solo interessi legali (senza rivalutazione)" },
+  { value: "sola_rivalutazione", label: "Sola rivalutazione (senza interessi)" },
+];
+
 const GRADI_SUCCESSIONE = [
   { id: "coniuge_parenti_retta", label: "Coniuge e parenti in linea retta (figli, genitori)" },
   { id: "fratelli_sorelle", label: "Fratelli e sorelle" },
@@ -707,8 +715,10 @@ export default function Calcolatori() {
   const [calcolandoCu, setCalcolandoCu] = React.useState(false);
   // Rivalutazione ISTAT
   const [istatCapitale, setIstatCapitale] = React.useState("");
-  const [istatIndiceIniziale, setIstatIndiceIniziale] = React.useState("");
-  const [istatIndiceFinale, setIstatIndiceFinale] = React.useState("");
+  const [istatDataInizio, setIstatDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
+  const [istatDataFine, setIstatDataFine] = React.useState(new Date().toISOString().slice(0, 10));
+  const [istatRivalutaAlPct, setIstatRivalutaAlPct] = React.useState("100");
+  const [istatModalita, setIstatModalita] = React.useState("rivalutazione_interessi");
   const [risIstat, setRisIstat] = React.useState<any>(null);
   const [calcolandoIstat, setCalcolandoIstat] = React.useState(false);
   // Termini memorie ex art. 171-ter c.p.c.
@@ -1007,7 +1017,13 @@ export default function Calcolatori() {
     setCalcolandoIstat(true);
     setRisIstat(null);
     try {
-      const r = await api.post("/calc/rivalutazione-istat", { capitale: parseNumeroIt(istatCapitale), indice_iniziale: parseNumeroIt(istatIndiceIniziale), indice_finale: parseNumeroIt(istatIndiceFinale) });
+      const r = await api.post("/calc/rivalutazione-istat", {
+        capitale: parseNumeroIt(istatCapitale),
+        data_inizio: istatDataInizio,
+        data_fine: istatDataFine,
+        rivaluta_al_pct: parseNumeroIt(istatRivalutaAlPct) || 100,
+        modalita: istatModalita,
+      });
       setRisIstat(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -1104,7 +1120,7 @@ export default function Calcolatori() {
     setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
-    setRisIstat(null); setIstatCapitale(""); setIstatIndiceIniziale(""); setIstatIndiceFinale("");
+    setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccValoreQuota(""); setSuccGrado("coniuge_parenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuVacazioni(""); setCtuTariffa(""); setCtuSpese("0"); setCtuMaggiorazione("0"); setTitoloCtu("Compenso CTU");
@@ -1977,21 +1993,45 @@ export default function Calcolatori() {
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
                   <TextInput testID="istat-capitale" value={istatCapitale} onChangeText={setIstatCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Indice ISTAT al mese di partenza</Text>
-                  <TextInput testID="istat-indice-iniziale" value={istatIndiceIniziale} onChangeText={setIstatIndiceIniziale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Indice ISTAT al mese di arrivo</Text>
-                  <TextInput testID="istat-indice-finale" value={istatIndiceFinale} onChangeText={setIstatIndiceFinale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
+                  <DataInput testID="istat-data-inizio" value={istatDataInizio} onChange={setIstatDataInizio} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
+                  <DataInput testID="istat-data-fine" value={istatDataFine} onChange={setIstatDataFine} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rivaluta al % (100 ordinario, 75 tipico per i canoni di locazione)</Text>
+                  <TextInput testID="istat-rivaluta-al" value={istatRivalutaAlPct} onChangeText={setIstatRivalutaAlPct} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità</Text>
+                  <SelectInput testID="istat-modalita" value={istatModalita} onChange={setIstatModalita} opzioni={MODALITA_ISTAT} />
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
-                    Gli indici si trovano nelle tabelle di rivalutazione ISTAT ufficiali (serie FOI), per il mese di partenza e quello di arrivo.
+                    Indice FOI recuperato automaticamente dal mese di inizio e fine (serie dal gennaio 1947). Nessun anatocismo: interesse sempre semplice.
                   </Text>
                   <Pressable testID="btn-calc-istat" onPress={calcolaIstat} disabled={calcolandoIstat} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoIstat ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoIstat ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risIstat ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
-                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CAPITALE RIVALUTATO</Text>
-                      <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risIstat.capitale_rivalutato)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Rivalutazione: {formatEuro(risIstat.rivalutazione)}</Text>
+                      {istatModalita === "sola_rivalutazione" ? (
+                        <>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CAPITALE RIVALUTATO</Text>
+                          <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risIstat.capitale_rivalutato)}</Text>
+                          <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>Rivalutazione: {formatEuro(risIstat.rivalutazione)}</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE</Text>
+                          <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risIstat.totale)}</Text>
+                          <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
+                            Capitale: {formatEuro(risIstat.capitale)}
+                            {risIstat.rivalutazione != null ? ` · Rivalutazione: ${formatEuro(risIstat.rivalutazione)}` : ""}
+                            {" "}· Interessi: {formatEuro(risIstat.interessi)}
+                          </Text>
+                          {(risIstat.dettaglio || []).map((d: any, i: number) => (
+                            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
+                              <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.tasso_pct}%)</Text>
+                              <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.interesse)}</Text>
+                            </View>
+                          ))}
+                        </>
+                      )}
                     </View>
                   ) : null}
                 </View>
