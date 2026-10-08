@@ -9,6 +9,10 @@ export type User = {
   nome?: string;
   cognome?: string;
   studio?: string;
+  studio_indirizzo?: string;
+  studio_cf?: string;
+  ordine_avvocati?: string;
+  studio_assicurazione?: string;
   studio_id?: string;
   ruolo?: "Amministratore" | "Avvocato" | "Collaboratore" | "Segreteria" | string;
   push_token?: string | null;

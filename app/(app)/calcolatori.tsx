@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoid
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
+import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
@@ -486,6 +487,41 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users", categoria: "euro" },
 ];
 
+// "Competenza per giurisdizione o materia" di Andreani (Preventivo avvocato
+// civile): stessa tendina usata sia per il dato visualizzato nel documento
+// sia, dove abbiamo una tabella DM 55/2014 verificata, per suggerire gli
+// importi delle 4 fasi (vedi TABELLE_PARAMETRI_FORENSI nel backend — solo 4
+// delle ~25 voci hanno oggi una tabella propria verificata: le altre restano
+// selezionabili ma senza suggerimento automatico, da compilare a mano).
+const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }[] = [
+  { value: "giudice_di_pace", label: "Giudice di pace", rito: "giudice_di_pace" },
+  { value: "tribunale", label: "Giudizi di cognizione innanzi al tribunale", rito: "tribunale" },
+  { value: "corte_dei_conti", label: "Corte dei Conti", rito: null },
+  { value: "corte_appello", label: "Corte d'Appello", rito: "appello" },
+  { value: "cassazione", label: "Corte di Cassazione", rito: "cassazione" },
+  { value: "corte_costituzionale", label: "Corte Costituzionale", rito: null },
+  { value: "corte_europea", label: "Corte Europea", rito: null },
+  { value: "cgue", label: "Corte di Giustizia UE", rito: null },
+  { value: "tar", label: "T.A.R.", rito: null },
+  { value: "consiglio_di_stato", label: "Consiglio di Stato", rito: null },
+  { value: "cgt_primo_grado", label: "Corte di Giustizia Tributaria di primo grado", rito: null },
+  { value: "cgt_secondo_grado", label: "Corte di Giustizia Tributaria di secondo grado", rito: null },
+  { value: "arbitrato", label: "Arbitrato", rito: null },
+  { value: "cause_lavoro", label: "Cause di lavoro", rito: null },
+  { value: "cause_previdenza", label: "Cause di previdenza", rito: null },
+  { value: "convalida_locatizia", label: "Procedimenti per convalida locatizia", rito: null },
+  { value: "atto_precetto", label: "Atto di precetto", rito: null },
+  { value: "volontaria_giurisdizione", label: "Volontaria giurisdizione", rito: null },
+  { value: "procedimenti_monitori", label: "Procedimenti monitori", rito: null },
+  { value: "istruzione_preventiva", label: "Procedimenti di istruzione preventiva", rito: null },
+  { value: "procedimenti_cautelari", label: "Procedimenti cautelari", rito: null },
+  { value: "esecuzioni_mobiliari", label: "Esecuzioni mobiliari", rito: null },
+  { value: "esecuzioni_presso_terzi", label: "Esecuzioni presso terzi, per consegna e rilascio", rito: null },
+  { value: "esecuzioni_immobiliari", label: "Esecuzioni immobiliari", rito: null },
+  { value: "iscrizione_ipotecaria", label: "Iscrizione ipotecaria / Affari tavolari", rito: null },
+  { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
+];
+
 const GRADI_SUCCESSIONE = [
   { id: "coniuge_parenti_retta", label: "Coniuge e parenti in linea retta (figli, genitori)" },
   { id: "fratelli_sorelle", label: "Fratelli e sorelle" },
@@ -495,6 +531,7 @@ const GRADI_SUCCESSIONE = [
 
 export default function Calcolatori() {
   const { t } = useTheme();
+  const { user } = useAuth();
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string; _t?: string; editId?: string; praticaId?: string }>();
   // L'unico caso che resta "a schermo diretto" (senza passare dal picker) è
@@ -545,27 +582,29 @@ export default function Calcolatori() {
   // originale prima dell'allineamento ad Andreani — tenute separate dalla
   // sezione automatica (le 4 fasi dei parametri forensi).
   const [vociCustom, setVociCustom] = React.useState<{ descrizione: string; importo: string }[]>([]);
-  // Campi non numerici del preventivo (sezioni Avvocato/Parte
-  // assistita/Procedimento/Altri dati di Andreani): tenuti separati da `par`
-  // perché quest'ultimo viene convertito in blocco con parseNumeroIt prima
-  // di ogni calcolo/salvataggio, il che corromperebbe un testo libero.
+  // Campi non numerici del preventivo (sezioni Avvocato/Procedimento/Altri
+  // dati di Andreani — le parti assistite sono in `partiAssistite`, sotto):
+  // tenuti separati da `par` perché quest'ultimo viene convertito in blocco
+  // con parseNumeroIt prima di ogni calcolo/salvataggio, il che
+  // corromperebbe un testo libero.
   const [parDati, setParDati] = React.useState<any>({
     avvocato_nome: "", studio_indirizzo: "", studio_cf: "", ordine_avvocati: "", studio_assicurazione: "",
-    parte_persona_giuridica: false, parte_rappresentante_legale: "",
+    oggetto: "", controparte: "", valore_causa: "",
     competenza: "", ufficio_giudiziario: "Tribunale", sede_ufficio: "",
-    accessori_di_legge: true, intestazione_studio: "", luogo: "",
+    accessori_di_legge: true, luogo: "",
     data_preventivo: new Date().toISOString().slice(0, 10),
   });
+  // Parti assistite: una o più, come Andreani (nominativo/ragione sociale,
+  // persona giuridica, rappresentante legale, CF/P.IVA) — non un'unica
+  // "persona_giuridica"/"rappresentante_legale" ad hoc per il solo cliente
+  // collegato alla pratica.
+  const [partiAssistite, setPartiAssistite] = React.useState<{ nominativo: string; persona_giuridica: boolean; rappresentante_legale: string; cf_piva: string }[]>([
+    { nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" },
+  ]);
   const [vociSpese, setVociSpese] = React.useState<{ descrizione: string; importo: string; esente: boolean }[]>([]);
   const [risPar, setRisPar] = React.useState<any>(null);
   const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
-  // Per precompilare "Attività e compensi" dalla tabella dei parametri
-  // forensi (come fa Andreani, che calcola i compensi dallo scaglione di
-  // valore invece di farli digitare da zero): rito scelto + stato del
-  // suggerimento, separati da `par` perché non vengono salvati con la
-  // parcella (sono solo un punto di partenza, poi modificabile a mano).
-  const [ritoPar, setRitoPar] = React.useState<"giudice_di_pace" | "tribunale" | "appello" | "cassazione">("tribunale");
   const [suggerendoPar, setSuggerendoPar] = React.useState(false);
   // Interessi legali / di mora
   const [tassiCapitale, setTassiCapitale] = React.useState("");
@@ -621,14 +660,45 @@ export default function Calcolatori() {
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
 
-  // Precompila "persona giuridica" dal tipo del cliente collegato alla
-  // pratica scelta, invece di richiederlo di nuovo: resta comunque
-  // modificabile a mano subito dopo.
+  // Precompila parte assistita (dal cliente collegato) e dati del
+  // procedimento (dalla pratica) quando si collega una pratica — come fa
+  // Andreani, da cui l'utente poi corregge/completa a mano: il collegamento
+  // non è mai un requisito, solo un punto di partenza.
   React.useEffect(() => {
     if (!praticaId) return;
     const p = pratiche.find((pp) => pp.id === praticaId);
-    if (p?.cliente?.tipo === "azienda") setParDati((prev: any) => ({ ...prev, parte_persona_giuridica: true }));
+    if (!p) return;
+    if (p.cliente) {
+      const nominativo = p.cliente.ragione_sociale || `${p.cliente.nome || ""} ${p.cliente.cognome || ""}`.trim();
+      setPartiAssistite((prev) => prev.map((parte, i) => i === 0 ? {
+        ...parte,
+        nominativo: parte.nominativo || nominativo,
+        persona_giuridica: p.cliente.tipo === "azienda",
+        cf_piva: parte.cf_piva || p.cliente.codice_fiscale || p.cliente.partita_iva || "",
+      } : parte));
+    }
+    setParDati((prev: any) => ({
+      ...prev,
+      oggetto: prev.oggetto || p.oggetto || "",
+      controparte: prev.controparte || p.controparte || "",
+      valore_causa: prev.valore_causa || (p.valore_causa ? String(p.valore_causa) : ""),
+      sede_ufficio: prev.sede_ufficio || p.tribunale || "",
+    }));
   }, [praticaId, pratiche]);
+
+  // Precompila la sezione Avvocato dal profilo utente, restando comunque
+  // modificabile: evita di reinserire sempre gli stessi dati dello studio.
+  React.useEffect(() => {
+    if (!user) return;
+    setParDati((prev: any) => ({
+      ...prev,
+      avvocato_nome: prev.avvocato_nome || `${user.nome || ""} ${user.cognome || ""}`.trim(),
+      studio_indirizzo: prev.studio_indirizzo || user.studio_indirizzo || "",
+      studio_cf: prev.studio_cf || user.studio_cf || "",
+      ordine_avvocati: prev.ordine_avvocati || user.ordine_avvocati || "",
+      studio_assicurazione: prev.studio_assicurazione || user.studio_assicurazione || "",
+    }));
+  }, [user]);
 
   // Modifica di una parcella esistente (arrivo qui da Archivio o dalla
   // scheda pratica con ?editId=...): precarica i campi e il calcolo gia'
@@ -664,16 +734,24 @@ export default function Calcolatori() {
         studio_cf: doc.studio_cf || "",
         ordine_avvocati: doc.ordine_avvocati || "",
         studio_assicurazione: doc.studio_assicurazione || "",
-        parte_persona_giuridica: !!doc.parte_persona_giuridica,
-        parte_rappresentante_legale: doc.parte_rappresentante_legale || "",
+        oggetto: doc.oggetto || "",
+        controparte: doc.controparte || "",
+        valore_causa: doc.valore_causa ? String(doc.valore_causa) : "",
         competenza: doc.competenza || "",
         ufficio_giudiziario: doc.ufficio_giudiziario || "Tribunale",
         sede_ufficio: doc.sede_ufficio || "",
         accessori_di_legge: doc.accessori_di_legge ?? true,
-        intestazione_studio: doc.intestazione_studio || "",
         luogo: doc.luogo || "",
         data_preventivo: doc.data_preventivo || new Date().toISOString().slice(0, 10),
       });
+      // Le parcelle salvate con una sola parte (prima dell'introduzione di
+      // "parti_assistite") si traducono in una lista di una voce, per non
+      // perdere il dato in modifica.
+      setPartiAssistite(
+        doc.parti_assistite && doc.parti_assistite.length > 0
+          ? doc.parti_assistite.map((p: any) => ({ nominativo: p.nominativo || "", persona_giuridica: !!p.persona_giuridica, rappresentante_legale: p.rappresentante_legale || "", cf_piva: p.cf_piva || "" }))
+          : [{ nominativo: "", persona_giuridica: !!doc.parte_persona_giuridica, rappresentante_legale: doc.parte_rappresentante_legale || "", cf_piva: "" }]
+      );
       // Le parcelle salvate prima dell'introduzione delle spese itemizzate
       // hanno solo "anticipazioni": si traduce in un'unica voce esente per
       // non perdere il dato in modifica.
@@ -704,6 +782,10 @@ export default function Calcolatori() {
     vociCustom
       .filter((v) => v.descrizione.trim() || parseNumeroIt(v.importo))
       .map((v) => ({ descrizione: v.descrizione.trim(), importo: parseNumeroIt(v.importo) }));
+  const buildPartiAssistiteBody = () =>
+    partiAssistite
+      .filter((p) => p.nominativo.trim())
+      .map((p) => ({ nominativo: p.nominativo.trim(), persona_giuridica: p.persona_giuridica, rappresentante_legale: p.rappresentante_legale.trim(), cf_piva: p.cf_piva.trim() }));
 
   // Precompila i 4 importi di fase con i valori medi della tabella dei
   // parametri forensi per il rito e il valore causa scelti, cosi' come fa
@@ -711,14 +793,19 @@ export default function Calcolatori() {
   // comunque modificabili a mano subito dopo, per i casi in cui l'avvocato
   // voglia pattuire un compenso diverso da quello tabellare.
   const suggerisciDaParametriForensi = async () => {
-    const valoreCausa = praticaParSelezionata?.valore_causa;
+    const valoreCausa = parseNumeroIt(parDati.valore_causa);
     if (!valoreCausa) {
-      Alert.alert("Valore causa mancante", "Collega una pratica con un valore della causa impostato, oppure inserisci gli importi di fase manualmente.");
+      Alert.alert("Valore causa mancante", "Inserisci il valore della controversia (sopra, in \"Dati del procedimento\"), oppure inserisci gli importi di fase manualmente.");
+      return;
+    }
+    const rito = COMPETENZE_PARCELLA.find((c) => c.value === parDati.competenza)?.rito;
+    if (!rito) {
+      Alert.alert("Nessuna tabella disponibile", "Per la competenza scelta non abbiamo una tabella di parametri forensi verificata: inserisci gli importi di fase manualmente.");
       return;
     }
     setSuggerendoPar(true);
     try {
-      const r = await api.post("/calc/parametri-forensi", { rito: ritoPar, valore_causa: valoreCausa });
+      const r = await api.post("/calc/parametri-forensi", { rito, valore_causa: valoreCausa });
       setPar({
         ...par,
         fase_studio: String(r.fasi.studio ?? 0),
@@ -734,10 +821,11 @@ export default function Calcolatori() {
   };
 
   const calcPar = async () => {
-    const body: any = { ...parDati };
+    const body: any = { ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
     Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
     body.voci_spese = buildVociSpeseBody();
     body.voci_custom = buildVociCustomBody();
+    body.parti_assistite = buildPartiAssistiteBody();
     const r = await api.post("/calc/parcella", body);
     setRisPar(r);
     // In modifica il ricalcolo raffina la stessa parcella: non si deve
@@ -766,10 +854,11 @@ export default function Calcolatori() {
   const savePar = async () => {
     setSaving(true);
     try {
-      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati };
+      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       body.voci_spese = buildVociSpeseBody();
       body.voci_custom = buildVociCustomBody();
+      body.parti_assistite = buildPartiAssistiteBody();
       if (params.editId) {
         await api.put(`/parcelle/${params.editId}`, body);
       } else {
@@ -911,7 +1000,8 @@ export default function Calcolatori() {
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
     setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc("");
-    setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]); setRitoPar("tribunale");
+    setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]);
+    setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatIndiceIniziale(""); setIstatIndiceFinale("");
@@ -1124,9 +1214,6 @@ export default function Calcolatori() {
     </View>
   );
 
-  const praticaParSelezionata = pratiche.find((p) => p.id === praticaId);
-  const clienteParSelezionato = praticaParSelezionata?.cliente;
-
   const sezioneLbl = { color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm };
   const checkbox = (checked: boolean, onToggle: () => void, label: string, testID: string) => (
     <Pressable testID={testID} onPress={onToggle} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
@@ -1166,51 +1253,94 @@ export default function Calcolatori() {
       {campoTesto("ordine_avvocati", "Ordine degli avvocati di")}
       {campoTesto("studio_assicurazione", "Assicurazione professionale")}
 
-      <Text style={sezioneLbl}>Parte assistita</Text>
-      {clienteParSelezionato ? (
-        <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
-          <Text style={{ color: t.onSurface, fontWeight: "700" }}>
-            {clienteParSelezionato.ragione_sociale || `${clienteParSelezionato.nome || ""} ${clienteParSelezionato.cognome || ""}`.trim()}
-          </Text>
-          {clienteParSelezionato.codice_fiscale ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>CF: {clienteParSelezionato.codice_fiscale}</Text> : null}
-          {clienteParSelezionato.partita_iva ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>P.IVA: {clienteParSelezionato.partita_iva}</Text> : null}
+      <Text style={sezioneLbl}>Parti assistite</Text>
+      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
+        Precompilate dal cliente collegato alla pratica (se presente), sempre modificabili. Come Andreani, puoi aggiungerne altre.
+      </Text>
+      {partiAssistite.map((parte, i) => (
+        <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              testID={`par-parte-nominativo-${i}`}
+              value={parte.nominativo}
+              onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, nominativo: v } : x))}
+              placeholder="Nome e cognome / Ragione sociale"
+              placeholderTextColor={t.onSurfaceTertiary}
+              style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+            />
+            <Pressable testID={`par-parte-rimuovi-${i}`} onPress={() => setPartiAssistite(partiAssistite.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+              <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+            </Pressable>
+          </View>
+          <Pressable
+            testID={`par-parte-persona-giuridica-${i}`}
+            onPress={() => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, persona_giuridica: !x.persona_giuridica } : x))}
+            style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
+          >
+            <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: parte.persona_giuridica ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+              {parte.persona_giuridica ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+            </View>
+            <Text style={{ color: t.onSurface, flex: 1 }}>Persona giuridica</Text>
+          </Pressable>
+          {parte.persona_giuridica ? (
+            <TextInput
+              testID={`par-parte-rappresentante-${i}`}
+              value={parte.rappresentante_legale}
+              onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, rappresentante_legale: v } : x))}
+              placeholder="Rappresentante legale"
+              placeholderTextColor={t.onSurfaceTertiary}
+              style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+            />
+          ) : null}
+          <TextInput
+            testID={`par-parte-cf-piva-${i}`}
+            value={parte.cf_piva}
+            onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, cf_piva: v } : x))}
+            placeholder="CF / P.IVA"
+            placeholderTextColor={t.onSurfaceTertiary}
+            style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+          />
         </View>
-      ) : (
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic" }}>Collega una pratica per precompilare i dati del cliente.</Text>
-      )}
-      {checkbox(parDati.parte_persona_giuridica, () => setParDati({ ...parDati, parte_persona_giuridica: !parDati.parte_persona_giuridica }), "Persona giuridica", "par-persona-giuridica")}
-      {parDati.parte_persona_giuridica ? campoTesto("parte_rappresentante_legale", "Rappresentante legale") : null}
+      ))}
+      <Pressable
+        testID="par-parte-aggiungi"
+        onPress={() => setPartiAssistite([...partiAssistite, { nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }])}
+        style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
+      >
+        <Feather name="plus-circle" size={16} color={t.brand} />
+        <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi un&apos;altra parte assistita</Text>
+      </Pressable>
 
       <Text style={sezioneLbl}>Dati del procedimento</Text>
-      {praticaParSelezionata ? (
-        <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }}>
-          <Text style={{ color: t.onSurface, fontWeight: "700" }}>{praticaParSelezionata.oggetto}</Text>
-          {praticaParSelezionata.controparte ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>Contro: {praticaParSelezionata.controparte}</Text> : null}
-          {praticaParSelezionata.valore_causa ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: 2 }}>Valore della controversia: {formatEuro(praticaParSelezionata.valore_causa)}</Text> : null}
-        </View>
-      ) : null}
-      {campoTesto("competenza", "Competenza per giurisdizione o materia", "Es. Tribunale")}
+      {campoTesto("oggetto", "Descrizione del procedimento")}
+      {campoTesto("controparte", "Contro")}
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Competenza per giurisdizione o materia</Text>
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          testID="par-competenza"
+          value={parDati.competenza}
+          onChange={(v) => setParDati({ ...parDati, competenza: v })}
+          opzioni={COMPETENZE_PARCELLA}
+          placeholder="Seleziona"
+        />
+      </View>
       {campoTesto("ufficio_giudiziario", "Ufficio giudiziario")}
-      {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario", praticaParSelezionata?.tribunale || undefined)}
+      {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario")}
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della controversia €</Text>
+      <TextInput
+        testID="par-valore-causa"
+        value={parDati.valore_causa}
+        onChangeText={(v) => setParDati({ ...parDati, valore_causa: v })}
+        keyboardType="numeric"
+        placeholder="Precompilato dalla pratica collegata, se presente"
+        placeholderTextColor={t.onSurfaceTertiary}
+        style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+      />
 
       <Text style={sezioneLbl}>Attività e compensi — sezione automatica</Text>
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-        Le stesse 4 fasi del preventivo di Andreani: un importo (dai parametri forensi) con un aggiustamento percentuale discrezionale per fase.
+        Le stesse 4 fasi del preventivo di Andreani: un importo (dai parametri forensi, per la competenza e il valore della controversia scelti sopra) con un aggiustamento percentuale discrezionale per fase.
       </Text>
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito/grado (per il suggerimento dai parametri forensi)</Text>
-      <View style={{ marginBottom: SPACING.sm }}>
-        <SelectInput
-          testID="par-rito"
-          value={ritoPar}
-          onChange={(v) => setRitoPar(v as typeof ritoPar)}
-          opzioni={[
-            { value: "giudice_di_pace", label: "Giudice di pace" },
-            { value: "tribunale", label: "Tribunale" },
-            { value: "appello", label: "Appello" },
-            { value: "cassazione", label: "Cassazione" },
-          ]}
-        />
-      </View>
       <Pressable
         testID="par-suggerisci-parametri-forensi"
         onPress={suggerisciDaParametriForensi}
@@ -1220,9 +1350,9 @@ export default function Calcolatori() {
         <Feather name="zap" size={14} color={t.brand} />
         <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{suggerendoPar ? "Calcolo..." : "Calcola importi dai parametri forensi"}</Text>
       </Pressable>
-      {!praticaParSelezionata?.valore_causa ? (
+      {!COMPETENZE_PARCELLA.find((c) => c.value === parDati.competenza)?.rito ? (
         <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-          Richiede una pratica collegata con un valore della causa impostato.
+          Richiede una competenza con tabella di parametri forensi disponibile (Giudice di pace, Tribunale, Corte d&apos;Appello o Cassazione) e un valore della controversia.
         </Text>
       ) : null}
       {([
@@ -1329,8 +1459,7 @@ export default function Calcolatori() {
       </Pressable>
 
       <Text style={sezioneLbl}>Altri dati</Text>
-      {campoTesto("intestazione_studio", "Intestazione studio")}
-      {checkbox(parDati.accessori_di_legge, () => setParDati({ ...parDati, accessori_di_legge: !parDati.accessori_di_legge }), "Oltre accessori di legge (spese generali, CPA, IVA)", "par-accessori-di-legge")}
+      {checkbox(parDati.accessori_di_legge, () => setParDati({ ...parDati, accessori_di_legge: !parDati.accessori_di_legge }), "Applica accessori di legge (spese generali, CPA, IVA)", "par-accessori-di-legge")}
       {[
         ["spese_generali_pct", "Spese generali %"],
         ["cpa_pct", "CPA %"],
