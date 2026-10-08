@@ -34,7 +34,7 @@ type CalcId =
 // tutti un piccolo form -> un POST -> un risultato da mostrare (ed
 // eventualmente da salvare come scadenza), senza logica particolare propria
 // che giustifichi una schermata dedicata come quelle storiche sopra.
-type CampoGenericoBase = { key: string; label: string; mostraSe?: (form: Record<string, any>) => boolean };
+type CampoGenericoBase = { key: string; label: string; mostraSe?: (form: Record<string, any>) => boolean; nota?: (form: Record<string, any>) => string | null };
 type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data" })
   | (CampoGenericoBase & { tipo: "data_opzionale" })
@@ -46,9 +46,45 @@ type ConfigGenerico = {
   campi: CampoGenerico[];
   endpoint: string;
   buildBody?: (form: Record<string, any>) => any;
+  validate?: (form: Record<string, any>) => string | null;
   risultato: (r: any) => [string, string][];
   scadenze?: (r: any) => { titolo: string; data: string }[];
 };
+
+// "Competenza per giurisdizione o materia" di Andreani (Preventivo avvocato
+// civile): stessa tendina usata sia per il dato visualizzato nel documento
+// sia, dove abbiamo una tabella DM 55/2014 verificata, per suggerire gli
+// importi delle 4 fasi (vedi TABELLE_PARAMETRI_FORENSI nel backend — solo 4
+// delle ~25 voci hanno oggi una tabella propria verificata: le altre restano
+// selezionabili ma senza suggerimento automatico, da compilare a mano).
+const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }[] = [
+  { value: "giudice_di_pace", label: "Giudice di pace", rito: "giudice_di_pace" },
+  { value: "tribunale", label: "Giudizi di cognizione innanzi al tribunale", rito: "tribunale" },
+  { value: "corte_dei_conti", label: "Corte dei Conti", rito: null },
+  { value: "corte_appello", label: "Corte d'Appello", rito: "appello" },
+  { value: "cassazione", label: "Corte di Cassazione", rito: "cassazione" },
+  { value: "corte_costituzionale", label: "Corte Costituzionale", rito: null },
+  { value: "corte_europea", label: "Corte Europea", rito: null },
+  { value: "cgue", label: "Corte di Giustizia UE", rito: null },
+  { value: "tar", label: "T.A.R.", rito: null },
+  { value: "consiglio_di_stato", label: "Consiglio di Stato", rito: null },
+  { value: "cgt_primo_grado", label: "Corte di Giustizia Tributaria di primo grado", rito: null },
+  { value: "cgt_secondo_grado", label: "Corte di Giustizia Tributaria di secondo grado", rito: null },
+  { value: "arbitrato", label: "Arbitrato", rito: null },
+  { value: "cause_lavoro", label: "Cause di lavoro", rito: null },
+  { value: "cause_previdenza", label: "Cause di previdenza", rito: null },
+  { value: "convalida_locatizia", label: "Procedimenti per convalida locatizia", rito: null },
+  { value: "atto_precetto", label: "Atto di precetto", rito: null },
+  { value: "volontaria_giurisdizione", label: "Volontaria giurisdizione", rito: null },
+  { value: "procedimenti_monitori", label: "Procedimenti monitori", rito: null },
+  { value: "istruzione_preventiva", label: "Procedimenti di istruzione preventiva", rito: null },
+  { value: "procedimenti_cautelari", label: "Procedimenti cautelari", rito: null },
+  { value: "esecuzioni_mobiliari", label: "Esecuzioni mobiliari", rito: null },
+  { value: "esecuzioni_presso_terzi", label: "Esecuzioni presso terzi, per consegna e rilascio", rito: null },
+  { value: "esecuzioni_immobiliari", label: "Esecuzioni immobiliari", rito: null },
+  { value: "iscrizione_ipotecaria", label: "Iscrizione ipotecaria / Affari tavolari", rito: null },
+  { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
+];
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -314,18 +350,30 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "parametri-forensi": {
     campi: [
-      { tipo: "scelta", key: "rito", label: "Rito/grado", default: "tribunale", opzioni: [
-        { value: "giudice_di_pace", label: "Giudice di pace (fino a 26.000€)" },
-        { value: "tribunale", label: "Tribunale (giudizio ordinario)" },
-        { value: "appello", label: "Corte d'Appello" },
-        { value: "cassazione", label: "Corte di Cassazione" },
-      ] },
+      {
+        tipo: "scelta", key: "competenza", label: "Competenza per giurisdizione o materia", default: "tribunale", opzioni: COMPETENZE_PARCELLA,
+        nota: (f) => (COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito
+          ? null
+          : "Per questa competenza non abbiamo una tabella di parametri forensi verificata (disponibile per Giudice di pace, Tribunale, Corte d'Appello e Cassazione)."),
+      },
       { tipo: "bool", key: "valore_indeterminabile", label: "Valore della causa indeterminabile", default: false },
       { tipo: "numero", key: "valore_causa", label: "Valore della causa €", default: "" },
       { tipo: "numero", key: "numero_parti_stessa_posizione", label: "N. parti assistite con la stessa posizione", default: "1" },
       { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (riduzione del 50%)", default: false },
     ],
     endpoint: "/calc/parametri-forensi",
+    validate: (f) => {
+      const rito = COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito;
+      if (!rito) return "Per la competenza scelta non abbiamo una tabella di parametri forensi verificata (disponibile per Giudice di pace, Tribunale, Corte d'Appello e Cassazione).";
+      return null;
+    },
+    buildBody: (f) => ({
+      rito: COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito,
+      valore_indeterminabile: !!f.valore_indeterminabile,
+      valore_causa: parseNumeroIt(f.valore_causa),
+      numero_parti_stessa_posizione: parseNumeroIt(f.numero_parti_stessa_posizione) || 1,
+      gratuito_patrocinio: !!f.gratuito_patrocinio,
+    }),
     risultato: (r) => [
       ["Fase di studio", formatEuro(r.fasi.studio)],
       ["Fase introduttiva", formatEuro(r.fasi.introduttiva)],
@@ -485,41 +533,6 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase", categoria: "euro" },
   { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2", categoria: "euro" },
   { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users", categoria: "euro" },
-];
-
-// "Competenza per giurisdizione o materia" di Andreani (Preventivo avvocato
-// civile): stessa tendina usata sia per il dato visualizzato nel documento
-// sia, dove abbiamo una tabella DM 55/2014 verificata, per suggerire gli
-// importi delle 4 fasi (vedi TABELLE_PARAMETRI_FORENSI nel backend — solo 4
-// delle ~25 voci hanno oggi una tabella propria verificata: le altre restano
-// selezionabili ma senza suggerimento automatico, da compilare a mano).
-const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }[] = [
-  { value: "giudice_di_pace", label: "Giudice di pace", rito: "giudice_di_pace" },
-  { value: "tribunale", label: "Giudizi di cognizione innanzi al tribunale", rito: "tribunale" },
-  { value: "corte_dei_conti", label: "Corte dei Conti", rito: null },
-  { value: "corte_appello", label: "Corte d'Appello", rito: "appello" },
-  { value: "cassazione", label: "Corte di Cassazione", rito: "cassazione" },
-  { value: "corte_costituzionale", label: "Corte Costituzionale", rito: null },
-  { value: "corte_europea", label: "Corte Europea", rito: null },
-  { value: "cgue", label: "Corte di Giustizia UE", rito: null },
-  { value: "tar", label: "T.A.R.", rito: null },
-  { value: "consiglio_di_stato", label: "Consiglio di Stato", rito: null },
-  { value: "cgt_primo_grado", label: "Corte di Giustizia Tributaria di primo grado", rito: null },
-  { value: "cgt_secondo_grado", label: "Corte di Giustizia Tributaria di secondo grado", rito: null },
-  { value: "arbitrato", label: "Arbitrato", rito: null },
-  { value: "cause_lavoro", label: "Cause di lavoro", rito: null },
-  { value: "cause_previdenza", label: "Cause di previdenza", rito: null },
-  { value: "convalida_locatizia", label: "Procedimenti per convalida locatizia", rito: null },
-  { value: "atto_precetto", label: "Atto di precetto", rito: null },
-  { value: "volontaria_giurisdizione", label: "Volontaria giurisdizione", rito: null },
-  { value: "procedimenti_monitori", label: "Procedimenti monitori", rito: null },
-  { value: "istruzione_preventiva", label: "Procedimenti di istruzione preventiva", rito: null },
-  { value: "procedimenti_cautelari", label: "Procedimenti cautelari", rito: null },
-  { value: "esecuzioni_mobiliari", label: "Esecuzioni mobiliari", rito: null },
-  { value: "esecuzioni_presso_terzi", label: "Esecuzioni presso terzi, per consegna e rilascio", rito: null },
-  { value: "esecuzioni_immobiliari", label: "Esecuzioni immobiliari", rito: null },
-  { value: "iscrizione_ipotecaria", label: "Iscrizione ipotecaria / Affari tavolari", rito: null },
-  { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
 ];
 
 // Periodicità di capitalizzazione per gli interessi legali, come Andreani
@@ -1213,6 +1226,11 @@ export default function Calcolatori() {
   const calcolaGenerico = async () => {
     const cfg = CONFIG_GENERICI[calcAperto as string];
     if (!cfg) return;
+    const errore = cfg.validate?.(genForm);
+    if (errore) {
+      Alert.alert("Non disponibile", errore);
+      return;
+    }
     Keyboard.dismiss();
     setGenCalcolando(true);
     setGenRisultato(null);
@@ -2286,6 +2304,7 @@ export default function Calcolatori() {
                         </Pressable>
                       );
                     }
+                    const nota = c.nota?.(genForm);
                     return (
                       <View key={c.key}>
                         <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
@@ -2297,6 +2316,9 @@ export default function Calcolatori() {
                             opzioni={typeof c.opzioni === "function" ? c.opzioni(genForm) : c.opzioni}
                           />
                         </View>
+                        {nota ? (
+                          <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: -SPACING.sm, marginBottom: SPACING.sm }}>{nota}</Text>
+                        ) : null}
                       </View>
                     );
                   })}
