@@ -599,6 +599,53 @@ const MODALITA_ISTAT = [
 
 // 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
 // etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
+// Sezione "tabellare" del compenso CTU (DM 182/2002), come Andreani:
+// elenco degli articoli/sottovoci selezionabili. "richiedeValore" = true
+// per le prestazioni a percentuale/scaglioni (serve il "Valore Stimato"),
+// false per quelle a tariffa fissa — v. ARTICOLI_DM182_2002 nel backend
+// per le fonti e i valori numerici verificati.
+const ARTICOLI_DM182 = [
+  { value: "2", label: "Art. 2 — Perizia contabile/fiscale/amministrativa", richiedeValore: true },
+  { value: "3", label: "Art. 3 — Valutazione aziende, patrimoni, avviamento, beni mobili", richiedeValore: true },
+  { value: "4_A", label: "Art. 4.A — Bilanci, sul totale delle attività", richiedeValore: true },
+  { value: "4_B", label: "Art. 4.B — Bilanci, sul totale dei ricavi lordi", richiedeValore: true },
+  { value: "5", label: "Art. 5 — Inventari, rendiconti, situazioni contabili", richiedeValore: false },
+  { value: "6_1", label: "Art. 6.1 — Avarie comuni", richiedeValore: true },
+  { value: "6_2", label: "Art. 6.2 — Avarie particolari", richiedeValore: true },
+  { value: "7_1", label: "Art. 7.1 — Metodo attuariale (posizioni retributive/previdenziali)", richiedeValore: false },
+  { value: "7_2", label: "Art. 7.2 — Basi tecniche gestioni previdenziali/assistenziali", richiedeValore: false },
+  { value: "8_1", label: "Art. 8.1 — Equilibrio tecnico-finanziario gestioni previdenziali", richiedeValore: true },
+  { value: "8_2", label: "Art. 8.2 — Analisi bilanci enti previdenziali/assicurativi/finanziari", richiedeValore: true },
+  { value: "9", label: "Art. 9 — Opere di pittura, scultura e simili", richiedeValore: false },
+  { value: "10", label: "Art. 10 — Retribuzioni, contributi, rapporto di lavoro", richiedeValore: false },
+  { value: "11", label: "Art. 11 — Costruzioni edilizie, impianti, infrastrutture", richiedeValore: true },
+  { value: "12_1", label: "Art. 12.1 — Verifica rispondenza tecnica, collaudi, contabilità lavori", richiedeValore: false },
+  { value: "12_2", label: "Art. 12.2 — Rilievi topografici, planimetrici, altimetrici", richiedeValore: false },
+  { value: "13_1", label: "Art. 13.1 — Estimo (perizia estimativa completa)", richiedeValore: true },
+  { value: "13_2", label: "Art. 13.2 — Estimo, stima sommaria", richiedeValore: true },
+  { value: "13_3", label: "Art. 13.3 — Estimo, semplice giudizio di stima", richiedeValore: true },
+  { value: "14", label: "Art. 14 — Cave e miniere, minerali, sostanze solide/liquide/gassose", richiedeValore: true },
+  { value: "15_1", label: "Art. 15.1 — Aerei, navi, imbarcazioni: valutazione/riparazione, salvataggio", richiedeValore: true },
+  { value: "15_2", label: "Art. 15.2 — Aerei, navi, imbarcazioni: valutazione danni", richiedeValore: true },
+  { value: "16", label: "Art. 16 — Funzioni contabili, equo canone, danni incendio/grandine, millesimali", richiedeValore: false },
+  { value: "17", label: "Art. 17 — Infortunistica del traffico e della circolazione", richiedeValore: true },
+  { value: "18_1", label: "Art. 18.1 — Esplosivi, armi, proiettili, bossoli", richiedeValore: false },
+  { value: "18_3", label: "Art. 18.3 — Balistica", richiedeValore: false },
+  { value: "19", label: "Art. 19 — Geomorfologia, idrogeologia, geologia applicata", richiedeValore: false },
+  { value: "21", label: "Art. 21 — Accertamenti medici, diagnostici, agenti patogeni (persona)", richiedeValore: false },
+  { value: "24", label: "Art. 24 — Materia psichiatrica o criminologica", richiedeValore: false },
+  { value: "25", label: "Art. 25 — Diagnosi su materiale biologico / tracce biologiche", richiedeValore: false },
+  { value: "28_1", label: "Art. 28.1 — Chimica-tossicologica (ricerca generale incognita)", richiedeValore: false },
+  { value: "28_2", label: "Art. 28.2 — Ecotossicologica", richiedeValore: false },
+  { value: "28_3", label: "Art. 28.3 — Inquinamento acustico", richiedeValore: false },
+];
+const ARTICOLI_DM182_CON_NESSUNO = [{ value: "", label: "Nessuno (solo vacazioni)" }, ...ARTICOLI_DM182];
+const TARIFFE_PREDEFINITE_CTU = [
+  { value: "minima", label: "Minima" },
+  { value: "media", label: "Media" },
+  { value: "massima", label: "Massima" },
+];
+
 const GRADI_SUCCESSIONE = [
   { id: "coniuge", label: "Coniuge" },
   { id: "discendenti_retta", label: "Discendente in linea retta (figlio, nipote ecc.)" },
@@ -751,6 +798,10 @@ export default function Calcolatori() {
   const [ctuSpeseDocumentate, setCtuSpeseDocumentate] = React.useState("0");
   const [ctuRimborsoKmUnitario, setCtuRimborsoKmUnitario] = React.useState("0");
   const [ctuNumeroKm, setCtuNumeroKm] = React.useState("0");
+  const [ctuArticoloTabellare, setCtuArticoloTabellare] = React.useState("");
+  const [ctuValoreStimato, setCtuValoreStimato] = React.useState("");
+  const [ctuTariffaPredefinita, setCtuTariffaPredefinita] = React.useState("media");
+  const [ctuCaricoOnorari, setCtuCaricoOnorari] = React.useState("100");
   const [titoloCtu, setTitoloCtu] = React.useState("Compenso CTU");
   const [risCtu, setRisCtu] = React.useState<any>(null);
   const [calcolandoCtu, setCalcolandoCtu] = React.useState(false);
@@ -1120,6 +1171,10 @@ export default function Calcolatori() {
         spese_documentate: parseNumeroIt(ctuSpeseDocumentate) || 0,
         rimborso_km_unitario: parseNumeroIt(ctuRimborsoKmUnitario) || 0,
         numero_km: parseNumeroIt(ctuNumeroKm) || 0,
+        articolo_tabellare: ctuArticoloTabellare || null,
+        valore_stimato: parseNumeroIt(ctuValoreStimato) || 0,
+        tariffa_predefinita: ctuTariffaPredefinita,
+        carico_onorari_pct: parseNumeroIt(ctuCaricoOnorari) || 100,
       });
       setRisCtu(r);
     } catch (e: any) {
@@ -1151,7 +1206,7 @@ export default function Calcolatori() {
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
-    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setTitoloCtu("Compenso CTU");
+    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
   };
 
@@ -2143,6 +2198,24 @@ export default function Calcolatori() {
                   <TextInput testID="ctu-rimborso-km-unitario" value={ctuRimborsoKmUnitario} onChangeText={setCtuRimborsoKmUnitario} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero km</Text>
                   <TextInput testID="ctu-numero-km" value={ctuNumeroKm} onChangeText={setCtuNumeroKm} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.lg, fontWeight: "700" }]}>Onorario tabellare (DM 182/2002)</Text>
+                  <SelectInput testID="ctu-articolo-tabellare" value={ctuArticoloTabellare} onChange={setCtuArticoloTabellare} opzioni={ARTICOLI_DM182_CON_NESSUNO} />
+                  {ctuArticoloTabellare ? (
+                    <>
+                      {ARTICOLI_DM182.find((a) => a.value === ctuArticoloTabellare)?.richiedeValore ? (
+                        <>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore stimato €</Text>
+                          <TextInput testID="ctu-valore-stimato" value={ctuValoreStimato} onChangeText={setCtuValoreStimato} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                        </>
+                      ) : null}
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tariffa predefinita</Text>
+                      <SelectInput testID="ctu-tariffa-predefinita" value={ctuTariffaPredefinita} onChange={setCtuTariffaPredefinita} opzioni={TARIFFE_PREDEFINITE_CTU} />
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico onorari % (1-200)</Text>
+                      <TextInput testID="ctu-carico-onorari" value={ctuCaricoOnorari} onChangeText={setCtuCaricoOnorari} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+
                   <Pressable testID="btn-calc-ctu" onPress={calcolaCtu} disabled={calcolandoCtu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCtu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCtu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
@@ -2155,6 +2228,7 @@ export default function Calcolatori() {
                         {risCtu.maggiorazione_urgenza > 0 ? ` · Urgenza: ${formatEuro(risCtu.maggiorazione_urgenza)}` : ""}
                         {risCtu.maggiorazione_complessita > 0 ? ` · Complessità: ${formatEuro(risCtu.maggiorazione_complessita)}` : ""}
                         {risCtu.rimborso_km > 0 ? ` · Rimborso km: ${formatEuro(risCtu.rimborso_km)}` : ""}
+                        {risCtu.onorario_tabellare > 0 ? ` · Onorario tabellare: ${formatEuro(risCtu.onorario_tabellare)}` : ""}
                       </Text>
                       {!risCtu.salvata ? (
                         <>
