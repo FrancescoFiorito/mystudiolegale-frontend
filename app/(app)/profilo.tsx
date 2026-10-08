@@ -36,7 +36,15 @@ export default function Profilo() {
   const navigation = useNavigation();
 
   const [showEditProfile, setShowEditProfile] = React.useState(false);
-  const [profileForm, setProfileForm] = React.useState({ nome: user?.nome || "", cognome: user?.cognome || "", studio: user?.studio || "" });
+  const [profileForm, setProfileForm] = React.useState({
+    nome: user?.nome || "", cognome: user?.cognome || "", studio: user?.studio || "",
+    // Dati dello studio/avvocato: precompilano la sezione "Avvocato" delle
+    // parcelle (vedi calcolatori.tsx) invece di doverli reinserire ogni volta.
+    studio_indirizzo: user?.studio_indirizzo || "",
+    studio_cf: user?.studio_cf || "",
+    ordine_avvocati: user?.ordine_avvocati || "",
+    studio_assicurazione: user?.studio_assicurazione || "",
+  });
   const [showChangePw, setShowChangePw] = React.useState(false);
   const [pwForm, setPwForm] = React.useState({ current_password: "", new_password: "", new_password2: "" });
   const [savingProfile, setSavingProfile] = React.useState(false);
@@ -155,7 +163,11 @@ export default function Profilo() {
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
             <Header variant="hero" title="Modifica profilo" onBack={() => setShowEditProfile(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }} keyboardShouldPersistTaps="handled">
-              {([["nome", "Nome"], ["cognome", "Cognome"], ["studio", "Studio legale"]] as const).map(([k, label]) => (
+              {([
+                ["nome", "Nome"], ["cognome", "Cognome"], ["studio", "Studio legale"],
+                ["studio_indirizzo", "Indirizzo studio"], ["studio_cf", "Codice fiscale"],
+                ["ordine_avvocati", "Ordine degli avvocati di"], ["studio_assicurazione", "Assicurazione professionale"],
+              ] as const).map(([k, label]) => (
                 <View key={k} style={{ marginBottom: SPACING.md }}>
                   <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{label}</Text>
                   <TextInput
