@@ -742,10 +742,15 @@ export default function Calcolatori() {
   const [risSucc, setRisSucc] = React.useState<any>(null);
   const [calcolandoSucc, setCalcolandoSucc] = React.useState(false);
   // Compenso CTU
-  const [ctuVacazioni, setCtuVacazioni] = React.useState("");
-  const [ctuTariffa, setCtuTariffa] = React.useState("");
-  const [ctuSpese, setCtuSpese] = React.useState("0");
-  const [ctuMaggiorazione, setCtuMaggiorazione] = React.useState("0");
+  const [ctuDataInizioPerizia, setCtuDataInizioPerizia] = React.useState("");
+  const [ctuDataFinePerizia, setCtuDataFinePerizia] = React.useState("");
+  const [ctuNumeroVacazioni, setCtuNumeroVacazioni] = React.useState("");
+  const [ctuCaricoVacazioni, setCtuCaricoVacazioni] = React.useState("100");
+  const [ctuCaricoUrgenza, setCtuCaricoUrgenza] = React.useState("0");
+  const [ctuCaricoComplessita, setCtuCaricoComplessita] = React.useState("0");
+  const [ctuSpeseDocumentate, setCtuSpeseDocumentate] = React.useState("0");
+  const [ctuRimborsoKmUnitario, setCtuRimborsoKmUnitario] = React.useState("0");
+  const [ctuNumeroKm, setCtuNumeroKm] = React.useState("0");
   const [titoloCtu, setTitoloCtu] = React.useState("Compenso CTU");
   const [risCtu, setRisCtu] = React.useState<any>(null);
   const [calcolandoCtu, setCalcolandoCtu] = React.useState(false);
@@ -1105,7 +1110,17 @@ export default function Calcolatori() {
     setCalcolandoCtu(true);
     setRisCtu(null);
     try {
-      const r = await api.post("/calc/compenso-ctu", { vacazioni: parseNumeroIt(ctuVacazioni), tariffa_oraria: parseNumeroIt(ctuTariffa), spese_rimborso: parseNumeroIt(ctuSpese), maggiorazione_pct: parseNumeroIt(ctuMaggiorazione) });
+      const r = await api.post("/calc/compenso-ctu", {
+        data_inizio_perizia: ctuDataInizioPerizia || null,
+        data_fine_perizia: ctuDataFinePerizia || null,
+        numero_vacazioni: parseNumeroIt(ctuNumeroVacazioni) || 0,
+        carico_vacazioni_pct: parseNumeroIt(ctuCaricoVacazioni) || 100,
+        carico_urgenza_pct: parseNumeroIt(ctuCaricoUrgenza) || 0,
+        carico_complessita_pct: parseNumeroIt(ctuCaricoComplessita) || 0,
+        spese_documentate: parseNumeroIt(ctuSpeseDocumentate) || 0,
+        rimborso_km_unitario: parseNumeroIt(ctuRimborsoKmUnitario) || 0,
+        numero_km: parseNumeroIt(ctuNumeroKm) || 0,
+      });
       setRisCtu(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -1136,7 +1151,7 @@ export default function Calcolatori() {
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
-    setRisCtu(null); setCtuVacazioni(""); setCtuTariffa(""); setCtuSpese("0"); setCtuMaggiorazione("0"); setTitoloCtu("Compenso CTU");
+    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
   };
 
@@ -2105,14 +2120,29 @@ export default function Calcolatori() {
 
               {calcAperto === "compenso-ctu" ? (
                 <View>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Vacazioni (ore)</Text>
-                  <TextInput testID="ctu-vacazioni" value={ctuVacazioni} onChangeText={setCtuVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tariffa oraria € (da verificare sul TU spese di giustizia vigente)</Text>
-                  <TextInput testID="ctu-tariffa" value={ctuTariffa} onChangeText={setCtuTariffa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione complessità %</Text>
-                  <TextInput testID="ctu-maggiorazione" value={ctuMaggiorazione} onChangeText={setCtuMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rimborso spese €</Text>
-                  <TextInput testID="ctu-spese" value={ctuSpese} onChangeText={setCtuSpese} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Inizio perizia</Text>
+                  <DataInput testID="ctu-data-inizio" value={ctuDataInizioPerizia} onChange={setCtuDataInizioPerizia} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fine perizia</Text>
+                  <DataInput testID="ctu-data-fine" value={ctuDataFinePerizia} onChange={setCtuDataFinePerizia} />
+                  {risCtu && risCtu.giorni_lavorativi != null ? (
+                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.xs }}>
+                      Giorni lavorativi: {risCtu.giorni_lavorativi} · Max vacazioni liquidabili: {risCtu.max_vacazioni}
+                    </Text>
+                  ) : null}
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero vacazioni (14,68€ ciascuna, tariffa piena dal 13/2/2025, Corte Cost. 16/2025)</Text>
+                  <TextInput testID="ctu-numero-vacazioni" value={ctuNumeroVacazioni} onChangeText={setCtuNumeroVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico vacazioni % (100 ordinario; fino a 200% se termine ≤5gg, fino a 150% se ≤15gg, art. 4 c. 3 L. 319/1980)</Text>
+                  <TextInput testID="ctu-carico-vacazioni" value={ctuCaricoVacazioni} onChangeText={setCtuCaricoVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico urgenza % (0-20)</Text>
+                  <TextInput testID="ctu-carico-urgenza" value={ctuCaricoUrgenza} onChangeText={setCtuCaricoUrgenza} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico complessità % (0-100)</Text>
+                  <TextInput testID="ctu-carico-complessita" value={ctuCaricoComplessita} onChangeText={setCtuCaricoComplessita} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Spese documentate €</Text>
+                  <TextInput testID="ctu-spese-documentate" value={ctuSpeseDocumentate} onChangeText={setCtuSpeseDocumentate} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rimborso chilometrico € per km</Text>
+                  <TextInput testID="ctu-rimborso-km-unitario" value={ctuRimborsoKmUnitario} onChangeText={setCtuRimborsoKmUnitario} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero km</Text>
+                  <TextInput testID="ctu-numero-km" value={ctuNumeroKm} onChangeText={setCtuNumeroKm} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Pressable testID="btn-calc-ctu" onPress={calcolaCtu} disabled={calcolandoCtu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCtu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCtu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
@@ -2120,6 +2150,12 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>COMPENSO TOTALE</Text>
                       <Text testID="ctu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCtu.totale)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
+                        Onorario vacazioni: {formatEuro(risCtu.onorario_vacazioni)}
+                        {risCtu.maggiorazione_urgenza > 0 ? ` · Urgenza: ${formatEuro(risCtu.maggiorazione_urgenza)}` : ""}
+                        {risCtu.maggiorazione_complessita > 0 ? ` · Complessità: ${formatEuro(risCtu.maggiorazione_complessita)}` : ""}
+                        {risCtu.rimborso_km > 0 ? ` · Rimborso km: ${formatEuro(risCtu.rimborso_km)}` : ""}
+                      </Text>
                       {!risCtu.salvata ? (
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome parcella</Text>
