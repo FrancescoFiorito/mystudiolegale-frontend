@@ -621,11 +621,19 @@ export default function Calcolatori() {
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiDataFine, setTassiDataFine] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("8");
-  // Come Andreani: spunta che imposta la maggiorazione a 7 punti (anziché 8)
-  // per le transazioni commerciali concluse entro il 31/12/2012, prima
-  // dell'innalzamento introdotto dal D.Lgs. 192/2012 — il campo maggiorazione
-  // resta comunque modificabile a mano dopo la spunta.
+  // Come Andreani: due spunte che impostano la maggiorazione di conseguenza —
+  // il campo maggiorazione resta comunque modificabile a mano dopo.
+  // - ante2013: 7 punti anziché 8, per le transazioni commerciali concluse
+  //   entro il 31/12/2012, prima dell'innalzamento introdotto dal D.Lgs.
+  //   192/2012.
+  // - prodottiAgricoli: ulteriori 4 punti (art. 4 comma 2 D.Lgs. 198/2021,
+  //   in vigore dal 4/7/2015 con il D.L. 51/2015), per le cessioni di
+  //   prodotti agricoli e agroalimentari. Andreani la chiama "maggiorazione
+  //   del 24%" ma la norma e le fonti indipendenti consultate descrivono
+  //   un'aggiunta di 4 punti percentuali, non una moltiplicazione per 1,24:
+  //   seguiamo la norma.
   const [tassiAnte2013, setTassiAnte2013] = React.useState(false);
+  const [tassiProdottiAgricoli, setTassiProdottiAgricoli] = React.useState(false);
   const [tassiCapitalizzazione, setTassiCapitalizzazione] = React.useState("nessuna");
   const [risTassi, setRisTassi] = React.useState<any>(null);
   const [calcolandoTassi, setCalcolandoTassi] = React.useState(false);
@@ -1768,7 +1776,7 @@ export default function Calcolatori() {
                         onPress={() => {
                           const nuovo = !tassiAnte2013;
                           setTassiAnte2013(nuovo);
-                          setTassiMaggiorazione(nuovo ? "7" : "8");
+                          setTassiMaggiorazione(String((nuovo ? 7 : 8) + (tassiProdottiAgricoli ? 4 : 0)));
                         }}
                         style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                       >
@@ -1776,6 +1784,20 @@ export default function Calcolatori() {
                           {tassiAnte2013 ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                         </View>
                         <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Transazione conclusa entro il 31/12/2012 (maggiorazione 7% anziché 8%, D.Lgs. 192/2012)</Text>
+                      </Pressable>
+                      <Pressable
+                        testID="tassi-prodotti-agricoli"
+                        onPress={() => {
+                          const nuovo = !tassiProdottiAgricoli;
+                          setTassiProdottiAgricoli(nuovo);
+                          setTassiMaggiorazione(String((tassiAnte2013 ? 7 : 8) + (nuovo ? 4 : 0)));
+                        }}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: tassiProdottiAgricoli ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                          {tassiProdottiAgricoli ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                        </View>
+                        <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)</Text>
                       </Pressable>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
                       <TextInput testID="tassi-maggiorazione" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
