@@ -621,6 +621,11 @@ export default function Calcolatori() {
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiDataFine, setTassiDataFine] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("8");
+  // Come Andreani: spunta che imposta la maggiorazione a 7 punti (anziché 8)
+  // per le transazioni commerciali concluse entro il 31/12/2012, prima
+  // dell'innalzamento introdotto dal D.Lgs. 192/2012 — il campo maggiorazione
+  // resta comunque modificabile a mano dopo la spunta.
+  const [tassiAnte2013, setTassiAnte2013] = React.useState(false);
   const [tassiCapitalizzazione, setTassiCapitalizzazione] = React.useState("nessuna");
   const [risTassi, setRisTassi] = React.useState<any>(null);
   const [calcolandoTassi, setCalcolandoTassi] = React.useState(false);
@@ -1758,6 +1763,20 @@ export default function Calcolatori() {
                   <DataInput testID="tassi-data-fine" value={tassiDataFine} onChange={setTassiDataFine} />
                   {calcAperto === "interessi-mora" ? (
                     <>
+                      <Pressable
+                        testID="tassi-ante-2013"
+                        onPress={() => {
+                          const nuovo = !tassiAnte2013;
+                          setTassiAnte2013(nuovo);
+                          setTassiMaggiorazione(nuovo ? "7" : "8");
+                        }}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: tassiAnte2013 ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                          {tassiAnte2013 ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                        </View>
+                        <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Transazione conclusa entro il 31/12/2012 (maggiorazione 7% anziché 8%, D.Lgs. 192/2012)</Text>
+                      </Pressable>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
                       <TextInput testID="tassi-maggiorazione" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
