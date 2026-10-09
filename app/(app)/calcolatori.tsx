@@ -390,16 +390,47 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "compenso-mediazione": {
     campi: [
       { tipo: "bool", key: "valore_indeterminabile", label: "Valore della lite indeterminabile", default: false },
-      { tipo: "numero", key: "valore_lite", label: "Valore della lite €", default: "" },
-      { tipo: "bool", key: "condizione_procedibilita", label: "Condizione di procedibilità / demandata dal giudice (-1/5)", default: false },
+      { tipo: "numero", key: "valore_lite", label: "Valore della lite €", default: "", mostraSe: (f) => !f.valore_indeterminabile },
+      {
+        tipo: "scelta", key: "valore_indeterminabile_livello", label: "Complessità presunta (sceglie lo scaglione del 1° incontro)", default: "medio", mostraSe: (f) => !!f.valore_indeterminabile,
+        opzioni: [
+          { value: "basso", label: "Basso" },
+          { value: "medio", label: "Medio" },
+          { value: "alto", label: "Alto" },
+        ],
+      },
+      { tipo: "bool", key: "condizione_procedibilita", label: "Mediazione obbligatoria o demandata dal giudice (-1/5)", default: false },
+      {
+        tipo: "scelta", key: "numero_incontri", label: "Numero di incontri", default: "uno",
+        opzioni: [
+          { value: "uno", label: "Uno" },
+          { value: "piu_di_uno", label: "Più di uno" },
+        ],
+      },
+      { tipo: "bool", key: "accordo_raggiunto", label: "Accordo raggiunto", default: false },
+      { tipo: "numero", key: "maggiorazione_discrezionale_pct", label: "Maggiorazione discrezionale dell'organismo sull'accordo (0-20%)", default: "0", mostraSe: (f) => !!f.accordo_raggiunto },
+      { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: false },
     ],
     endpoint: "/calc/compenso-mediazione",
     risultato: (r) => [
-      ["Spese di avvio (1° incontro)", formatEuro(r.spese_avvio_primo_incontro)],
-      ["Spese mediazione (1° incontro)", formatEuro(r.spese_mediazione_primo_incontro)],
-      ["Spese mediazione oltre il 1° incontro", `${formatEuro(r.spese_mediazione_minimo_oltre_primo_incontro)} - ${formatEuro(r.spese_mediazione_massimo_oltre_primo_incontro)}`],
-      ["Maggiorazione se accordo al 1° incontro", `+${r.maggiorazione_accordo_primo_incontro_pct}%`],
-      ["Maggiorazione se accordo in incontri successivi", `+${r.maggiorazione_accordo_incontri_successivi_pct}%`],
+      ["Spese di avvio", formatEuro(r.spese_avvio)],
+      ["Indennità primo incontro", formatEuro(r.spese_primo_incontro)],
+      ...(r.ulteriori_spese_dovute
+        ? ([
+            ["Ulteriori spese (tabella A) — minimo", formatEuro(r.ulteriori_spese_minimo)],
+            ["Ulteriori spese (tabella A) — massimo", formatEuro(r.ulteriori_spese_massimo)],
+            ...(r.maggiorazione_accordo_pct ? ([["di cui maggiorazione per accordo", `+${r.maggiorazione_accordo_pct}%`]] as [string, string][]) : []),
+            ...(r.maggiorazione_discrezionale_pct ? ([["di cui maggiorazione discrezionale (sul massimo)", `+${r.maggiorazione_discrezionale_pct}%`]] as [string, string][]) : []),
+          ] as [string, string][])
+        : ([["Ulteriori spese (tabella A)", "Non dovute: esito negativo al primo incontro"]] as [string, string][])),
+      ["Totale — minimo", formatEuro(r.totale_minimo)],
+      ["Totale — massimo", formatEuro(r.totale_massimo)],
+      ...(r.applica_iva
+        ? ([
+            ["Totale con IVA — minimo", formatEuro(r.totale_minimo_con_iva)],
+            ["Totale con IVA — massimo", formatEuro(r.totale_massimo_con_iva)],
+          ] as [string, string][])
+        : []),
     ],
   },
   "giorni-tra-date": {
