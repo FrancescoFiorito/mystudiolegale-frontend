@@ -40,7 +40,11 @@ type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data_opzionale" })
   | (CampoGenericoBase & { tipo: "numero"; default?: string })
   | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
-  | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string; cercabile?: boolean });
+  | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string; cercabile?: boolean })
+  // Sola intestazione di sezione (nessun valore nel form): raggruppa più
+  // campi "bool" sotto un'unica frase comune, invece di ripeterla in ogni
+  // singola etichetta.
+  | (CampoGenericoBase & { tipo: "titolo" });
 
 type ConfigGenerico = {
   campi: CampoGenerico[];
@@ -441,10 +445,11 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "data", key: "data_iniziale", label: "Data iniziale" },
       { tipo: "data", key: "data_finale", label: "Data finale" },
-      { tipo: "bool", key: "escludi_sabati", label: "Escludi dal conteggio: sabati", default: false },
-      { tipo: "bool", key: "escludi_domeniche", label: "Escludi dal conteggio: domeniche", default: false },
-      { tipo: "bool", key: "escludi_festivi", label: "Escludi dal conteggio: festivi", default: false },
-      { tipo: "bool", key: "escludi_chiusura_estiva", label: "Escludi dal conteggio: chiusura estiva (1-31 agosto)", default: false },
+      { tipo: "titolo", key: "escludi_titolo", label: "Escludi dal conteggio:" },
+      { tipo: "bool", key: "escludi_sabati", label: "Sabati", default: false },
+      { tipo: "bool", key: "escludi_domeniche", label: "Domeniche", default: false },
+      { tipo: "bool", key: "escludi_festivi", label: "Festivi", default: false },
+      { tipo: "bool", key: "escludi_chiusura_estiva", label: "Chiusura estiva (1-31 agosto)", default: false },
     ],
     endpoint: "/calc/giorni-tra-date",
     risultato: (r) => [["Giorni", String(r.giorni)]],
@@ -2762,6 +2767,11 @@ export default function Calcolatori() {
                             <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: 4, marginBottom: SPACING.sm }}>{notaData}</Text>
                           ) : null}
                         </View>
+                      );
+                    }
+                    if (c.tipo === "titolo") {
+                      return (
+                        <Text key={c.key} style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>{c.label}</Text>
                       );
                     }
                     if (c.tipo === "numero") {
