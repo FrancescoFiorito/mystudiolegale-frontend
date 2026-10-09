@@ -453,6 +453,152 @@ type AttoId = "diffida_ad_adempiere" | "messa_in_mora" | "incarico_professionale
 
 type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean; opzioni?: { value: string; label: string }[]; tipo?: "bool"; mostraSe?: (form: Record<string, string>) => boolean };
 
+// Ordini Circondariali Forensi italiani (Fori), uno per circondario di Tribunale
+// ordinario attualmente operativo (138, verificati su Tabella 5 del Ministero della
+// Giustizia incrociata con l'elenco Tribunali di Wikipedia e fonti puntuali per i casi
+// dubbi — inclusi i 4 Tribunali abruzzesi mai chiusi nonostante la soppressione 2012/2013
+// per proroghe legislative ininterrotte; esclusi Chiavari e Bassano del Grappa, soppressi).
+const ORDINI_FORENSI: { value: string; label: string }[] = [
+  { value: "Agrigento", label: "Agrigento" },
+  { value: "Alessandria", label: "Alessandria" },
+  { value: "Ancona", label: "Ancona" },
+  { value: "Aosta", label: "Aosta" },
+  { value: "Arezzo", label: "Arezzo" },
+  { value: "Ascoli Piceno", label: "Ascoli Piceno" },
+  { value: "Asti", label: "Asti" },
+  { value: "Avellino", label: "Avellino" },
+  { value: "Avezzano", label: "Avezzano" },
+  { value: "Barcellona Pozzo di Gotto", label: "Barcellona Pozzo di Gotto" },
+  { value: "Bari", label: "Bari" },
+  { value: "Belluno", label: "Belluno" },
+  { value: "Benevento", label: "Benevento" },
+  { value: "Bergamo", label: "Bergamo" },
+  { value: "Biella", label: "Biella" },
+  { value: "Bologna", label: "Bologna" },
+  { value: "Bolzano", label: "Bolzano" },
+  { value: "Brescia", label: "Brescia" },
+  { value: "Brindisi", label: "Brindisi" },
+  { value: "Busto Arsizio", label: "Busto Arsizio" },
+  { value: "Caltagirone", label: "Caltagirone" },
+  { value: "Caltanissetta", label: "Caltanissetta" },
+  { value: "Campobasso", label: "Campobasso" },
+  { value: "Cassino", label: "Cassino" },
+  { value: "Castrovillari", label: "Castrovillari" },
+  { value: "Catania", label: "Catania" },
+  { value: "Catanzaro", label: "Catanzaro" },
+  { value: "Chieti", label: "Chieti" },
+  { value: "Civitavecchia", label: "Civitavecchia" },
+  { value: "Como", label: "Como" },
+  { value: "Cosenza", label: "Cosenza" },
+  { value: "Cremona", label: "Cremona" },
+  { value: "Crotone", label: "Crotone" },
+  { value: "Cuneo", label: "Cuneo" },
+  { value: "Enna", label: "Enna" },
+  { value: "Fermo", label: "Fermo" },
+  { value: "Ferrara", label: "Ferrara" },
+  { value: "Firenze", label: "Firenze" },
+  { value: "Foggia", label: "Foggia" },
+  { value: "Forlì", label: "Forlì" },
+  { value: "Frosinone", label: "Frosinone" },
+  { value: "Gela", label: "Gela" },
+  { value: "Genova", label: "Genova" },
+  { value: "Gorizia", label: "Gorizia" },
+  { value: "Grosseto", label: "Grosseto" },
+  { value: "Imperia", label: "Imperia" },
+  { value: "Isernia", label: "Isernia" },
+  { value: "Ivrea", label: "Ivrea" },
+  { value: "Lagonegro", label: "Lagonegro" },
+  { value: "Lamezia Terme", label: "Lamezia Terme" },
+  { value: "Lanciano", label: "Lanciano" },
+  { value: "Lanusei", label: "Lanusei" },
+  { value: "L'Aquila", label: "L'Aquila" },
+  { value: "Larino", label: "Larino" },
+  { value: "La Spezia", label: "La Spezia" },
+  { value: "Latina", label: "Latina" },
+  { value: "Lecce", label: "Lecce" },
+  { value: "Lecco", label: "Lecco" },
+  { value: "Livorno", label: "Livorno" },
+  { value: "Locri", label: "Locri" },
+  { value: "Lodi", label: "Lodi" },
+  { value: "Lucca", label: "Lucca" },
+  { value: "Macerata", label: "Macerata" },
+  { value: "Mantova", label: "Mantova" },
+  { value: "Marsala", label: "Marsala" },
+  { value: "Massa", label: "Massa" },
+  { value: "Matera", label: "Matera" },
+  { value: "Messina", label: "Messina" },
+  { value: "Milano", label: "Milano" },
+  { value: "Modena", label: "Modena" },
+  { value: "Monza", label: "Monza" },
+  { value: "Napoli", label: "Napoli" },
+  { value: "Napoli Nord", label: "Napoli Nord" },
+  { value: "Nocera Inferiore", label: "Nocera Inferiore" },
+  { value: "Nola", label: "Nola" },
+  { value: "Novara", label: "Novara" },
+  { value: "Nuoro", label: "Nuoro" },
+  { value: "Oristano", label: "Oristano" },
+  { value: "Padova", label: "Padova" },
+  { value: "Palermo", label: "Palermo" },
+  { value: "Palmi", label: "Palmi" },
+  { value: "Paola", label: "Paola" },
+  { value: "Parma", label: "Parma" },
+  { value: "Patti", label: "Patti" },
+  { value: "Pavia", label: "Pavia" },
+  { value: "Perugia", label: "Perugia" },
+  { value: "Pesaro", label: "Pesaro" },
+  { value: "Pescara", label: "Pescara" },
+  { value: "Piacenza", label: "Piacenza" },
+  { value: "Pisa", label: "Pisa" },
+  { value: "Pistoia", label: "Pistoia" },
+  { value: "Pordenone", label: "Pordenone" },
+  { value: "Potenza", label: "Potenza" },
+  { value: "Prato", label: "Prato" },
+  { value: "Ragusa", label: "Ragusa" },
+  { value: "Ravenna", label: "Ravenna" },
+  { value: "Reggio Calabria", label: "Reggio Calabria" },
+  { value: "Reggio Emilia", label: "Reggio Emilia" },
+  { value: "Rieti", label: "Rieti" },
+  { value: "Rimini", label: "Rimini" },
+  { value: "Roma", label: "Roma" },
+  { value: "Rovereto", label: "Rovereto" },
+  { value: "Rovigo", label: "Rovigo" },
+  { value: "Salerno", label: "Salerno" },
+  { value: "Santa Maria Capua Vetere", label: "Santa Maria Capua Vetere" },
+  { value: "Sassari", label: "Sassari" },
+  { value: "Savona", label: "Savona" },
+  { value: "Sciacca", label: "Sciacca" },
+  { value: "Siena", label: "Siena" },
+  { value: "Siracusa", label: "Siracusa" },
+  { value: "Sondrio", label: "Sondrio" },
+  { value: "Spoleto", label: "Spoleto" },
+  { value: "Sulmona", label: "Sulmona" },
+  { value: "Taranto", label: "Taranto" },
+  { value: "Teramo", label: "Teramo" },
+  { value: "Termini Imerese", label: "Termini Imerese" },
+  { value: "Terni", label: "Terni" },
+  { value: "Tivoli", label: "Tivoli" },
+  { value: "Torino", label: "Torino" },
+  { value: "Torre Annunziata", label: "Torre Annunziata" },
+  { value: "Trani", label: "Trani" },
+  { value: "Trapani", label: "Trapani" },
+  { value: "Trento", label: "Trento" },
+  { value: "Treviso", label: "Treviso" },
+  { value: "Trieste", label: "Trieste" },
+  { value: "Udine", label: "Udine" },
+  { value: "Urbino", label: "Urbino" },
+  { value: "Vallo della Lucania", label: "Vallo della Lucania" },
+  { value: "Varese", label: "Varese" },
+  { value: "Vasto", label: "Vasto" },
+  { value: "Velletri", label: "Velletri" },
+  { value: "Venezia", label: "Venezia" },
+  { value: "Verbania", label: "Verbania" },
+  { value: "Vercelli", label: "Vercelli" },
+  { value: "Verona", label: "Verona" },
+  { value: "Vibo Valentia", label: "Vibo Valentia" },
+  { value: "Vicenza", label: "Vicenza" },
+  { value: "Viterbo", label: "Viterbo" },
+];
+
 const ATTI: { id: AttoId; titolo: string; sottotitolo: string; icona: string }[] = [
   { id: "diffida_ad_adempiere", titolo: "Diffida ad adempiere", sottotitolo: "Art. 1454 c.c.", icona: "alert-circle" },
   { id: "messa_in_mora", titolo: "Messa in mora", sottotitolo: "Art. 1219 c.c.", icona: "clock" },
@@ -530,12 +676,13 @@ const CAMPI_ATTI: Record<AttoId, CampoAtto[]> = {
     { key: "data", label: "Data", dataIso: true },
   ],
   procura_alle_liti: [
-    { key: "parte_nome", label: "Nome della parte", obbligatorio: true },
-    { key: "parte_cf", label: "Codice fiscale della parte" },
-    { key: "parte_indirizzo", label: "Indirizzo/sede della parte" },
-    { key: "oggetto_procedimento", label: "Oggetto del procedimento", obbligatorio: true, multiline: true },
-    { key: "avvocato_nome", label: "Nome dell'avvocato", obbligatorio: true },
-    { key: "avvocato_foro", label: "Foro di iscrizione dell'avvocato", obbligatorio: true },
+    {
+      key: "incipit", label: "Incipit", opzioni: [
+        { value: "Il sottoscritto/a", label: "Il sottoscritto/a" },
+        { value: "Io sottoscritto/a", label: "Io sottoscritto/a" },
+      ],
+    },
+    { key: "dati_causa", label: "Dati della causa (facoltativo)", multiline: true },
     { key: "luogo", label: "Luogo" },
     { key: "data", label: "Data", dataIso: true },
   ],
@@ -897,6 +1044,8 @@ export default function Calcolatori() {
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
   const [attoCrediti, setAttoCrediti] = React.useState<{ descrizione: string; importo: string }[]>([]);
+  const [procuraParti, setProcuraParti] = React.useState<{ nome: string; persona_giuridica: boolean; legale_rappresentante: string; cf_piva: string; indirizzo: string }[]>([]);
+  const [procuraAvvocati, setProcuraAvvocati] = React.useState<{ nome: string; cf: string; ordine: string; eletto_domicilio: boolean; indirizzo_studio: string; autentica_firme: boolean }[]>([]);
   const [attoGenerato, setAttoGenerato] = React.useState<any>(null);
   const [attoGenerando, setAttoGenerando] = React.useState(false);
 
@@ -1343,6 +1492,8 @@ export default function Calcolatori() {
     });
     setAttoForm(f);
     setAttoCrediti(id === "messa_in_mora" ? [{ descrizione: "", importo: "" }] : []);
+    setProcuraParti(id === "procura_alle_liti" ? [{ nome: "", persona_giuridica: false, legale_rappresentante: "", cf_piva: "", indirizzo: "" }] : []);
+    setProcuraAvvocati(id === "procura_alle_liti" ? [{ nome: "", cf: "", ordine: "", eletto_domicilio: false, indirizzo_studio: "", autentica_firme: false }] : []);
     setAttoGenerato(null);
   };
 
@@ -1353,11 +1504,25 @@ export default function Calcolatori() {
       Alert.alert("Campi mancanti", `Compila: ${mancanti.map((c) => c.label).join(", ")}`);
       return;
     }
+    if (attoAperto === "procura_alle_liti") {
+      if (!procuraParti.some((p) => p.nome.trim())) {
+        Alert.alert("Campi mancanti", "Compila: almeno una parte assistita con nome");
+        return;
+      }
+      if (!procuraAvvocati.some((a) => a.nome.trim())) {
+        Alert.alert("Campi mancanti", "Compila: almeno un avvocato con nome");
+        return;
+      }
+    }
     setAttoGenerando(true);
     try {
       const campi: Record<string, any> = { ...attoForm };
       if (attoAperto === "messa_in_mora") {
         campi.crediti = attoCrediti.filter((v) => v.descrizione.trim() || v.importo.trim());
+      }
+      if (attoAperto === "procura_alle_liti") {
+        campi.parti = procuraParti.filter((p) => p.nome.trim());
+        campi.avvocati = procuraAvvocati.filter((a) => a.nome.trim());
       }
       const r = await api.post("/atti", { tipo: attoAperto, pratica_id: praticaId, campi });
       setAttoGenerato(r);
@@ -1971,6 +2136,149 @@ export default function Calcolatori() {
                         >
                           <Feather name="plus-circle" size={16} color={t.brand} />
                           <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi un altro credito</Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
+                    {attoAperto === "procura_alle_liti" && c.key === "incipit" ? (
+                      <View>
+                        <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>Parti assistite</Text>
+                        {procuraParti.map((p, i) => (
+                          <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              <TextInput
+                                testID={`procura-parte-nome-${i}`}
+                                value={p.nome}
+                                onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, nome: val } : x)))}
+                                placeholder="Nome / Ragione sociale"
+                                placeholderTextColor={t.onSurfaceTertiary}
+                                style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                              />
+                              <Pressable testID={`procura-parte-rimuovi-${i}`} onPress={() => setProcuraParti(procuraParti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                                <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+                              </Pressable>
+                            </View>
+                            <Pressable
+                              testID={`procura-parte-persona-giuridica-${i}`}
+                              onPress={() => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, persona_giuridica: !x.persona_giuridica } : x)))}
+                              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
+                            >
+                              <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: p.persona_giuridica ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                                {p.persona_giuridica ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                              </View>
+                              <Text style={{ color: t.onSurface, flex: 1 }}>Persona giuridica</Text>
+                            </Pressable>
+                            {p.persona_giuridica ? (
+                              <TextInput
+                                testID={`procura-parte-legale-rappresentante-${i}`}
+                                value={p.legale_rappresentante}
+                                onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, legale_rappresentante: val } : x)))}
+                                placeholder="Legale rappresentante"
+                                placeholderTextColor={t.onSurfaceTertiary}
+                                style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                              />
+                            ) : null}
+                            <TextInput
+                              testID={`procura-parte-cf-piva-${i}`}
+                              value={p.cf_piva}
+                              onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, cf_piva: val } : x)))}
+                              placeholder="C.F. / P.IVA"
+                              placeholderTextColor={t.onSurfaceTertiary}
+                              style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                            />
+                            <TextInput
+                              testID={`procura-parte-indirizzo-${i}`}
+                              value={p.indirizzo}
+                              onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, indirizzo: val } : x)))}
+                              placeholder="Indirizzo / sede"
+                              placeholderTextColor={t.onSurfaceTertiary}
+                              style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                            />
+                          </View>
+                        ))}
+                        <Pressable
+                          testID="procura-parte-aggiungi"
+                          onPress={() => setProcuraParti([...procuraParti, { nome: "", persona_giuridica: false, legale_rappresentante: "", cf_piva: "", indirizzo: "" }])}
+                          style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                        >
+                          <Feather name="plus-circle" size={16} color={t.brand} />
+                          <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi un&apos;altra parte assistita</Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
+                    {attoAperto === "procura_alle_liti" && c.key === "dati_causa" ? (
+                      <View>
+                        <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>Avvocati</Text>
+                        {procuraAvvocati.map((a, i) => (
+                          <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              <TextInput
+                                testID={`procura-avvocato-nome-${i}`}
+                                value={a.nome}
+                                onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, nome: val } : x)))}
+                                placeholder="Nome e cognome"
+                                placeholderTextColor={t.onSurfaceTertiary}
+                                style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                              />
+                              <Pressable testID={`procura-avvocato-rimuovi-${i}`} onPress={() => setProcuraAvvocati(procuraAvvocati.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                                <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+                              </Pressable>
+                            </View>
+                            <View style={{ marginTop: SPACING.sm }}>
+                              <SelectInput
+                                testID={`procura-avvocato-ordine-${i}`}
+                                value={a.ordine}
+                                onChange={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, ordine: val } : x)))}
+                                opzioni={ORDINI_FORENSI}
+                                placeholder="Ordine forense"
+                              />
+                            </View>
+                            <TextInput
+                              testID={`procura-avvocato-cf-${i}`}
+                              value={a.cf}
+                              onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, cf: val } : x)))}
+                              placeholder="Codice fiscale"
+                              placeholderTextColor={t.onSurfaceTertiary}
+                              style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                            />
+                            <Pressable
+                              testID={`procura-avvocato-eletto-domicilio-${i}`}
+                              onPress={() => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, eletto_domicilio: !x.eletto_domicilio } : x)))}
+                              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
+                            >
+                              <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: a.eletto_domicilio ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                                {a.eletto_domicilio ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                              </View>
+                              <Text style={{ color: t.onSurface, flex: 1 }}>Eletto domicilio presso questo avvocato</Text>
+                            </Pressable>
+                            {a.eletto_domicilio ? (
+                              <TextInput
+                                testID={`procura-avvocato-indirizzo-studio-${i}`}
+                                value={a.indirizzo_studio}
+                                onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, indirizzo_studio: val } : x)))}
+                                placeholder="Indirizzo dello studio"
+                                placeholderTextColor={t.onSurfaceTertiary}
+                                style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
+                              />
+                            ) : null}
+                            <Pressable
+                              testID={`procura-avvocato-autentica-firme-${i}`}
+                              onPress={() => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, autentica_firme: !x.autentica_firme } : x)))}
+                              style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
+                            >
+                              <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: a.autentica_firme ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                                {a.autentica_firme ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                              </View>
+                              <Text style={{ color: t.onSurface, flex: 1 }}>Autentica le firme degli assistiti</Text>
+                            </Pressable>
+                          </View>
+                        ))}
+                        <Pressable
+                          testID="procura-avvocato-aggiungi"
+                          onPress={() => setProcuraAvvocati([...procuraAvvocati, { nome: "", cf: "", ordine: "", eletto_domicilio: false, indirizzo_studio: "", autentica_firme: false }])}
+                          style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                        >
+                          <Feather name="plus-circle" size={16} color={t.brand} />
+                          <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi un altro avvocato</Text>
                         </Pressable>
                       </View>
                     ) : null}
