@@ -240,14 +240,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale", default: false },
       { tipo: "scelta", key: "tipo_pignoramento", label: "Termini successivi al pignoramento (facoltativo)", default: "", opzioni: [
         { value: "", label: "Nessuno" },
-        { value: "mobiliare_immobiliare", label: "Mobiliare/immobiliare (iscrizione a ruolo e istanza di vendita)" },
+        { value: "mobiliare", label: "Mobiliare (iscrizione a ruolo e istanza di vendita, art. 518 c.p.c.)" },
+        { value: "immobiliare", label: "Immobiliare (iscrizione a ruolo e istanza di vendita, art. 557 c.p.c.)" },
         { value: "presso_terzi", label: "Presso terzi (iscrizione a ruolo)" },
         { value: "autoveicoli", label: "Autoveicoli/motoveicoli/rimorchi (art. 521-bis)" },
       ] },
       { tipo: "data_opzionale", key: "data_pignoramento", label: "Data di compimento del pignoramento (per l'istanza di vendita)",
-        mostraSe: (f) => f.tipo_pignoramento === "mobiliare_immobiliare" || f.tipo_pignoramento === "autoveicoli" },
+        mostraSe: (f) => f.tipo_pignoramento === "mobiliare" || f.tipo_pignoramento === "immobiliare" || f.tipo_pignoramento === "autoveicoli",
+        nota: (f) => f.tipo_pignoramento === "immobiliare" ? "Per l'immobiliare, il \"compimento del pignoramento\" coincide con la notificazione al debitore, non con la trascrizione (Cass. civ. n. 7998/2015)." : null },
       { tipo: "data_opzionale", key: "data_consegna_verbale", label: "Data di consegna del verbale/atto al creditore da parte dell'ufficiale giudiziario (per l'iscrizione a ruolo)",
-        mostraSe: (f) => f.tipo_pignoramento === "mobiliare_immobiliare" || f.tipo_pignoramento === "presso_terzi" },
+        mostraSe: (f) => f.tipo_pignoramento === "mobiliare" || f.tipo_pignoramento === "immobiliare" || f.tipo_pignoramento === "presso_terzi" },
       { tipo: "data_opzionale", key: "data_comunicazione_ivg", label: "Data comunicazione IVG di avvenuta consegna (solo autoveicoli)",
         mostraSe: (f) => f.tipo_pignoramento === "autoveicoli" },
       { tipo: "data_opzionale", key: "data_iscrizione_ruolo", label: "Data iscrizione a ruolo (solo autoveicoli, se già avvenuta)",
@@ -271,6 +273,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     risultato: (r) => [
       ["Data minima pignoramento", isoToDataIt(r.data_minima_pignoramento)],
       ["Scadenza efficacia precetto", isoToDataIt(r.scadenza_efficacia_precetto)],
+      ...(r.articolo_iscrizione_ruolo ? ([["Articolo iscrizione a ruolo", r.articolo_iscrizione_ruolo]] as [string, string][]) : []),
+      ...(r.articolo_istanza_vendita ? ([["Articolo istanza di vendita", r.articolo_istanza_vendita]] as [string, string][]) : []),
       ...(r.termine_minimo_istanza_vendita ? ([
         ["Istanza di vendita - dal", isoToDataIt(r.termine_minimo_istanza_vendita)],
         ["Istanza di vendita - entro", isoToDataIt(r.termine_massimo_istanza_vendita)],
@@ -2769,10 +2773,14 @@ export default function Calcolatori() {
                   {CONFIG_GENERICI[calcAperto].campi.map((c) => {
                     if (c.mostraSe && !c.mostraSe(genForm)) return null;
                     if (c.tipo === "data" || c.tipo === "data_opzionale") {
+                      const notaData = c.nota?.(genForm);
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.tipo === "data_opzionale" ? " (opzionale)" : ""}</Text>
                           <DataInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
+                          {notaData ? (
+                            <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: 4, marginBottom: SPACING.sm }}>{notaData}</Text>
+                          ) : null}
                         </View>
                       );
                     }
