@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
@@ -7,6 +7,7 @@ import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
+import DataInput from "@/src/components/DataInput";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra, chiaveOrdinamentoOra } from "@/src/utils/orario";
 
@@ -239,8 +240,8 @@ export default function Calendario() {
         <View style={{ flex: 1, backgroundColor: "#00000088", alignItems: "center", justifyContent: "center", padding: SPACING.xl }}>
           <View style={{ width: "100%", backgroundColor: t.surface, borderRadius: RADIUS.lg, padding: SPACING.lg, borderWidth: 1, borderColor: t.border }}>
             <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 16, marginBottom: SPACING.md }}>Sposta "{moveTarget?.titolo}"</Text>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceTertiary, marginBottom: 4 }}>Nuova data (YYYY-MM-DD)</Text>
-            <TextInput value={moveDate} onChangeText={setMoveDate} style={{ borderWidth: 1, borderColor: t.border, borderRadius: RADIUS.md, padding: SPACING.md, color: t.onSurface, backgroundColor: t.surfaceSecondary }} />
+            <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceTertiary, marginBottom: 4 }}>Nuova data</Text>
+            <DataInput testID="sposta-data" value={moveDate} onChange={setMoveDate} />
             <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.lg }}>
               <Pressable onPress={() => setMoveTarget(null)} style={{ flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
                 <Text style={{ color: t.onSurface }}>Annulla</Text>
