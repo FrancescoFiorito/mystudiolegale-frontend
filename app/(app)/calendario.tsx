@@ -103,7 +103,7 @@ export default function Calendario() {
       <View style={{ flex: 1, padding: SPACING.md }}>
         <Text style={{ color: t.onSurface, fontWeight: "700" }}>{e.titolo}</Text>
         <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{e.data} · {formatOra(e.ora)} · {e.categoria}</Text>
-        {e.pratica ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }}>{e.pratica.numero}</Text> : null}
+        {e.pratica ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }} numberOfLines={1}>{e.pratica.oggetto}</Text> : null}
       </View>
       <Pressable onPress={() => apriSposta(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
         <Feather name="move" size={16} color={t.onSurfaceTertiary} />
