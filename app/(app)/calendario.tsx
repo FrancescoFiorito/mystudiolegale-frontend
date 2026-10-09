@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, Modal, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Modal, TextInput, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
@@ -8,6 +8,11 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import DataInput from "@/src/components/DataInput";
+import SelectInput from "@/src/components/SelectInput";
+import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import PraticaPicker from "@/src/components/PraticaPicker";
+import OrarioInput from "@/src/components/OrarioInput";
+import PromemoriaInput from "@/src/components/PromemoriaInput";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra, chiaveOrdinamentoOra } from "@/src/utils/orario";
 
@@ -47,6 +52,22 @@ export default function Calendario() {
   const [events, setEvents] = React.useState<any[]>([]);
   const [moveTarget, setMoveTarget] = React.useState<any>(null);
   const [moveDate, setMoveDate] = React.useState("");
+
+  // Nuovo evento (facoltativo, tasto + in alto a destra): stessi campi e
+  // componenti già usati dai calcolatori per salvare una scadenza, cosi' da
+  // poter creare un evento anche senza passare da un calcolatore.
+  const [pratiche, setPratiche] = React.useState<any[]>([]);
+  React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
+  const [showNuovo, setShowNuovo] = React.useState(false);
+  const [nuovoTitolo, setNuovoTitolo] = React.useState("");
+  const [nuovoData, setNuovoData] = React.useState("");
+  const [nuovoOra, setNuovoOra] = React.useState<string | null>(null);
+  const [nuovoCategoria, setNuovoCategoria] = React.useState("generale");
+  const [nuovoPriorita, setNuovoPriorita] = React.useState("media");
+  const [nuovoPromemoria, setNuovoPromemoria] = React.useState<number[]>([1]);
+  const [nuovoDescrizione, setNuovoDescrizione] = React.useState("");
+  const [nuovoPraticaId, setNuovoPraticaId] = React.useState<string | null>(null);
+  const [savingNuovo, setSavingNuovo] = React.useState(false);
 
   const y = cursor.getFullYear();
   const m = cursor.getMonth();
@@ -98,6 +119,41 @@ export default function Calendario() {
     ]);
   };
 
+  const apriNuovo = () => {
+    setNuovoTitolo("");
+    setNuovoData(selectedDay);
+    setNuovoOra(null);
+    setNuovoCategoria("generale");
+    setNuovoPriorita("media");
+    setNuovoPromemoria([1]);
+    setNuovoDescrizione("");
+    setNuovoPraticaId(null);
+    setShowNuovo(true);
+  };
+  const creaEvento = async () => {
+    if (!nuovoTitolo.trim() || !nuovoData) return;
+    setSavingNuovo(true);
+    try {
+      await api.post("/scadenze", {
+        pratica_id: nuovoPraticaId,
+        titolo: nuovoTitolo.trim(),
+        descrizione: nuovoDescrizione.trim(),
+        data: nuovoData,
+        ora: nuovoOra,
+        categoria: nuovoCategoria,
+        priorita: nuovoPriorita,
+        promemoria: nuovoPromemoria,
+      });
+      sincronizzaSeConnesso();
+      setShowNuovo(false);
+      load();
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile creare l'evento. Riprova.");
+    } finally {
+      setSavingNuovo(false);
+    }
+  };
+
   const EventCard = ({ e }: { e: any }) => (
     <Pressable onLongPress={() => apriSposta(e)} style={[{ flexDirection: "row", borderRadius: RADIUS.lg, marginBottom: SPACING.sm, overflow: "hidden", backgroundColor: t.surface }, SHADOW.card]}>
       <View style={{ width: 4, backgroundColor: priColor(e.priorita) }} />
@@ -136,7 +192,16 @@ export default function Calendario() {
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
-      <Header variant="hero" title="Calendario" onBack={() => router.back()} />
+      <Header
+        variant="hero"
+        title="Calendario"
+        onBack={() => router.back()}
+        right={
+          <Pressable testID="new-evento-btn" onPress={apriNuovo} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" }}>
+            <Feather name="plus" size={20} color={t.onBrand} />
+          </Pressable>
+        }
+      />
 
       <View style={{ flexDirection: "row", backgroundColor: t.surface, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         {VIEWS.map((v) => (
@@ -253,6 +318,85 @@ export default function Calendario() {
           </View>
         </View>
       </Modal>
+
+      {showNuovo ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setShowNuovo(false)}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <Header variant="hero" title="Nuovo evento" onBack={() => setShowNuovo(false)} />
+            <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
+              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Titolo *</Text>
+              <TextInput
+                testID="nuovo-evento-titolo"
+                value={nuovoTitolo}
+                onChangeText={setNuovoTitolo}
+                placeholder="Es. Udienza"
+                placeholderTextColor={t.onSurfaceTertiary}
+                style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+              />
+
+              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Data</Text>
+              <DataInput testID="nuovo-evento-data" value={nuovoData} onChange={setNuovoData} />
+
+              <OrarioInput value={nuovoOra} onChange={setNuovoOra} />
+
+              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Categoria</Text>
+              <SelectInput
+                testID="nuovo-evento-categoria"
+                value={nuovoCategoria}
+                onChange={setNuovoCategoria}
+                opzioni={[
+                  { value: "generale", label: "Generale" },
+                  { value: "udienza", label: "Udienza" },
+                  { value: "deposito", label: "Deposito" },
+                  { value: "notifica", label: "Notifica" },
+                  { value: "riunione", label: "Riunione" },
+                ]}
+              />
+
+              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Priorità</Text>
+              <SelectInput
+                testID="nuovo-evento-priorita"
+                value={nuovoPriorita}
+                onChange={setNuovoPriorita}
+                opzioni={[
+                  { value: "bassa", label: "Bassa" },
+                  { value: "media", label: "Media" },
+                  { value: "alta", label: "Alta" },
+                ]}
+              />
+
+              <PromemoriaInput value={nuovoPromemoria} onChange={setNuovoPromemoria} />
+
+              <PraticaPicker
+                pratiche={pratiche}
+                praticaId={nuovoPraticaId}
+                onChange={setNuovoPraticaId}
+                helperText={nuovoPraticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui in Calendario."}
+              />
+
+              <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Descrizione (facoltativa)</Text>
+              <TextInput
+                testID="nuovo-evento-descrizione"
+                value={nuovoDescrizione}
+                onChangeText={setNuovoDescrizione}
+                multiline
+                placeholder="Note aggiuntive"
+                placeholderTextColor={t.onSurfaceTertiary}
+                style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, minHeight: 70, textAlignVertical: "top" }]}
+              />
+
+              <Pressable
+                testID="submit-nuovo-evento"
+                onPress={creaEvento}
+                disabled={savingNuovo || !nuovoTitolo.trim()}
+                style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingNuovo || !nuovoTitolo.trim() ? 0.6 : 1 }}
+              >
+                <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingNuovo ? "Creazione..." : "Crea evento"}</Text>
+              </Pressable>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SwipeBackScreen>
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -260,4 +404,6 @@ export default function Calendario() {
 const s = StyleSheet.create({
   monthBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: SPACING.lg, borderBottomWidth: 1 },
   monthCard: { marginHorizontal: SPACING.lg, marginTop: SPACING.md, borderRadius: RADIUS.lg, padding: SPACING.md },
+  lbl: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginTop: SPACING.md, marginBottom: SPACING.xs },
+  input: { borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md, fontSize: 14 },
 });
