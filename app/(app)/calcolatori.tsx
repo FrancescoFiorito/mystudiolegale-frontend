@@ -451,7 +451,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
 // scritto dall'avvocato, non generato automaticamente.
 type AttoId = "diffida_ad_adempiere" | "messa_in_mora" | "incarico_professionale" | "procura_alle_liti" | "disdetta_locazione";
 
-type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean; opzioni?: { value: string; label: string }[] };
+type CampoAtto = { key: string; label: string; obbligatorio?: boolean; multiline?: boolean; dataIso?: boolean; opzioni?: { value: string; label: string }[]; tipo?: "bool"; mostraSe?: (form: Record<string, string>) => boolean };
 
 const ATTI: { id: AttoId; titolo: string; sottotitolo: string; icona: string }[] = [
   { id: "diffida_ad_adempiere", titolo: "Diffida ad adempiere", sottotitolo: "Art. 1454 c.c.", icona: "alert-circle" },
@@ -473,13 +473,50 @@ const CAMPI_ATTI: Record<AttoId, CampoAtto[]> = {
     { key: "data", label: "Data", dataIso: true },
   ],
   messa_in_mora: [
+    {
+      key: "incipit", label: "Incipit", opzioni: [
+        { value: "Il sottoscritto,", label: "Il sottoscritto," },
+        { value: "La sottoscritta,", label: "La sottoscritta," },
+        { value: "Io sottoscritto,", label: "Io sottoscritto," },
+        { value: "Io sottoscritta,", label: "Io sottoscritta," },
+      ],
+    },
+    {
+      key: "qualifica_mittente", label: "In qualità di", opzioni: [
+        { value: "Creditore", label: "Creditore" },
+        { value: "Avvocato del Creditore", label: "Avvocato del Creditore" },
+        { value: "Legale rappresentante", label: "Legale rappresentante" },
+        { value: "Amministratore di condominio", label: "Amministratore di condominio" },
+      ],
+    },
     { key: "mittente", label: "Mittente (nome/ragione sociale)", obbligatorio: true },
     { key: "mittente_indirizzo", label: "Indirizzo mittente" },
+    { key: "creditore", label: "Creditore (se diverso dal mittente, es. cliente dell'avvocato)", obbligatorio: true },
+    { key: "creditore_persona_giuridica", label: "Il creditore è una persona giuridica", tipo: "bool" },
+    { key: "creditore_legale_rappresentante", label: "Legale rappresentante del creditore", mostraSe: (f) => !!f.creditore_persona_giuridica },
+    { key: "creditore_cf_piva", label: "C.F. / P.IVA del creditore" },
+    {
+      key: "titolo_destinatario", label: "Titolo destinatario", opzioni: [
+        { value: "Spett.le", label: "Spett.le" },
+        { value: "Egr. Sig.", label: "Egr. Sig." },
+        { value: "Gent.ma Sig.ra", label: "Gent.ma Sig.ra" },
+        { value: "Egr. Dott.", label: "Egr. Dott." },
+        { value: "Gent.ma Dott.ssa", label: "Gent.ma Dott.ssa" },
+      ],
+    },
     { key: "destinatario", label: "Destinatario", obbligatorio: true },
     { key: "destinatario_indirizzo", label: "Indirizzo destinatario" },
-    { key: "descrizione_credito", label: "Descrizione del credito", obbligatorio: true, multiline: true },
+    { key: "destinatario_email_pec", label: "Email / PEC destinatario" },
     { key: "data_scadenza_originaria", label: "Data scadenza originaria", dataIso: true },
-    { key: "importo", label: "Importo dovuto €" },
+    { key: "versamento_entro_giorni", label: "Termine di pagamento concesso (giorni)" },
+    { key: "acconti", label: "Acconti già versati (dedotti dal totale) €" },
+    {
+      key: "invio_tramite", label: "Invio tramite", opzioni: [
+        { value: "Posta Ordinaria", label: "Posta Ordinaria" },
+        { value: "Raccomandata A/R", label: "Raccomandata A/R" },
+        { value: "PEC", label: "PEC / Posta Elettronica" },
+      ],
+    },
     { key: "luogo", label: "Luogo" },
     { key: "data", label: "Data", dataIso: true },
   ],
@@ -859,6 +896,7 @@ export default function Calcolatori() {
   // Atti (bozze di documenti)
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
+  const [attoCrediti, setAttoCrediti] = React.useState<{ descrizione: string; importo: string }[]>([]);
   const [attoGenerato, setAttoGenerato] = React.useState<any>(null);
   const [attoGenerando, setAttoGenerando] = React.useState(false);
 
@@ -1304,19 +1342,24 @@ export default function Calcolatori() {
       f[c.key] = c.dataIso && c.key === "data" ? new Date().toISOString().slice(0, 10) : c.opzioni ? c.opzioni[0].value : "";
     });
     setAttoForm(f);
+    setAttoCrediti(id === "messa_in_mora" ? [{ descrizione: "", importo: "" }] : []);
     setAttoGenerato(null);
   };
 
   const generaAtto = async () => {
     if (!attoAperto) return;
-    const mancanti = CAMPI_ATTI[attoAperto].filter((c) => c.obbligatorio && !attoForm[c.key]?.trim());
+    const mancanti = CAMPI_ATTI[attoAperto].filter((c) => c.obbligatorio && (!c.mostraSe || c.mostraSe(attoForm)) && !attoForm[c.key]?.trim());
     if (mancanti.length) {
       Alert.alert("Campi mancanti", `Compila: ${mancanti.map((c) => c.label).join(", ")}`);
       return;
     }
     setAttoGenerando(true);
     try {
-      const r = await api.post("/atti", { tipo: attoAperto, pratica_id: praticaId, campi: attoForm });
+      const campi: Record<string, any> = { ...attoForm };
+      if (attoAperto === "messa_in_mora") {
+        campi.crediti = attoCrediti.filter((v) => v.descrizione.trim() || v.importo.trim());
+      }
+      const r = await api.post("/atti", { tipo: attoAperto, pratica_id: praticaId, campi });
       setAttoGenerato(r);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile generare il documento. Riprova.");
@@ -1854,31 +1897,86 @@ export default function Calcolatori() {
               <Text style={{ color: t.warning, fontSize: 12, marginBottom: SPACING.md }}>
                 Il documento generato è una bozza: va rivista e personalizzata prima dell&apos;invio.
               </Text>
-              {attoAperto && CAMPI_ATTI[attoAperto].map((c) => (
-                <View key={c.key}>
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.obbligatorio ? " *" : ""}</Text>
-                  {c.opzioni ? (
-                    <View style={{ marginBottom: SPACING.sm }}>
-                      <SelectInput
+              {attoAperto && CAMPI_ATTI[attoAperto].map((c) => {
+                if (c.mostraSe && !c.mostraSe(attoForm)) return null;
+                return (
+                  <React.Fragment key={c.key}>
+                    {c.tipo === "bool" ? (
+                      <Pressable
                         testID={`atto-campo-${c.key}`}
-                        value={attoForm[c.key] || ""}
-                        onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
-                        opzioni={c.opzioni}
-                      />
-                    </View>
-                  ) : c.dataIso ? (
-                    <DataInput testID={`atto-campo-${c.key}`} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
-                  ) : (
-                    <TextInput
-                      testID={`atto-campo-${c.key}`}
-                      value={attoForm[c.key] || ""}
-                      onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
-                      multiline={c.multiline}
-                      style={[st.input, c.multiline ? { minHeight: 80, textAlignVertical: "top" } : null, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
-                    />
-                  )}
-                </View>
-              ))}
+                        onPress={() => setAttoForm({ ...attoForm, [c.key]: attoForm[c.key] ? "" : "true" })}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: attoForm[c.key] ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                          {attoForm[c.key] ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                        </View>
+                        <Text style={{ color: t.onSurface, flex: 1 }}>{c.label}</Text>
+                      </Pressable>
+                    ) : (
+                      <View>
+                        <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.obbligatorio ? " *" : ""}</Text>
+                        {c.opzioni ? (
+                          <View style={{ marginBottom: SPACING.sm }}>
+                            <SelectInput
+                              testID={`atto-campo-${c.key}`}
+                              value={attoForm[c.key] || ""}
+                              onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
+                              opzioni={c.opzioni}
+                            />
+                          </View>
+                        ) : c.dataIso ? (
+                          <DataInput testID={`atto-campo-${c.key}`} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
+                        ) : (
+                          <TextInput
+                            testID={`atto-campo-${c.key}`}
+                            value={attoForm[c.key] || ""}
+                            onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
+                            multiline={c.multiline}
+                            style={[st.input, c.multiline ? { minHeight: 80, textAlignVertical: "top" } : null, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                          />
+                        )}
+                      </View>
+                    )}
+                    {attoAperto === "messa_in_mora" && c.key === "destinatario_email_pec" ? (
+                      <View>
+                        <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>Crediti</Text>
+                        {attoCrediti.map((v, i) => (
+                          <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                            <TextInput
+                              testID={`atto-credito-descrizione-${i}`}
+                              value={v.descrizione}
+                              onChangeText={(val) => setAttoCrediti(attoCrediti.map((x, j) => (j === i ? { ...x, descrizione: val } : x)))}
+                              placeholder="Descrizione"
+                              placeholderTextColor={t.onSurfaceTertiary}
+                              style={[st.input, { flex: 2, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                            />
+                            <TextInput
+                              testID={`atto-credito-importo-${i}`}
+                              value={v.importo}
+                              onChangeText={(val) => setAttoCrediti(attoCrediti.map((x, j) => (j === i ? { ...x, importo: val } : x)))}
+                              keyboardType="numeric"
+                              placeholder="Importo €"
+                              placeholderTextColor={t.onSurfaceTertiary}
+                              style={[st.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
+                            />
+                            <Pressable testID={`atto-credito-rimuovi-${i}`} onPress={() => setAttoCrediti(attoCrediti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                              <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
+                            </Pressable>
+                          </View>
+                        ))}
+                        <Pressable
+                          testID="atto-credito-aggiungi"
+                          onPress={() => setAttoCrediti([...attoCrediti, { descrizione: "", importo: "" }])}
+                          style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                        >
+                          <Feather name="plus-circle" size={16} color={t.brand} />
+                          <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi un altro credito</Text>
+                        </Pressable>
+                      </View>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
               <PraticaPicker
                 pratiche={pratiche}
                 praticaId={praticaId}
