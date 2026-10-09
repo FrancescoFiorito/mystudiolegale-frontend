@@ -931,14 +931,10 @@ export default function Calcolatori() {
   // finché la voce è selezionata (si sbloccano solo se quella precisa voce
   // non fissa un valore per quel campo), come fa Andreani — la voce si
   // sceglie o si inserisce il termine a mano, non entrambi insieme.
+  // Stesso SelectInput cercabile usato per l'elenco di prescrizione e
+  // decadenza: niente apertura/chiusura a mano, evita il bug per cui uno
+  // scroll veloce nell'elenco a gestione custom chiudeva la tendina.
   const [terminiCpc, setTerminiCpc] = React.useState<any[]>([]);
-  const [queryCpc, setQueryCpc] = React.useState("");
-  const [cpcListaAperta, setCpcListaAperta] = React.useState(false);
-  // Chiusura della tendina al blur del campo di ricerca, ma con un timer
-  // annullabile: uno scroll veloce nell'elenco avvia il drag (quindi
-  // annulla la chiusura) prima che il timer scatti, altrimenti un trascinamento
-  // rapido causava la chiusura della tendina a metà scroll.
-  const cpcBlurTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voceCpcSelezionata, setVoceCpcSelezionata] = React.useState<any>(null);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
@@ -1448,7 +1444,7 @@ export default function Calcolatori() {
 
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
-    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc(""); setCpcListaAperta(false); setTerminLibero(false); setRitoTermini("nuovo");
+    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setTerminLibero(false); setRitoTermini("nuovo");
     setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]);
     setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
@@ -1561,14 +1557,17 @@ export default function Calcolatori() {
   // logica, solo spostato in una funzione cosi' da poterlo renderizzare
   // sia nel caso "locked" sia dentro l'overlay aperto dal picker.
   const terminiCpcPerRito = terminiCpc.filter((v) => !v.rito || v.rito === "entrambi" || v.rito === ritoTermini);
-  const terminiCpcFiltrati = queryCpc.trim()
-    ? terminiCpcPerRito.filter((v) => `${v.articolo} ${v.descrizione}`.toLowerCase().includes(queryCpc.trim().toLowerCase()))
-    : terminiCpcPerRito;
+  const cpcOpzioni = [
+    { value: "", label: "Nessuna (inserisci il termine manualmente)" },
+    ...terminiCpcPerRito.map((v, i) => ({ value: String(i), label: `${v.articolo} — ${v.descrizione} (${v.valore} ${v.unita}, ${v.direzione})` })),
+  ];
+  const cpcValoreSelezionato = voceCpcSelezionata ? String(terminiCpcPerRito.indexOf(voceCpcSelezionata)) : "";
 
-  const selezionaVoceCpc = (v: any) => {
+  const selezionaVoceCpc = (indice: string) => {
+    if (indice === "") { setVoceCpcSelezionata(null); return; }
+    const v = terminiCpcPerRito[Number(indice)];
+    if (!v) return;
     setVoceCpcSelezionata(v);
-    setQueryCpc("");
-    setCpcListaAperta(false);
     setGiorni(String(v.valore));
     setUnita(v.unita);
     setTipoS(v.direzione);
@@ -1606,55 +1605,16 @@ export default function Calcolatori() {
         &quot;Nuovo rito&quot; per i procedimenti iniziati dal 28/02/2023 (riforma Cartabia, D.Lgs. 149/2022); &quot;Vecchio rito&quot; per quelli iniziati prima di tale data. Cambia quali voci dell&apos;elenco sottostante sono proposte.
       </Text>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Voce notevole del c.p.c. (facoltativo)</Text>
-      {voceCpcSelezionata ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
-          <View style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary }}>
-            <Text style={{ color: t.brand, fontSize: 13, fontWeight: "700" }}>{voceCpcSelezionata.articolo}</Text>
-            <Text style={{ color: t.brand, fontSize: 12 }} numberOfLines={2}>{voceCpcSelezionata.descrizione}</Text>
-          </View>
-          <Pressable testID="voce-cpc-deseleziona" onPress={() => setVoceCpcSelezionata(null)} style={{ padding: 8 }}>
-            <Feather name="x" size={16} color={t.onSurfaceTertiary} />
-          </Pressable>
-        </View>
-      ) : (
-        <>
-          <View style={{ flexDirection: "row", alignItems: "center", borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: 10, backgroundColor: t.surfaceSecondary, marginBottom: SPACING.sm }}>
-            <Feather name="search" size={15} color={t.onSurfaceTertiary} />
-            <TextInput
-              testID="voce-cpc-search"
-              value={queryCpc}
-              onChangeText={setQueryCpc}
-              onFocus={() => {
-                if (cpcBlurTimeout.current) { clearTimeout(cpcBlurTimeout.current); cpcBlurTimeout.current = null; }
-                setCpcListaAperta(true);
-              }}
-              onBlur={() => { cpcBlurTimeout.current = setTimeout(() => setCpcListaAperta(false), 150); }}
-              placeholder="Cerca per articolo o descrizione (es. 325, impugnazione...)"
-              placeholderTextColor={t.onSurfaceTertiary}
-              style={{ flex: 1, marginLeft: 8, color: t.onSurface, fontSize: 13 }}
-            />
-          </View>
-          {cpcListaAperta ? (
-            <ScrollView
-              style={{ maxHeight: 180, marginBottom: SPACING.sm }}
-              nestedScrollEnabled
-              keyboardShouldPersistTaps="handled"
-              onScrollBeginDrag={() => { if (cpcBlurTimeout.current) { clearTimeout(cpcBlurTimeout.current); cpcBlurTimeout.current = null; } }}
-            >
-              {terminiCpcFiltrati.length === 0 ? (
-                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessuna voce trovata</Text>
-              ) : (
-                terminiCpcFiltrati.map((v, i) => (
-                  <Pressable key={i} testID={`voce-cpc-opzione-${i}`} onPress={() => selezionaVoceCpc(v)} style={{ paddingVertical: 8, paddingHorizontal: 10, borderRadius: RADIUS.md }}>
-                    <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "700" }}>{v.articolo}</Text>
-                    <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }} numberOfLines={2}>{v.descrizione} — {v.valore} {v.unita} ({v.direzione})</Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          ) : null}
-        </>
-      )}
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          testID="voce-cpc"
+          value={cpcValoreSelezionato}
+          onChange={selezionaVoceCpc}
+          opzioni={cpcOpzioni}
+          cercabile
+          placeholder="Cerca per articolo o descrizione (es. 325, impugnazione...)"
+        />
+      </View>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza</Text>
       <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita}){valoreBloccato ? " (fissato dalla voce scelta)" : ""}</Text>
