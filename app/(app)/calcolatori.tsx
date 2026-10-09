@@ -437,9 +437,13 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "data", key: "data_iniziale", label: "Data iniziale" },
       { tipo: "data", key: "data_finale", label: "Data finale" },
+      { tipo: "bool", key: "escludi_sabati", label: "Escludi dal conteggio: sabati", default: false },
+      { tipo: "bool", key: "escludi_domeniche", label: "Escludi dal conteggio: domeniche", default: false },
+      { tipo: "bool", key: "escludi_festivi", label: "Escludi dal conteggio: festivi (incl. Pasquetta)", default: false },
+      { tipo: "bool", key: "escludi_chiusura_estiva", label: "Escludi dal conteggio: chiusura estiva (1-31 agosto)", default: false },
     ],
     endpoint: "/calc/giorni-tra-date",
-    risultato: (r) => [["Giorni di calendario", String(r.giorni)]],
+    risultato: (r) => [["Giorni", String(r.giorni)]],
   },
 };
 
