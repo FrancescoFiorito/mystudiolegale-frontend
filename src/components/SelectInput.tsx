@@ -12,13 +12,14 @@ import { SPACING, RADIUS } from "@/src/theme";
 type Opzione = { value: string; label: string };
 
 export default function SelectInput({
-  value, onChange, opzioni, placeholder = "Seleziona", testID,
+  value, onChange, opzioni, placeholder = "Seleziona", testID, disabled = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   opzioni: Opzione[];
   placeholder?: string;
   testID?: string;
+  disabled?: boolean;
 }) {
   const { t } = useTheme();
   const [aperto, setAperto] = React.useState(false);
@@ -28,19 +29,19 @@ export default function SelectInput({
     <View>
       <Pressable
         testID={testID}
-        onPress={() => setAperto(!aperto)}
+        onPress={() => !disabled && setAperto(!aperto)}
         style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
           borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
-          backgroundColor: t.surfaceSecondary, borderColor: t.border,
+          backgroundColor: t.surfaceSecondary, borderColor: t.border, opacity: disabled ? 0.6 : 1,
         }}
       >
         <Text style={{ color: selezionata ? t.onSurface : t.onSurfaceTertiary, fontSize: 14, flex: 1 }} numberOfLines={1}>
           {selezionata?.label || placeholder}
         </Text>
-        <Feather name={aperto ? "chevron-up" : "chevron-down"} size={16} color={t.onSurfaceTertiary} />
+        {disabled ? null : <Feather name={aperto ? "chevron-up" : "chevron-down"} size={16} color={t.onSurfaceTertiary} />}
       </Pressable>
-      {aperto ? (
+      {aperto && !disabled ? (
         <View style={{ marginTop: SPACING.xs, borderWidth: 1, borderRadius: RADIUS.md, borderColor: t.border, backgroundColor: t.surface, maxHeight: 240, overflow: "hidden" }}>
           <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
             {opzioni.map((o) => (

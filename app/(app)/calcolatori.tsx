@@ -920,10 +920,16 @@ export default function Calcolatori() {
   const [unita, setUnita] = React.useState<"giorni" | "mesi" | "anni">("giorni");
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [escludiCovid, setEscludiCovid] = React.useState(false);
+  const [terminLibero, setTerminLibero] = React.useState(false);
   // Voci notevoli del c.p.c. (come il selettore di avvocatoandreani.it):
-  // precompilano termine/unità/direzione, restando comunque modificabili.
+  // precompilano termine/unità/direzione; unità e direzione restano poi
+  // bloccate finché la voce è selezionata (si sbloccano solo se quella
+  // precisa voce non fissa un valore per uno dei due campi), come fa
+  // Andreani — la voce si sceglie o si inserisce il termine a mano, non
+  // entrambi insieme.
   const [terminiCpc, setTerminiCpc] = React.useState<any[]>([]);
   const [queryCpc, setQueryCpc] = React.useState("");
+  const [cpcListaAperta, setCpcListaAperta] = React.useState(false);
   const [voceCpcSelezionata, setVoceCpcSelezionata] = React.useState<any>(null);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
@@ -1165,7 +1171,7 @@ export default function Calcolatori() {
   const calcScad = async () => {
     Keyboard.dismiss();
     try {
-      const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer, escludi_covid: escludiCovid });
+      const r = await api.post("/calc/scadenza", { data_partenza: dataPartenza, giorni: Number(giorni), tipo: tipoS, unita, escludi_feriale: escludiFer, escludi_covid: escludiCovid, termine_libero: unita === "giorni" && terminLibero });
       setRisScad(r);
       setTitoloScad("");
     } catch (e: any) { setRisScad({ error: e.message }); }
@@ -1433,7 +1439,7 @@ export default function Calcolatori() {
 
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
-    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc("");
+    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc(""); setCpcListaAperta(false); setTerminLibero(false);
     setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]);
     setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
@@ -1547,15 +1553,23 @@ export default function Calcolatori() {
   // sia nel caso "locked" sia dentro l'overlay aperto dal picker.
   const terminiCpcFiltrati = queryCpc.trim()
     ? terminiCpc.filter((v) => `${v.articolo} ${v.descrizione}`.toLowerCase().includes(queryCpc.trim().toLowerCase()))
-    : [];
+    : terminiCpc;
 
   const selezionaVoceCpc = (v: any) => {
     setVoceCpcSelezionata(v);
     setQueryCpc("");
+    setCpcListaAperta(false);
     setGiorni(String(v.valore));
     setUnita(v.unita);
     setTipoS(v.direzione);
+    setTerminLibero(!!v.libero);
   };
+  // Una voce selezionata blocca unità e direzione (si inserisce o il
+  // termine a mano o si sceglie dall'elenco, non un misto dei due) — a
+  // meno che quella specifica voce non fissi un valore per uno dei due
+  // campi, nel qual caso quel campo resta modificabile.
+  const unitaBloccata = !!voceCpcSelezionata && voceCpcSelezionata.unita != null;
+  const direzioneBloccata = !!voceCpcSelezionata && voceCpcSelezionata.direzione != null;
 
   const contenutoScadenze = (
     <View>
@@ -1578,12 +1592,14 @@ export default function Calcolatori() {
               testID="voce-cpc-search"
               value={queryCpc}
               onChangeText={setQueryCpc}
+              onFocus={() => setCpcListaAperta(true)}
+              onBlur={() => setTimeout(() => setCpcListaAperta(false), 150)}
               placeholder="Cerca per articolo o descrizione (es. 325, impugnazione...)"
               placeholderTextColor={t.onSurfaceTertiary}
               style={{ flex: 1, marginLeft: 8, color: t.onSurface, fontSize: 13 }}
             />
           </View>
-          {queryCpc.trim() ? (
+          {cpcListaAperta ? (
             <ScrollView style={{ maxHeight: 180, marginBottom: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
               {terminiCpcFiltrati.length === 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessuna voce trovata</Text>
@@ -1603,21 +1619,23 @@ export default function Calcolatori() {
       <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita})</Text>
       <TextInput testID="scad-giorni" value={giorni} onChangeText={setGiorni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Unità</Text>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Unità{unitaBloccata ? " (fissata dalla voce scelta)" : ""}</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
           value={unita}
           onChange={(v) => setUnita(v as typeof unita)}
           opzioni={[{ value: "giorni", label: "Giorni" }, { value: "mesi", label: "Mesi" }, { value: "anni", label: "Anni" }]}
+          disabled={unitaBloccata}
         />
       </View>
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Direzione</Text>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Direzione{direzioneBloccata ? " (fissata dalla voce scelta)" : ""}</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
           testID="dir"
           value={tipoS}
           onChange={(v) => setTipoS(v as typeof tipoS)}
           opzioni={[{ value: "avanti", label: "Avanti" }, { value: "ritroso", label: "Ritroso" }]}
+          disabled={direzioneBloccata}
         />
       </View>
       <Pressable testID="toggle-feriale" onPress={() => setEscludiFer(!escludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.sm }}>
@@ -1632,6 +1650,14 @@ export default function Calcolatori() {
         </View>
         <Text style={{ color: t.onSurface, flex: 1 }}>Applica sospensione straordinaria COVID-19 (9 marzo - 11 maggio 2020)</Text>
       </Pressable>
+      {unita === "giorni" ? (
+        <Pressable testID="toggle-libero" onPress={() => setTerminLibero(!terminLibero)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
+          <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: terminLibero ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+            {terminLibero ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+          </View>
+          <Text style={{ color: t.onSurface, flex: 1 }}>Termine libero (art. 155 c.p.c.: né il giorno iniziale né quello finale si computano — solo per i casi previsti dalla legge, es. art. 163-bis)</Text>
+        </Pressable>
+      ) : null}
       <Pressable testID="btn-calc-scad" onPress={calcScad} style={[st.submit, { backgroundColor: t.brand }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>Calcola</Text>
       </Pressable>
