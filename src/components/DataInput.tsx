@@ -34,21 +34,34 @@ export default function DataInput({
 }) {
   const { t } = useTheme();
   const [aperto, setAperto] = React.useState(false);
+  // Su iOS (display "spinner") l'onChange nativo si attiva a ogni scorrimento
+  // della rotella: tenerne traccia qui e ri-propagarlo esplicitamente alla
+  // chiusura ("Fatto") è una rete di sicurezza contro un eventuale evento
+  // finale non recapitato dal bridge nativo durante uno scorrimento rapido,
+  // che lascerebbe il valore fermo a una posizione intermedia nonostante la
+  // selezione sia stata completata.
+  const ultimoSelezionato = React.useRef<Date | null>(null);
 
   const onPick = (event: any, selected?: Date) => {
     if (Platform.OS === "android") {
       setAperto(false);
       if (event.type !== "dismissed" && selected) onChange(dateToIso(selected));
     } else if (selected) {
+      ultimoSelezionato.current = selected;
       onChange(dateToIso(selected));
     }
+  };
+
+  const chiudi = () => {
+    if (ultimoSelezionato.current) onChange(dateToIso(ultimoSelezionato.current));
+    setAperto(false);
   };
 
   return (
     <View>
       <Pressable
         testID={testID}
-        onPress={() => setAperto(true)}
+        onPress={() => { ultimoSelezionato.current = null; setAperto(true); }}
         style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
           borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
@@ -72,7 +85,7 @@ export default function DataInput({
             <DateTimePicker value={isoToDate(value)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPick} locale="it-IT" themeVariant={(t.mode as string) === "dark" ? "dark" : "light"} />
           </View>
           {Platform.OS === "ios" ? (
-            <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={() => setAperto(false)} style={{ paddingVertical: 6, paddingHorizontal: SPACING.md }}>
+            <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={chiudi} style={{ paddingVertical: 6, paddingHorizontal: SPACING.md }}>
               <Text style={{ color: t.brand, fontWeight: "700" }}>Fatto</Text>
             </Pressable>
           ) : null}
