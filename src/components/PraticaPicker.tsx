@@ -18,11 +18,17 @@ type Props = {
 export default function PraticaPicker({ pratiche, praticaId, onChange, helperText }: Props) {
   const { t } = useTheme();
   const [q, setQ] = React.useState("");
+  const [aperto, setAperto] = React.useState(false);
 
+  // Elenco completo (ordinato alfabeticamente) mostrato già alla selezione
+  // del campo, filtrato man mano che si scrive — stesso comportamento del
+  // selettore di voci notevoli del c.p.c. in Scadenze Processuali e delle
+  // SelectInput "cercabili".
   const praticheFiltrate = React.useMemo(() => {
-    if (!q.trim()) return [];
+    const ordinate = [...pratiche].sort((a, b) => (a.oggetto || "").localeCompare(b.oggetto || ""));
+    if (!q.trim()) return ordinate;
     const qq = q.trim().toLowerCase();
-    return pratiche.filter((p) => (p.oggetto || "").toLowerCase().includes(qq));
+    return ordinate.filter((p) => (p.oggetto || "").toLowerCase().includes(qq));
   }, [pratiche, q]);
 
   const selezionata = pratiche.find((p) => p.id === praticaId);
@@ -40,7 +46,7 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
               {selezionata?.oggetto || "Pratica"}
             </Text>
           </View>
-          <Pressable testID="pratica-picker-deseleziona" onPress={() => onChange(null)} style={{ padding: 8 }}>
+          <Pressable testID="pratica-picker-deseleziona" onPress={() => { onChange(null); setQ(""); setAperto(false); }} style={{ padding: 8 }}>
             <Feather name="x" size={16} color={t.onSurfaceTertiary} />
           </Pressable>
         </View>
@@ -52,12 +58,13 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
               testID="pratica-picker-search"
               value={q}
               onChangeText={setQ}
+              onFocus={() => setAperto(true)}
               placeholder="Cerca pratica..."
               placeholderTextColor={t.onSurfaceTertiary}
               style={{ flex: 1, marginLeft: 8, color: t.onSurface, fontSize: 13 }}
             />
           </View>
-          {q.trim() ? (
+          {aperto ? (
             <ScrollView style={{ maxHeight: 150, marginTop: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
               {praticheFiltrate.length === 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessuna pratica trovata</Text>
@@ -66,7 +73,7 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
                   <Pressable
                     key={p.id}
                     testID={`pratica-picker-opzione-${p.id}`}
-                    onPress={() => { onChange(p.id); setQ(""); }}
+                    onPress={() => { onChange(p.id); setQ(""); setAperto(false); }}
                     style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}
                   >
                     <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
