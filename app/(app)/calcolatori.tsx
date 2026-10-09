@@ -921,6 +921,7 @@ export default function Calcolatori() {
   const [escludiFer, setEscludiFer] = React.useState(true);
   const [escludiCovid, setEscludiCovid] = React.useState(false);
   const [terminLibero, setTerminLibero] = React.useState(false);
+  const [ritoTermini, setRitoTermini] = React.useState<"nuovo" | "vecchio">("nuovo");
   // Voci notevoli del c.p.c. (come il selettore di avvocatoandreani.it):
   // precompilano termine/unità/direzione; unità e direzione restano poi
   // bloccate finché la voce è selezionata (si sbloccano solo se quella
@@ -1439,7 +1440,7 @@ export default function Calcolatori() {
 
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
-    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc(""); setCpcListaAperta(false); setTerminLibero(false);
+    setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setQueryCpc(""); setCpcListaAperta(false); setTerminLibero(false); setRitoTermini("nuovo");
     setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]);
     setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
@@ -1551,9 +1552,10 @@ export default function Calcolatori() {
   // Contenuto del calcolatore "Scadenze Processuali": invariato nella
   // logica, solo spostato in una funzione cosi' da poterlo renderizzare
   // sia nel caso "locked" sia dentro l'overlay aperto dal picker.
+  const terminiCpcPerRito = terminiCpc.filter((v) => !v.rito || v.rito === "entrambi" || v.rito === ritoTermini);
   const terminiCpcFiltrati = queryCpc.trim()
-    ? terminiCpc.filter((v) => `${v.articolo} ${v.descrizione}`.toLowerCase().includes(queryCpc.trim().toLowerCase()))
-    : terminiCpc;
+    ? terminiCpcPerRito.filter((v) => `${v.articolo} ${v.descrizione}`.toLowerCase().includes(queryCpc.trim().toLowerCase()))
+    : terminiCpcPerRito;
 
   const selezionaVoceCpc = (v: any) => {
     setVoceCpcSelezionata(v);
@@ -1573,6 +1575,27 @@ export default function Calcolatori() {
 
   const contenutoScadenze = (
     <View>
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito</Text>
+      <View style={{ marginBottom: SPACING.xs }}>
+        <SelectInput
+          testID="scad-rito"
+          value={ritoTermini}
+          onChange={(v) => {
+            const nuovo = v as typeof ritoTermini;
+            setRitoTermini(nuovo);
+            if (voceCpcSelezionata && voceCpcSelezionata.rito && voceCpcSelezionata.rito !== "entrambi" && voceCpcSelezionata.rito !== nuovo) {
+              setVoceCpcSelezionata(null);
+            }
+          }}
+          opzioni={[
+            { value: "nuovo", label: "Nuovo rito (post riforma)" },
+            { value: "vecchio", label: "Vecchio rito (ante riforma)" },
+          ]}
+        />
+      </View>
+      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
+        &quot;Nuovo rito&quot; per i procedimenti iniziati dal 28/02/2023 (riforma Cartabia, D.Lgs. 149/2022); &quot;Vecchio rito&quot; per quelli iniziati prima di tale data. Cambia quali voci dell&apos;elenco sottostante sono proposte.
+      </Text>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Voce notevole del c.p.c. (facoltativo)</Text>
       {voceCpcSelezionata ? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
