@@ -443,7 +443,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "data", key: "data_finale", label: "Data finale" },
       { tipo: "bool", key: "escludi_sabati", label: "Escludi dal conteggio: sabati", default: false },
       { tipo: "bool", key: "escludi_domeniche", label: "Escludi dal conteggio: domeniche", default: false },
-      { tipo: "bool", key: "escludi_festivi", label: "Escludi dal conteggio: festivi (incl. Pasquetta)", default: false },
+      { tipo: "bool", key: "escludi_festivi", label: "Escludi dal conteggio: festivi", default: false },
       { tipo: "bool", key: "escludi_chiusura_estiva", label: "Escludi dal conteggio: chiusura estiva (1-31 agosto)", default: false },
     ],
     endpoint: "/calc/giorni-tra-date",
@@ -927,14 +927,18 @@ export default function Calcolatori() {
   const [terminLibero, setTerminLibero] = React.useState(false);
   const [ritoTermini, setRitoTermini] = React.useState<"nuovo" | "vecchio">("nuovo");
   // Voci notevoli del c.p.c. (come il selettore di avvocatoandreani.it):
-  // precompilano termine/unità/direzione; unità e direzione restano poi
-  // bloccate finché la voce è selezionata (si sbloccano solo se quella
-  // precisa voce non fissa un valore per uno dei due campi), come fa
-  // Andreani — la voce si sceglie o si inserisce il termine a mano, non
-  // entrambi insieme.
+  // precompilano termine/unità/direzione; tutti e tre restano poi bloccati
+  // finché la voce è selezionata (si sbloccano solo se quella precisa voce
+  // non fissa un valore per quel campo), come fa Andreani — la voce si
+  // sceglie o si inserisce il termine a mano, non entrambi insieme.
   const [terminiCpc, setTerminiCpc] = React.useState<any[]>([]);
   const [queryCpc, setQueryCpc] = React.useState("");
   const [cpcListaAperta, setCpcListaAperta] = React.useState(false);
+  // Chiusura della tendina al blur del campo di ricerca, ma con un timer
+  // annullabile: uno scroll veloce nell'elenco avvia il drag (quindi
+  // annulla la chiusura) prima che il timer scatti, altrimenti un trascinamento
+  // rapido causava la chiusura della tendina a metà scroll.
+  const cpcBlurTimeout = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voceCpcSelezionata, setVoceCpcSelezionata] = React.useState<any>(null);
   const [risScad, setRisScad] = React.useState<any>(null);
   const [titoloScad, setTitoloScad] = React.useState("");
@@ -1576,6 +1580,7 @@ export default function Calcolatori() {
   // campi, nel qual caso quel campo resta modificabile.
   const unitaBloccata = !!voceCpcSelezionata && voceCpcSelezionata.unita != null;
   const direzioneBloccata = !!voceCpcSelezionata && voceCpcSelezionata.direzione != null;
+  const valoreBloccato = !!voceCpcSelezionata && voceCpcSelezionata.valore != null;
 
   const contenutoScadenze = (
     <View>
@@ -1619,15 +1624,23 @@ export default function Calcolatori() {
               testID="voce-cpc-search"
               value={queryCpc}
               onChangeText={setQueryCpc}
-              onFocus={() => setCpcListaAperta(true)}
-              onBlur={() => setTimeout(() => setCpcListaAperta(false), 150)}
+              onFocus={() => {
+                if (cpcBlurTimeout.current) { clearTimeout(cpcBlurTimeout.current); cpcBlurTimeout.current = null; }
+                setCpcListaAperta(true);
+              }}
+              onBlur={() => { cpcBlurTimeout.current = setTimeout(() => setCpcListaAperta(false), 150); }}
               placeholder="Cerca per articolo o descrizione (es. 325, impugnazione...)"
               placeholderTextColor={t.onSurfaceTertiary}
               style={{ flex: 1, marginLeft: 8, color: t.onSurface, fontSize: 13 }}
             />
           </View>
           {cpcListaAperta ? (
-            <ScrollView style={{ maxHeight: 180, marginBottom: SPACING.sm }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={{ maxHeight: 180, marginBottom: SPACING.sm }}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+              onScrollBeginDrag={() => { if (cpcBlurTimeout.current) { clearTimeout(cpcBlurTimeout.current); cpcBlurTimeout.current = null; } }}
+            >
               {terminiCpcFiltrati.length === 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessuna voce trovata</Text>
               ) : (
@@ -1644,8 +1657,15 @@ export default function Calcolatori() {
       )}
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza</Text>
       <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
-      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita})</Text>
-      <TextInput testID="scad-giorni" value={giorni} onChangeText={setGiorni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita}){valoreBloccato ? " (fissato dalla voce scelta)" : ""}</Text>
+      <TextInput
+        testID="scad-giorni"
+        value={giorni}
+        onChangeText={setGiorni}
+        keyboardType="numeric"
+        editable={!valoreBloccato}
+        style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, opacity: valoreBloccato ? 0.6 : 1 }]}
+      />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Unità{unitaBloccata ? " (fissata dalla voce scelta)" : ""}</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
