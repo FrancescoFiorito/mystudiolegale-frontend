@@ -738,29 +738,241 @@ function defaultGenForm(idc: string): Record<string, any> {
 // Ogni calcolatore produce o una data (scadenza/termine) o un importo in
 // euro: la categoria serve solo a raggruppare il picker in due sezioni,
 // cosi' l'utente trova subito il tipo di calcolo che gli serve.
-const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string; categoria: "data" | "euro" }[] = [
-  { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock", categoria: "data" },
-  { id: "giorni-tra-date", titolo: "Giorni tra due date", sottotitolo: "Conteggio giorni di calendario", icona: "calendar", categoria: "data" },
-  { id: "termini-memorie", titolo: "Termini memorie e conclusionali", sottotitolo: "Artt. 171-ter e 189 c.p.c., riforma Cartabia", icona: "calendar", categoria: "data" },
-  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello, Cassazione, revocazione, opposizione di terzo", icona: "flag", categoria: "data" },
-  { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield", categoria: "data" },
-  { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw", categoria: "data" },
-  { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass", categoria: "data" },
-  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Mobiliare, immobiliare, presso terzi, autoveicoli", icona: "alert-triangle", categoria: "data" },
-  { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x", categoria: "data" },
-  { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus", categoria: "data" },
-  { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map", categoria: "data" },
-  { id: "termine-querela", titolo: "Termine per la querela", sottotitolo: "Art. 124 c.p.", icona: "alert-octagon", categoria: "data" },
-  { id: "disdetta-locazione", titolo: "Disdetta di locazione", sottotitolo: "Abitativa o commerciale", icona: "key", categoria: "data" },
-  { id: "parcelle", titolo: "Parcelle", sottotitolo: "Compensi, spese, CPA, IVA", icona: "dollar-sign", categoria: "euro" },
-  { id: "interessi-legali", titolo: "Interessi legali", sottotitolo: "Art. 1284 c.c.", icona: "percent", categoria: "euro" },
-  { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle", categoria: "euro" },
-  { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text", categoria: "euro" },
-  { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up", categoria: "euro" },
-  { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home", categoria: "euro" },
-  { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase", categoria: "euro" },
-  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2", categoria: "euro" },
-  { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users", categoria: "euro" },
+const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: string }[] = [
+  { id: "scadenze", titolo: "Scadenze Processuali", sottotitolo: "Calcolo termini a partire da una data", icona: "clock" },
+  { id: "giorni-tra-date", titolo: "Giorni tra due date", sottotitolo: "Conteggio giorni di calendario", icona: "calendar" },
+  { id: "termini-memorie", titolo: "Termini memorie e conclusionali", sottotitolo: "Artt. 171-ter e 189 c.p.c., riforma Cartabia", icona: "calendar" },
+  { id: "termini-impugnazione", titolo: "Termini di impugnazione", sottotitolo: "Appello, Cassazione, revocazione, opposizione di terzo", icona: "flag" },
+  { id: "opposizione-decreto-ingiuntivo", titolo: "Opposizione a decreto ingiuntivo", sottotitolo: "Termine fissato nel decreto, art. 641 c.p.c.", icona: "shield" },
+  { id: "prescrizione", titolo: "Prescrizione e decadenza", sottotitolo: "Con eventuali atti interruttivi", icona: "rotate-ccw" },
+  { id: "termini-citazione", titolo: "Termini di comparizione in citazione", sottotitolo: "Art. 163-bis c.p.c.", icona: "compass" },
+  { id: "precetto", titolo: "Precetto ed esecuzione", sottotitolo: "Mobiliare, immobiliare, presso terzi, autoveicoli", icona: "alert-triangle" },
+  { id: "impugnazione-licenziamento", titolo: "Impugnazione licenziamento", sottotitolo: "Art. 6 L. 604/1966", icona: "user-x" },
+  { id: "ricorso-tributario", titolo: "Ricorso tributario", sottotitolo: "Art. 21 D.Lgs. 546/1992", icona: "file-minus" },
+  { id: "ricorso-tar", titolo: "Ricorso al TAR", sottotitolo: "Giurisdizionale o straordinario", icona: "map" },
+  { id: "termine-querela", titolo: "Termine per la querela", sottotitolo: "Art. 124 c.p.", icona: "alert-octagon" },
+  { id: "disdetta-locazione", titolo: "Disdetta di locazione", sottotitolo: "Abitativa o commerciale", icona: "key" },
+  { id: "parcelle", titolo: "Parcelle", sottotitolo: "Compensi, spese, CPA, IVA", icona: "dollar-sign" },
+  { id: "interessi-legali", titolo: "Interessi legali", sottotitolo: "Art. 1284 c.c.", icona: "percent" },
+  { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle" },
+  { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text" },
+  { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
+  { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
+  { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
+  { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2" },
+  { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users" },
+];
+
+// Struttura "come Andreani": le 9 macro-categorie del menu di
+// avvocatoandreani.it (vedi analisi comparativa), ciascuna con tutte le
+// singole voci del sito. Una voce già coperta da un nostro calcolatore o
+// atto è selezionabile e apre quello; le altre sono mostrate in grigio con
+// etichetta "in arrivo" (non selezionabili), per rendere visibile a colpo
+// d'occhio il lavoro ancora da fare, categoria per categoria.
+type VoceAndreani =
+  | { nome: string; tipo: "calcolatore"; calcId: CalcId }
+  | { nome: string; tipo: "atto"; attoId: AttoId }
+  | { nome: string; tipo: "in_arrivo" };
+
+type CategoriaAndreani = { id: string; titolo: string; icona: string; voci: VoceAndreani[] };
+
+const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
+  {
+    id: "rivalutazioni-istat", titolo: "Rivalutazioni Istat", icona: "trending-up",
+    voci: [
+      { nome: "Rivalutazione e Interessi", tipo: "calcolatore", calcId: "rivalutazione-istat" },
+      { nome: "Rivalutazione Mensile", tipo: "in_arrivo" },
+      { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "rivalutazione-istat" },
+      { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "rivalutazione-istat" },
+      { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
+      { nome: "Calcolo Devalutazione", tipo: "in_arrivo" },
+      { nome: "Rivalutazione Storica", tipo: "in_arrivo" },
+      { nome: "Variazioni Storiche Istat", tipo: "in_arrivo" },
+      { nome: "Tabella Variazioni Istat", tipo: "in_arrivo" },
+      { nome: "Ultimo Indice Istat", tipo: "in_arrivo" },
+      { nome: "Rivalutazione Annuale Media", tipo: "in_arrivo" },
+      { nome: "Rivalutazione TFR", tipo: "in_arrivo" },
+      { nome: "Calcolo Inflazione", tipo: "in_arrivo" },
+      { nome: "Inflazione e Titoli di Stato", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "tassi-interessi", titolo: "Tassi e Interessi", icona: "percent",
+    voci: [
+      { nome: "Calcolo Interessi Legali", tipo: "calcolatore", calcId: "interessi-legali" },
+      { nome: "Calcolo Interessi di Mora", tipo: "calcolatore", calcId: "interessi-mora" },
+      { nome: "Interessi a Tasso Fisso", tipo: "in_arrivo" },
+      { nome: "Interessi e Acconti", tipo: "in_arrivo" },
+      { nome: "Calcolo Maggior Danno", tipo: "in_arrivo" },
+      { nome: "Interessi 1284 cc", tipo: "calcolatore", calcId: "interessi-legali" },
+      { nome: "Calcolo Ammortamento", tipo: "in_arrivo" },
+      { nome: "Calcolo Surroga", tipo: "in_arrivo" },
+      { nome: "Calcolo Tasso di Usura", tipo: "in_arrivo" },
+      { nome: "Calcolo TAEG", tipo: "in_arrivo" },
+      { nome: "Tabella Interessi Legali", tipo: "in_arrivo" },
+      { nome: "Tabella Interessi di Mora", tipo: "in_arrivo" },
+      { nome: "Interessi Mora Appalti", tipo: "in_arrivo" },
+      { nome: "Tabella Tassi Appalti", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "scadenze-termini", titolo: "Scadenze e Termini", icona: "clock",
+    voci: [
+      { nome: "Calcolo Scadenze", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini Processuali Civili", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini Memorie e Repliche", tipo: "calcolatore", calcId: "termini-memorie" },
+      { nome: "Termini Separazione e Divorzio", tipo: "in_arrivo" },
+      { nome: "Termini Procedimento Semplificato", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini 183 + 190 cpc", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini Esecuzioni", tipo: "calcolatore", calcId: "precetto" },
+      { nome: "Termini Deposito Atti Appello", tipo: "calcolatore", calcId: "termini-impugnazione" },
+      { nome: "Scadenze Impugnazioni", tipo: "calcolatore", calcId: "termini-impugnazione" },
+      { nome: "Scadenze Multe", tipo: "in_arrivo" },
+      { nome: "Termini Deposito CTU", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "atti-giudiziari", titolo: "Atti Giudiziari", icona: "file-text",
+    voci: [
+      { nome: "Calcolo Contributo Unificato", tipo: "calcolatore", calcId: "contributo-unificato" },
+      { nome: "Tabella Contributo Unificato", tipo: "in_arrivo" },
+      { nome: "Calcolo Diritti di Copia", tipo: "in_arrivo" },
+      { nome: "Copie Processo Tributario", tipo: "in_arrivo" },
+      { nome: "Fascicolo di Parte", tipo: "in_arrivo" },
+      { nome: "Procura alle Liti", tipo: "atto", attoId: "procura_alle_liti" },
+      { nome: "Attestazione Conformità", tipo: "in_arrivo" },
+      { nome: "Relata Notifica PEC", tipo: "in_arrivo" },
+      { nome: "Deposito Telematico Documenti", tipo: "in_arrivo" },
+      { nome: "Visibilità Fascicolo Telematico", tipo: "in_arrivo" },
+      { nome: "Note di Trattazione Scritta", tipo: "in_arrivo" },
+      { nome: "Sollecito di Pagamento", tipo: "atto", attoId: "messa_in_mora" },
+      { nome: "Decreto Ingiuntivo", tipo: "in_arrivo" },
+      { nome: "Sfratto per Morosità", tipo: "in_arrivo" },
+      { nome: "Atto di Precetto", tipo: "in_arrivo" },
+      { nome: "Nota di Precisazione del Credito", tipo: "in_arrivo" },
+      { nome: "Pignoramento stipendio o pensione", tipo: "in_arrivo" },
+      { nome: "Dichiarazione 553 cpc", tipo: "in_arrivo" },
+      { nome: "Indice Allegati", tipo: "in_arrivo" },
+      { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
+      { nome: "Ricerca uffici UNEP", tipo: "in_arrivo" },
+      { nome: "Note Iscrizione Ruolo", tipo: "in_arrivo" },
+      { nome: "Codici Iscrizione Ruolo", tipo: "in_arrivo" },
+      { nome: "Calcolo Impronta Hash", tipo: "in_arrivo" },
+      { nome: "Controllo Cause a Ruolo", tipo: "in_arrivo" },
+      { nome: "Tassazione Atti Giudiziari", tipo: "in_arrivo" },
+      { nome: "Testimonianza Scritta (257-bis cpc)", tipo: "in_arrivo" },
+      { nome: "Verifica Gratuito Patrocinio", tipo: "calcolatore", calcId: "parametri-forensi" },
+      { nome: "Codice di Procedura Civile", tipo: "in_arrivo" },
+      { nome: "Codice della Strada", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "fatturazione-avvocati", titolo: "Fatturazione Avvocati", icona: "dollar-sign",
+    voci: [
+      { nome: "Preventivo Cause Civili", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Preventivo Attività Stragiudiziali", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Fattura Elettronica Avvocati", tipo: "in_arrivo" },
+      { nome: "Visualizzatore Fatture Elettroniche", tipo: "in_arrivo" },
+      { nome: "Scorporo Importi", tipo: "in_arrivo" },
+      { nome: "Fattura Avvocati", tipo: "in_arrivo" },
+      { nome: "Parametri 2014 Civile", tipo: "calcolatore", calcId: "parametri-forensi" },
+      { nome: "Parametri 2014 Penale", tipo: "in_arrivo" },
+      { nome: "Parametri Stragiudiziali", tipo: "in_arrivo" },
+      { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
+      { nome: "Tabelle Parametri", tipo: "calcolatore", calcId: "parametri-forensi" },
+      { nome: "Parametri 2012 Civile", tipo: "in_arrivo" },
+      { nome: "Parametri 2012 Penale", tipo: "in_arrivo" },
+      { nome: "Tariffe Forensi 2004", tipo: "in_arrivo" },
+      { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Modelli di Notula", tipo: "in_arrivo" },
+      { nome: "Calcolo Notula Penale", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "parcelle-professionisti", titolo: "Parcelle Professionisti", icona: "briefcase",
+    voci: [
+      { nome: "Fattura Elettronica", tipo: "in_arrivo" },
+      { nome: "Visualizza Messaggi SDI", tipo: "in_arrivo" },
+      { nome: "Fattura Professionisti", tipo: "in_arrivo" },
+      { nome: "Calcolo Compenso CTU", tipo: "calcolatore", calcId: "compenso-ctu" },
+      { nome: "Compenso Curatore Fallimentare", tipo: "in_arrivo" },
+      { nome: "Compenso Delegati Vendite Giudiziarie", tipo: "in_arrivo" },
+      { nome: "Compenso Mediatore Familiare", tipo: "in_arrivo" },
+      { nome: "Calcolo Fattura Enasarco", tipo: "in_arrivo" },
+      { nome: "Ricevuta Prestazione Occasionale", tipo: "in_arrivo" },
+      { nome: "Calcolo Spese di Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
+      { nome: "Tariffe Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
+      { nome: "Calcolo Compenso a Ore", tipo: "in_arrivo" },
+      { nome: "Calcolo Rimborso Chilometrico ACI", tipo: "in_arrivo" },
+      { nome: "Calcolo Ritenuta d'Acconto", tipo: "in_arrivo" },
+      { nome: "Calcolo Preventivo", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Calcolatrice Online", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "risarcimento-danni", titolo: "Risarcimento Danni", icona: "alert-circle",
+    voci: [
+      { nome: "Calcolo Danno Biologico", tipo: "in_arrivo" },
+      { nome: "Calcolo Risarcimento Danno Tabella Unica", tipo: "in_arrivo" },
+      { nome: "Danno non Patrimoniale", tipo: "in_arrivo" },
+      { nome: "Danno Parentale Roma", tipo: "in_arrivo" },
+      { nome: "Danno Parentale Milano", tipo: "in_arrivo" },
+      { nome: "Calcolo Menomazioni Plurime", tipo: "in_arrivo" },
+      { nome: "Risarcimento INAIL", tipo: "in_arrivo" },
+      { nome: "Calcolo Equo Indennizzo", tipo: "in_arrivo" },
+      { nome: "Tabelle Danno Biologico", tipo: "in_arrivo" },
+      { nome: "Tabella Unica Macropermanenti", tipo: "in_arrivo" },
+      { nome: "Tabelle Milano e Roma", tipo: "in_arrivo" },
+      { nome: "Tabella delle Menomazioni", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "diritto-penale", titolo: "Diritto Penale", icona: "alert-octagon",
+    voci: [
+      { nome: "Aumenti/Riduzioni Pena", tipo: "in_arrivo" },
+      { nome: "Conversione Pena", tipo: "in_arrivo" },
+      { nome: "Calcolo Fine Pena", tipo: "in_arrivo" },
+      { nome: "Calcolo Prescrizione Reati", tipo: "in_arrivo" },
+      { nome: "Codice di Procedura Penale", tipo: "in_arrivo" },
+    ],
+  },
+  {
+    id: "proprieta-successioni", titolo: "Proprietà, Successioni", icona: "home",
+    voci: [
+      { nome: "Calcolo Eredità", tipo: "in_arrivo" },
+      { nome: "Calcolo Imposte di Successione", tipo: "calcolatore", calcId: "imposta-successione" },
+      { nome: "Calcolo Usufrutto", tipo: "in_arrivo" },
+      { nome: "Coefficienti Usufrutto", tipo: "in_arrivo" },
+      { nome: "Pensione di Reversibilità", tipo: "in_arrivo" },
+      { nome: "Grado di Parentela", tipo: "in_arrivo" },
+      { nome: "Calcolo IMU", tipo: "in_arrivo" },
+      { nome: "Calcolo Valore Catastale", tipo: "in_arrivo" },
+      { nome: "Categorie Catastali", tipo: "in_arrivo" },
+      { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
+      { nome: "Calcolo Superficie Commerciale", tipo: "in_arrivo" },
+      { nome: "Imposte Compravendita", tipo: "in_arrivo" },
+      { nome: "Calcolo Cedolare Secca", tipo: "in_arrivo" },
+      { nome: "Tassa Registro Locazioni", tipo: "in_arrivo" },
+      { nome: "Spese Condominiali", tipo: "in_arrivo" },
+    ],
+  },
+];
+
+// Calcolatori nostri che non hanno una voce corrispondente in nessuna delle
+// 9 categorie Andreani sopra (il loro equivalente, quando esiste, sta in una
+// macro-categoria del sito non coperta da questa ristrutturazione — es.
+// "Giorni tra due date" sta sotto "Applicazioni Varie"): restano comunque
+// raggiungibili da qui, in una categoria a parte.
+const ALTRI_CALCOLATORI: VoceAndreani[] = [
+  { nome: "Prescrizione e decadenza", tipo: "calcolatore", calcId: "prescrizione" },
+  { nome: "Termini di comparizione in citazione", tipo: "calcolatore", calcId: "termini-citazione" },
+  { nome: "Opposizione a decreto ingiuntivo", tipo: "calcolatore", calcId: "opposizione-decreto-ingiuntivo" },
+  { nome: "Impugnazione licenziamento", tipo: "calcolatore", calcId: "impugnazione-licenziamento" },
+  { nome: "Ricorso tributario", tipo: "calcolatore", calcId: "ricorso-tributario" },
+  { nome: "Ricorso al TAR", tipo: "calcolatore", calcId: "ricorso-tar" },
+  { nome: "Termine per la querela", tipo: "calcolatore", calcId: "termine-querela" },
+  { nome: "Disdetta di locazione", tipo: "calcolatore", calcId: "disdetta-locazione" },
+  { nome: "Giorni tra due date", tipo: "calcolatore", calcId: "giorni-tra-date" },
 ];
 
 // Periodicità di capitalizzazione per gli interessi legali, come Andreani
@@ -909,7 +1121,7 @@ export default function Calcolatori() {
   const locked = params.tab === "parcelle" && !!params.editId;
   const isEditingPar = !!params.editId;
   const [calcAperto, setCalcAperto] = React.useState<CalcId | null>(locked ? "parcelle" : null);
-  const [categoriaCalc, setCategoriaCalc] = React.useState<"data" | "euro" | "atti" | null>(null);
+  const [categoriaCalc, setCategoriaCalc] = React.useState<string | null>(null);
   const scrollRef = React.useRef<ScrollView>(null);
 
   // La schermata resta montata da una visita all'altra: se si arriva qui di
@@ -2035,13 +2247,16 @@ export default function Calcolatori() {
     );
   }
 
-  const CATEGORIE_CALC: { id: "data" | "euro" | "atti"; titolo: string; icona: string }[] = [
-    { id: "data", titolo: "Date e scadenze", icona: "calendar" },
-    { id: "euro", titolo: "Importi e compensi", icona: "dollar-sign" },
+  const CATEGORIE_CALC: { id: string; titolo: string; icona: string }[] = [
+    ...CATEGORIE_ANDREANI.map((c) => ({ id: c.id, titolo: c.titolo, icona: c.icona })),
+    { id: "altri-calcolatori", titolo: "Altri calcolatori", icona: "grid" },
     { id: "atti", titolo: "Atti (bozze di documenti)", icona: "file-text" },
   ];
-  const vociCategoria = (catId: "data" | "euro" | "atti") =>
-    catId === "atti" ? ATTI : CALCOLATORI.filter((c) => c.categoria === catId);
+  const vociCategoria = (catId: string): VoceAndreani[] => {
+    if (catId === "atti") return ATTI.map((a) => ({ nome: a.titolo, tipo: "atto" as const, attoId: a.id }));
+    if (catId === "altri-calcolatori") return ALTRI_CALCOLATORI;
+    return CATEGORIE_ANDREANI.find((c) => c.id === catId)?.voci || [];
+  };
 
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
@@ -2051,6 +2266,7 @@ export default function Calcolatori() {
       <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         {CATEGORIE_CALC.map((cat) => {
           const voci = vociCategoria(cat.id);
+          const disponibili = voci.filter((v) => v.tipo !== "in_arrivo").length;
           return (
             <Pressable
               key={cat.id}
@@ -2063,7 +2279,9 @@ export default function Calcolatori() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{cat.titolo}</Text>
-                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{voci.length} {voci.length === 1 ? "voce" : "voci"}</Text>
+                <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>
+                  {disponibili < voci.length ? `${disponibili} di ${voci.length} voci` : `${voci.length} ${voci.length === 1 ? "voce" : "voci"}`}
+                </Text>
               </View>
               <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
             </Pressable>
@@ -2075,23 +2293,41 @@ export default function Calcolatori() {
         <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto}>
           <Header variant="hero" title={categoriaCorrente?.titolo || "Calcolatori"} onBack={() => setCategoriaCalc(null)} />
           <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
-            {vociCategoria(categoriaCalc).map((v: any) => (
-              <Pressable
-                key={v.id}
-                testID={categoriaCalc === "atti" ? `atto-${v.id}` : `calc-${v.id}`}
-                onPress={() => (categoriaCalc === "atti" ? apriAtto(v.id) : apriCalcolatore(v.id))}
-                style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
-              >
-                <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
-                  <Feather name={v.icona as any} size={18} color={t.brand} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.titolo}</Text>
-                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{v.sottotitolo}</Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
-              </Pressable>
-            ))}
+            {vociCategoria(categoriaCalc).map((v, i) => {
+              if (v.tipo === "in_arrivo") {
+                return (
+                  <View key={i} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
+                    <View style={[st.calcIcon, { backgroundColor: t.border }]}>
+                      <Feather name={categoriaCorrente?.icona as any} size={18} color={t.onSurfaceTertiary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.onSurfaceSecondary, fontWeight: "700", fontSize: 14 }}>{v.nome}</Text>
+                      <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>In arrivo</Text>
+                    </View>
+                  </View>
+                );
+              }
+              const sorgente = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : ATTI.find((a) => a.id === v.attoId);
+              return (
+                <Pressable
+                  key={i}
+                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`}
+                  onPress={() => (v.tipo === "atto" ? apriAtto(v.attoId) : apriCalcolatore(v.calcId))}
+                  style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
+                >
+                  <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+                    <Feather name={(sorgente?.icona || categoriaCorrente?.icona) as any} size={18} color={t.brand} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.nome}</Text>
+                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>
+                      {sorgente?.titolo && sorgente.titolo !== v.nome ? `Apre: ${sorgente.titolo}` : sorgente?.sottotitolo}
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </SwipeBackScreen>
       ) : null}
