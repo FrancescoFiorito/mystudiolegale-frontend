@@ -22,7 +22,7 @@ import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItali
 type CalcId =
   | "scadenze" | "parcelle"
   | "termini-memorie" | "interessi-legali" | "interessi-mora" | "contributo-unificato"
-  | "rivalutazione-istat" | "imposta-successione" | "compenso-ctu"
+  | "rivalutazione-istat" | "rivalutazione-mensile" | "imposta-successione" | "compenso-ctu"
   | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
   | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
   | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione"
@@ -757,6 +757,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "interessi-mora", titolo: "Interessi di mora", sottotitolo: "D.Lgs. 231/2002, transazioni commerciali", icona: "alert-circle" },
   { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text" },
   { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
+  { id: "rivalutazione-mensile", titolo: "Rivalutazione Mensile", sottotitolo: "Rate mensili non pagate: assegno, canone, retribuzioni", icona: "calendar" },
   { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
   { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2" },
@@ -781,7 +782,7 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
     id: "rivalutazioni-istat", titolo: "Rivalutazioni Istat", icona: "trending-up",
     voci: [
       { nome: "Rivalutazione e Interessi", tipo: "calcolatore", calcId: "rivalutazione-istat" },
-      { nome: "Rivalutazione Mensile", tipo: "in_arrivo" },
+      { nome: "Rivalutazione Mensile", tipo: "calcolatore", calcId: "rivalutazione-mensile" },
       { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "rivalutazione-istat" },
       { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "rivalutazione-istat" },
       { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
@@ -1050,6 +1051,12 @@ const MODALITA_ISTAT = [
   { value: "sola_rivalutazione", label: "Sola rivalutazione (senza interessi)" },
 ];
 
+const MODALITA_RIVALUTAZIONE_MENSILE = [
+  { value: "rivalutazione_mensile", label: "Rivaluta mensilmente (ISTAT) + interessi legali" },
+  { value: "solo_interessi", label: "Solo interessi, a un tasso indicato da te" },
+  { value: "rivalutazione_annuale", label: "Rivaluta annualmente a un tasso indicato da te" },
+];
+
 // 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
 // etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
 // Sezione "tabellare" del compenso CTU (DM 182/2002), come Andreani:
@@ -1233,6 +1240,15 @@ export default function Calcolatori() {
   const [istatModalita, setIstatModalita] = React.useState("rivalutazione_interessi");
   const [risIstat, setRisIstat] = React.useState<any>(null);
   const [calcolandoIstat, setCalcolandoIstat] = React.useState(false);
+  // Rivalutazione Mensile (rate periodiche non pagate: assegno, canone, retribuzioni)
+  const [rivMensImporto, setRivMensImporto] = React.useState("");
+  const [rivMensDataInizio, setRivMensDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
+  const [rivMensDataFine, setRivMensDataFine] = React.useState(new Date().toISOString().slice(0, 10));
+  const [rivMensModalita, setRivMensModalita] = React.useState("rivalutazione_mensile");
+  const [rivMensTassoInteressi, setRivMensTassoInteressi] = React.useState("");
+  const [rivMensTassoAnnuale, setRivMensTassoAnnuale] = React.useState("");
+  const [risRivMens, setRisRivMens] = React.useState<any>(null);
+  const [calcolandoRivMens, setCalcolandoRivMens] = React.useState(false);
   // Termini memorie ex art. 171-ter c.p.c.
   const [memUdienza, setMemUdienza] = React.useState(new Date().toISOString().slice(0, 10));
   const [memEscludiFer, setMemEscludiFer] = React.useState(true);
@@ -1558,6 +1574,28 @@ export default function Calcolatori() {
     }
   };
 
+  const calcolaRivalutazioneMensile = async () => {
+    Keyboard.dismiss();
+    setCalcolandoRivMens(true);
+    setRisRivMens(null);
+    try {
+      const body: any = {
+        importo_mensile: parseNumeroIt(rivMensImporto),
+        data_inizio: rivMensDataInizio,
+        data_fine: rivMensDataFine,
+        modalita: rivMensModalita,
+      };
+      if (rivMensModalita === "solo_interessi") body.tasso_interessi_pct = parseNumeroIt(rivMensTassoInteressi) || 0;
+      if (rivMensModalita === "rivalutazione_annuale") body.tasso_rivalutazione_annuale_pct = parseNumeroIt(rivMensTassoAnnuale) || 0;
+      const r = await api.post("/calc/rivalutazione-mensile", body);
+      setRisRivMens(r);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    } finally {
+      setCalcolandoRivMens(false);
+    }
+  };
+
   const calcolaMemorie = async () => {
     Keyboard.dismiss();
     setCalcolandoMem(true);
@@ -1667,6 +1705,7 @@ export default function Calcolatori() {
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
+    setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensModalita("rivalutazione_mensile"); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
@@ -2848,6 +2887,52 @@ export default function Calcolatori() {
                           ))}
                         </>
                       )}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {calcAperto === "rivalutazione-mensile" ? (
+                <View>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Importo di ogni rata €</Text>
+                  <TextInput testID="rivmens-importo" value={rivMensImporto} onChangeText={setRivMensImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Scadenza della prima rata non pagata</Text>
+                  <DataInput testID="rivmens-data-inizio" value={rivMensDataInizio} onChange={setRivMensDataInizio} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fino al (di norma la data del pagamento, o oggi)</Text>
+                  <DataInput testID="rivmens-data-fine" value={rivMensDataFine} onChange={setRivMensDataFine} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità</Text>
+                  <SelectInput testID="rivmens-modalita" value={rivMensModalita} onChange={setRivMensModalita} opzioni={MODALITA_RIVALUTAZIONE_MENSILE} />
+                  {rivMensModalita === "solo_interessi" ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso di interesse %</Text>
+                      <TextInput testID="rivmens-tasso-interessi" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+                  {rivMensModalita === "rivalutazione_annuale" ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso di rivalutazione annua %</Text>
+                      <TextInput testID="rivmens-tasso-annuale" value={rivMensTassoAnnuale} onChangeText={setRivMensTassoAnnuale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
+                    Una rata al mese dalla data di inizio alla data di fine (incluse entrambe). Ogni rata matura rivalutazione e/o interessi per conto proprio, dalla propria scadenza — le rate non si sommano in un unico capitale cumulato.
+                  </Text>
+                  <Pressable testID="btn-calc-rivmens" onPress={calcolaRivalutazioneMensile} disabled={calcolandoRivMens} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoRivMens ? 0.6 : 1 }]}>
+                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoRivMens ? "Calcolo..." : "Calcola"}</Text>
+                  </Pressable>
+                  {risRivMens ? (
+                    <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE ({risRivMens.numero_rate} {risRivMens.numero_rate === 1 ? "rata" : "rate"})</Text>
+                      <Text testID="rivmens-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risRivMens.totale)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
+                        Capitale: {formatEuro(risRivMens.capitale_totale)} · Rivalutazione: {formatEuro(risRivMens.rivalutazione_totale)} · Interessi: {formatEuro(risRivMens.interessi_totale)}
+                      </Text>
+                      {(risRivMens.dettaglio || []).map((d: any, i: number) => (
+                        <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.data_scadenza)} ({d.giorni_maturati}gg)</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.totale_rata)}</Text>
+                        </View>
+                      ))}
                     </View>
                   ) : null}
                 </View>
