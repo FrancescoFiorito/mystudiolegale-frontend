@@ -1313,7 +1313,7 @@ export default function Calcolatori() {
   const [variAnatocismo, setVariAnatocismo] = React.useState("nessuna");
   const [variRivaluta, setVariRivaluta] = React.useState(false);
   const [variBaseRivalutazione, setVariBaseRivalutazione] = React.useState("iniziale_fissa");
-  const [variIgnoraDeflazione, setVariIgnoraDeflazione] = React.useState(true);
+  const [variIgnoraDeflazione, setVariIgnoraDeflazione] = React.useState(false);
   const [variGiornoIniziale, setVariGiornoIniziale] = React.useState("escluso");
   const [variConvenzioneGiorni, setVariConvenzioneGiorni] = React.useState("civile");
   const [risVari, setRisVari] = React.useState<any>(null);
@@ -1654,7 +1654,7 @@ export default function Calcolatori() {
         data_fine: rivMensDataFine,
         modalita: rivMensModalita,
       };
-      if (rivMensModalita === "solo_interessi") body.tasso_interessi_pct = parseNumeroIt(rivMensTassoInteressi) || 0;
+      if (rivMensModalita === "solo_interessi") body.tasso_interessi_pct = parseNumeroIt(rivMensTassoInteressi) || 100;
       if (rivMensModalita === "rivalutazione_annuale") body.tasso_rivalutazione_annuale_pct = parseNumeroIt(rivMensTassoAnnuale) || 0;
       const r = await api.post("/calc/rivalutazione-mensile", body);
       setRisRivMens(r);
@@ -3022,8 +3022,8 @@ export default function Calcolatori() {
                   <SelectInput testID="rivmens-modalita" value={rivMensModalita} onChange={setRivMensModalita} opzioni={MODALITA_RIVALUTAZIONE_MENSILE} />
                   {rivMensModalita === "solo_interessi" ? (
                     <>
-                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso di interesse %</Text>
-                      <TextInput testID="rivmens-tasso-interessi" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale del tasso legale % (100 = tasso pieno)</Text>
+                      <TextInput testID="rivmens-tasso-interessi" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
                   {rivMensModalita === "rivalutazione_annuale" ? (
