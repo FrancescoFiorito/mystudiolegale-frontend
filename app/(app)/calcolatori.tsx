@@ -22,7 +22,8 @@ import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItali
 type CalcId =
   | "scadenze" | "parcelle"
   | "termini-memorie" | "interessi-legali" | "interessi-mora" | "contributo-unificato"
-  | "rivalutazione-istat" | "rivalutazione-mensile" | "adeguamento-canone" | "imposta-successione" | "compenso-ctu"
+  | "rivalutazione-istat" | "rivalutazione-mensile" | "adeguamento-canone" | "interessi-vari-capitale-rivalutato"
+  | "imposta-successione" | "compenso-ctu"
   | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
   | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
   | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione"
@@ -759,6 +760,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
   { id: "rivalutazione-mensile", titolo: "Rivalutazione Mensile", sottotitolo: "Rate mensili non pagate: assegno, canone, retribuzioni", icona: "calendar" },
   { id: "adeguamento-canone", titolo: "Adeguamento Canone", sottotitolo: "Aggiornamento ISTAT annuale del canone di locazione", icona: "home" },
+  { id: "interessi-vari-capitale-rivalutato", titolo: "Interessi Vari sul Capitale Rivalutato", sottotitolo: "Legali, di mora o a tasso fisso, con anatocismo e rivalutazione", icona: "percent" },
   { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
   { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2" },
@@ -784,11 +786,7 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
     voci: [
       { nome: "Rivalutazione e Interessi", tipo: "calcolatore", calcId: "rivalutazione-istat" },
       { nome: "Rivalutazione Mensile", tipo: "calcolatore", calcId: "rivalutazione-mensile" },
-      // Verificata la pagina Andreani: usa interessi legali/mora/tasso fisso
-      // + maggiorazione, anatocismo combinato con rivalutazione sul
-      // montante, due basi di calcolo alternative e tre convenzioni
-      // giorni/anno — non equivalente al nostro calcolatore generico.
-      { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "in_arrivo" },
+      { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "interessi-vari-capitale-rivalutato" },
       { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "adeguamento-canone" },
       { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
       { nome: "Calcolo Devalutazione", tipo: "in_arrivo" },
@@ -1068,6 +1066,28 @@ const PERCENTUALI_CANONE = [
   { value: "altro", label: "Altra percentuale da contratto" },
 ];
 
+// Interessi Vari sul Capitale Rivalutato (AND-003): tipo di interesse +
+// due modalità di rivalutazione sul montante + convenzione di calcolo dei
+// giorni, come Andreani.
+const TIPI_INTERESSE_VARI = [
+  { value: "legali", label: "Legali" },
+  { value: "moratori", label: "Di mora (D.Lgs. 231/2002)" },
+  { value: "tasso_fisso", label: "A tasso fisso" },
+];
+const BASI_RIVALUTAZIONE_VARI = [
+  { value: "iniziale_fissa", label: "Mese e anno iniziali (confronto a due punti, applicato a fine periodo)" },
+  { value: "anno_precedente", label: "Stesso mese dell'anno precedente (rivalutazione annua composta sul montante)" },
+];
+const GIORNI_INIZIALI_VARI = [
+  { value: "escluso", label: "Escluso (conta dal giorno successivo)" },
+  { value: "compreso", label: "Compreso" },
+];
+const CONVENZIONI_GIORNI_VARI = [
+  { value: "civile", label: "Civile (365 fisso, anche negli anni bisestili)" },
+  { value: "effettivo", label: "Effettivo (365 o 366 secondo il calendario reale)" },
+  { value: "giuliano", label: "Giuliano (365,25)" },
+];
+
 // 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
 // etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
 // Sezione "tabellare" del compenso CTU (DM 182/2002), come Andreani:
@@ -1267,6 +1287,21 @@ export default function Calcolatori() {
   const [canonePercAltro, setCanonePercAltro] = React.useState("");
   const [risCanone, setRisCanone] = React.useState<any>(null);
   const [calcolandoCanone, setCalcolandoCanone] = React.useState(false);
+  // Interessi Vari sul Capitale Rivalutato (AND-003)
+  const [variCapitale, setVariCapitale] = React.useState("");
+  const [variDataInizio, setVariDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
+  const [variDataFine, setVariDataFine] = React.useState(new Date().toISOString().slice(0, 10));
+  const [variTipoInteresse, setVariTipoInteresse] = React.useState("legali");
+  const [variTassoFisso, setVariTassoFisso] = React.useState("");
+  const [variMaggiorazione, setVariMaggiorazione] = React.useState("");
+  const [variAnatocismo, setVariAnatocismo] = React.useState("nessuna");
+  const [variRivaluta, setVariRivaluta] = React.useState(false);
+  const [variBaseRivalutazione, setVariBaseRivalutazione] = React.useState("iniziale_fissa");
+  const [variIgnoraDeflazione, setVariIgnoraDeflazione] = React.useState(true);
+  const [variGiornoIniziale, setVariGiornoIniziale] = React.useState("escluso");
+  const [variConvenzioneGiorni, setVariConvenzioneGiorni] = React.useState("civile");
+  const [risVari, setRisVari] = React.useState<any>(null);
+  const [calcolandoVari, setCalcolandoVari] = React.useState(false);
   // Termini memorie ex art. 171-ter c.p.c.
   const [memUdienza, setMemUdienza] = React.useState(new Date().toISOString().slice(0, 10));
   const [memEscludiFer, setMemEscludiFer] = React.useState(true);
@@ -1633,6 +1668,34 @@ export default function Calcolatori() {
     }
   };
 
+  const calcolaInteressiVari = async () => {
+    Keyboard.dismiss();
+    setCalcolandoVari(true);
+    setRisVari(null);
+    try {
+      const body: any = {
+        capitale: parseNumeroIt(variCapitale),
+        data_inizio: variDataInizio,
+        data_fine: variDataFine,
+        tipo_interesse: variTipoInteresse,
+        anatocismo: variAnatocismo,
+        rivaluta: variRivaluta,
+        base_rivalutazione: variBaseRivalutazione,
+        ignora_deflazione: variIgnoraDeflazione,
+        giorno_iniziale: variGiornoIniziale,
+        convenzione_giorni: variConvenzioneGiorni,
+      };
+      if (variTipoInteresse === "tasso_fisso") body.tasso_fisso_pct = parseNumeroIt(variTassoFisso);
+      if (variMaggiorazione.trim()) body.maggiorazione_pct = parseNumeroIt(variMaggiorazione);
+      const r = await api.post("/calc/interessi-vari-capitale-rivalutato", body);
+      setRisVari(r);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    } finally {
+      setCalcolandoVari(false);
+    }
+  };
+
   const calcolaMemorie = async () => {
     Keyboard.dismiss();
     setCalcolandoMem(true);
@@ -1744,6 +1807,7 @@ export default function Calcolatori() {
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensModalita("rivalutazione_mensile"); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
     setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 10)); setCanonePercScelta("100"); setCanonePercAltro("");
+    setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
@@ -3006,6 +3070,81 @@ export default function Calcolatori() {
                       <Text style={{ color: t.onBrandSecondary, marginTop: 2, fontSize: 11 }}>
                         Indice FOI: {risCanone.indice_precedente} → {risCanone.indice_corrente}
                       </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {calcAperto === "interessi-vari-capitale-rivalutato" ? (
+                <View>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
+                  <TextInput testID="vari-capitale" value={variCapitale} onChangeText={setVariCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
+                  <DataInput testID="vari-data-inizio" value={variDataInizio} onChange={setVariDataInizio} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
+                  <DataInput testID="vari-data-fine" value={variDataFine} onChange={setVariDataFine} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tipo di interesse</Text>
+                  <SelectInput testID="vari-tipo-interesse" value={variTipoInteresse} onChange={setVariTipoInteresse} opzioni={TIPI_INTERESSE_VARI} />
+                  {variTipoInteresse === "tasso_fisso" ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso fisso %</Text>
+                      <TextInput testID="vari-tasso-fisso" value={variTassoFisso} onChangeText={setVariTassoFisso} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione punti % (facoltativa — default 8 per gli interessi di mora, 0 per gli altri)</Text>
+                  <TextInput testID="vari-maggiorazione" value={variMaggiorazione} onChangeText={setVariMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Anatocismo</Text>
+                  <SelectInput testID="vari-anatocismo" value={variAnatocismo} onChange={setVariAnatocismo} opzioni={CAPITALIZZAZIONI} />
+                  <Pressable
+                    testID="vari-rivaluta"
+                    onPress={() => setVariRivaluta(!variRivaluta)}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                  >
+                    <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: variRivaluta ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      {variRivaluta ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                    </View>
+                    <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Rivaluta il capitale secondo l&apos;indice FOI</Text>
+                  </Pressable>
+                  {variRivaluta ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità di rivalutazione</Text>
+                      <SelectInput testID="vari-base-rivalutazione" value={variBaseRivalutazione} onChange={setVariBaseRivalutazione} opzioni={BASI_RIVALUTAZIONE_VARI} />
+                      <Pressable
+                        testID="vari-ignora-deflazione"
+                        onPress={() => setVariIgnoraDeflazione(!variIgnoraDeflazione)}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: variIgnoraDeflazione ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                          {variIgnoraDeflazione ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                        </View>
+                        <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Ignora la deflazione (se l&apos;indice cala, non applica una rivalutazione negativa)</Text>
+                      </Pressable>
+                    </>
+                  ) : null}
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Giorno iniziale</Text>
+                  <SelectInput testID="vari-giorno-iniziale" value={variGiornoIniziale} onChange={setVariGiornoIniziale} opzioni={GIORNI_INIZIALI_VARI} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Convenzione di calcolo dei giorni</Text>
+                  <SelectInput testID="vari-convenzione-giorni" value={variConvenzioneGiorni} onChange={setVariConvenzioneGiorni} opzioni={CONVENZIONI_GIORNI_VARI} />
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
+                    Calcolatore avanzato: la pagina Andreani non specifica in dettaglio l&apos;interazione fra tutti questi parametri in ogni combinazione — il risultato può differire dal suo in casi particolari.
+                  </Text>
+                  <Pressable testID="btn-calc-vari" onPress={calcolaInteressiVari} disabled={calcolandoVari} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoVari ? 0.6 : 1 }]}>
+                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoVari ? "Calcolo..." : "Calcola"}</Text>
+                  </Pressable>
+                  {risVari ? (
+                    <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE</Text>
+                      <Text testID="vari-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risVari.totale)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
+                        Capitale: {formatEuro(risVari.capitale)} · Interessi: {formatEuro(risVari.interessi)}
+                        {risVari.rivalutazione != null ? ` · Rivalutazione: ${formatEuro(risVari.rivalutazione)}` : ""}
+                      </Text>
+                      {(risVari.dettaglio || []).map((d: any, i: number) => (
+                        <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.tasso_pct}%)</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.montante)}</Text>
+                        </View>
+                      ))}
                     </View>
                   ) : null}
                 </View>
