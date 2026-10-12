@@ -1147,6 +1147,22 @@ const GRADI_SUCCESSIONE = [
   { id: "altri_soggetti", label: "Altro soggetto diverso dai precedenti" },
 ] as const;
 
+// Riepilogo di più valori (es. "Capitale: ... · Rivalutazione: ...") come una
+// riga di "pillole" che va a capo liberamente, invece di un'unica stringa
+// concatenata con "·" che su importi lunghi o schermi stretti può uscire dal
+// bordo della card invece di andare a capo in modo leggibile.
+function RiepilogoChips({ voci, color, fontSize = 12 }: { voci: { label: string; value: string }[]; color: string; fontSize?: number }) {
+  return (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 4 }}>
+      {voci.map((v, i) => (
+        <Text key={i} style={{ color, fontSize, marginRight: 10, marginTop: 2 }}>
+          {v.label}: {v.value}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 export default function Calcolatori() {
   const { t } = useTheme();
   const { user } = useAuth();
@@ -2976,11 +2992,11 @@ export default function Calcolatori() {
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE</Text>
                           <Text testID="istat-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risIstat.totale)}</Text>
-                          <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                            Capitale: {formatEuro(risIstat.capitale)}
-                            {risIstat.rivalutazione != null ? ` · Rivalutazione: ${formatEuro(risIstat.rivalutazione)}` : ""}
-                            {" "}· Interessi: {formatEuro(risIstat.interessi)}
-                          </Text>
+                          <RiepilogoChips color={t.onBrandSecondary} voci={[
+                            { label: "Capitale", value: formatEuro(risIstat.capitale) },
+                            ...(risIstat.rivalutazione != null ? [{ label: "Rivalutazione", value: formatEuro(risIstat.rivalutazione) }] : []),
+                            { label: "Interessi", value: formatEuro(risIstat.interessi) },
+                          ]} />
                           {(risIstat.dettaglio || []).map((d: any, i: number) => (
                             <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
                               <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.tasso_pct}%)</Text>
@@ -3026,9 +3042,12 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE ({risRivMens.numero_rate} {risRivMens.numero_rate === 1 ? "rata" : "rate"})</Text>
                       <Text testID="rivmens-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risRivMens.totale)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                        Capitale: {formatEuro(risRivMens.capitale_totale)} · Rivalutazione: {formatEuro(risRivMens.rivalutazione_totale)} · Montante rivalutato: {formatEuro(risRivMens.capitale_rivalutato)} · Interessi: {formatEuro(risRivMens.interessi_totale)}
-                      </Text>
+                      <RiepilogoChips color={t.onBrandSecondary} voci={[
+                        { label: "Capitale", value: formatEuro(risRivMens.capitale_totale) },
+                        { label: "Rivalutazione", value: formatEuro(risRivMens.rivalutazione_totale) },
+                        { label: "Montante rivalutato", value: formatEuro(risRivMens.capitale_rivalutato) },
+                        { label: "Interessi", value: formatEuro(risRivMens.interessi_totale) },
+                      ]} />
                       {(risRivMens.dettaglio || []).map((d: any, i: number) => (
                         <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.giorni}gg)</Text>
@@ -3064,9 +3083,10 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>NUOVO CANONE</Text>
                       <Text testID="canone-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCanone.nuovo_canone)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                        Adeguamento: {formatEuro(risCanone.adeguamento)} · Variazione ISTAT: {risCanone.variazione_istat_pct}%
-                      </Text>
+                      <RiepilogoChips color={t.onBrandSecondary} voci={[
+                        { label: "Adeguamento", value: formatEuro(risCanone.adeguamento) },
+                        { label: "Variazione ISTAT", value: `${risCanone.variazione_istat_pct}%` },
+                      ]} />
                       <Text style={{ color: t.onBrandSecondary, marginTop: 2, fontSize: 11 }}>
                         Indice FOI: {risCanone.indice_precedente} → {risCanone.indice_corrente}
                       </Text>
@@ -3135,10 +3155,11 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE</Text>
                       <Text testID="vari-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risVari.totale)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                        Capitale: {formatEuro(risVari.capitale)} · Interessi: {formatEuro(risVari.interessi)}
-                        {risVari.rivalutazione != null ? ` · Rivalutazione: ${formatEuro(risVari.rivalutazione)}` : ""}
-                      </Text>
+                      <RiepilogoChips color={t.onBrandSecondary} voci={[
+                        { label: "Capitale", value: formatEuro(risVari.capitale) },
+                        { label: "Interessi", value: formatEuro(risVari.interessi) },
+                        ...(risVari.rivalutazione != null ? [{ label: "Rivalutazione", value: formatEuro(risVari.rivalutazione) }] : []),
+                      ]} />
                       {(risVari.dettaglio || []).map((d: any, i: number) => (
                         <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.tasso_pct}%)</Text>
@@ -3210,9 +3231,10 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fine perizia</Text>
                   <DataInput testID="ctu-data-fine" value={ctuDataFinePerizia} onChange={setCtuDataFinePerizia} />
                   {risCtu && risCtu.giorni_lavorativi != null ? (
-                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.xs }}>
-                      Giorni lavorativi: {risCtu.giorni_lavorativi} · Max vacazioni liquidabili: {risCtu.max_vacazioni}
-                    </Text>
+                    <RiepilogoChips color={t.onSurfaceTertiary} fontSize={11} voci={[
+                      { label: "Giorni lavorativi", value: String(risCtu.giorni_lavorativi) },
+                      { label: "Max vacazioni liquidabili", value: String(risCtu.max_vacazioni) },
+                    ]} />
                   ) : null}
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero vacazioni (14,68€ ciascuna, tariffa piena dal 13/2/2025, Corte Cost. 16/2025)</Text>
                   <TextInput testID="ctu-numero-vacazioni" value={ctuNumeroVacazioni} onChangeText={setCtuNumeroVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
@@ -3253,13 +3275,13 @@ export default function Calcolatori() {
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>COMPENSO TOTALE</Text>
                       <Text testID="ctu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCtu.totale)}</Text>
-                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                        Onorario vacazioni: {formatEuro(risCtu.onorario_vacazioni)}
-                        {risCtu.maggiorazione_urgenza > 0 ? ` · Urgenza: ${formatEuro(risCtu.maggiorazione_urgenza)}` : ""}
-                        {risCtu.maggiorazione_complessita > 0 ? ` · Complessità: ${formatEuro(risCtu.maggiorazione_complessita)}` : ""}
-                        {risCtu.rimborso_km > 0 ? ` · Rimborso km: ${formatEuro(risCtu.rimborso_km)}` : ""}
-                        {risCtu.onorario_tabellare > 0 ? ` · Onorario tabellare: ${formatEuro(risCtu.onorario_tabellare)}` : ""}
-                      </Text>
+                      <RiepilogoChips color={t.onBrandSecondary} voci={[
+                        { label: "Onorario vacazioni", value: formatEuro(risCtu.onorario_vacazioni) },
+                        ...(risCtu.maggiorazione_urgenza > 0 ? [{ label: "Urgenza", value: formatEuro(risCtu.maggiorazione_urgenza) }] : []),
+                        ...(risCtu.maggiorazione_complessita > 0 ? [{ label: "Complessità", value: formatEuro(risCtu.maggiorazione_complessita) }] : []),
+                        ...(risCtu.rimborso_km > 0 ? [{ label: "Rimborso km", value: formatEuro(risCtu.rimborso_km) }] : []),
+                        ...(risCtu.onorario_tabellare > 0 ? [{ label: "Onorario tabellare", value: formatEuro(risCtu.onorario_tabellare) }] : []),
+                      ]} />
                       {!risCtu.salvata ? (
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome parcella</Text>
