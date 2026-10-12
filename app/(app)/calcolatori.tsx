@@ -22,7 +22,7 @@ import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItali
 type CalcId =
   | "scadenze" | "parcelle"
   | "termini-memorie" | "interessi-legali" | "interessi-mora" | "contributo-unificato"
-  | "rivalutazione-istat" | "rivalutazione-mensile" | "imposta-successione" | "compenso-ctu"
+  | "rivalutazione-istat" | "rivalutazione-mensile" | "adeguamento-canone" | "imposta-successione" | "compenso-ctu"
   | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
   | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
   | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione"
@@ -758,6 +758,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "contributo-unificato", titolo: "Contributo unificato", sottotitolo: "Processo civile, per valore causa", icona: "file-text" },
   { id: "rivalutazione-istat", titolo: "Rivalutazione ISTAT", sottotitolo: "Capitale rivalutato tra due indici", icona: "trending-up" },
   { id: "rivalutazione-mensile", titolo: "Rivalutazione Mensile", sottotitolo: "Rate mensili non pagate: assegno, canone, retribuzioni", icona: "calendar" },
+  { id: "adeguamento-canone", titolo: "Adeguamento Canone", sottotitolo: "Aggiornamento ISTAT annuale del canone di locazione", icona: "home" },
   { id: "imposta-successione", titolo: "Imposta di successione", sottotitolo: "Aliquote e franchigie per grado di parentela", icona: "home" },
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
   { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2" },
@@ -783,8 +784,12 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
     voci: [
       { nome: "Rivalutazione e Interessi", tipo: "calcolatore", calcId: "rivalutazione-istat" },
       { nome: "Rivalutazione Mensile", tipo: "calcolatore", calcId: "rivalutazione-mensile" },
-      { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "rivalutazione-istat" },
-      { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "rivalutazione-istat" },
+      // Verificata la pagina Andreani: usa interessi legali/mora/tasso fisso
+      // + maggiorazione, anatocismo combinato con rivalutazione sul
+      // montante, due basi di calcolo alternative e tre convenzioni
+      // giorni/anno — non equivalente al nostro calcolatore generico.
+      { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "in_arrivo" },
+      { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "adeguamento-canone" },
       { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
       { nome: "Calcolo Devalutazione", tipo: "in_arrivo" },
       { nome: "Rivalutazione Storica", tipo: "in_arrivo" },
@@ -1057,6 +1062,12 @@ const MODALITA_RIVALUTAZIONE_MENSILE = [
   { value: "rivalutazione_annuale", label: "Rivaluta annualmente a un tasso indicato da te" },
 ];
 
+const PERCENTUALI_CANONE = [
+  { value: "75", label: "75% (locazioni abitative ordinarie, se la clausola lo prevede — art. 32 L. 392/1978)" },
+  { value: "100", label: "100% (locazioni diverse da abitazione, assegni di mantenimento)" },
+  { value: "altro", label: "Altra percentuale da contratto" },
+];
+
 // 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
 // etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
 // Sezione "tabellare" del compenso CTU (DM 182/2002), come Andreani:
@@ -1249,6 +1260,13 @@ export default function Calcolatori() {
   const [rivMensTassoAnnuale, setRivMensTassoAnnuale] = React.useState("");
   const [risRivMens, setRisRivMens] = React.useState<any>(null);
   const [calcolandoRivMens, setCalcolandoRivMens] = React.useState(false);
+  // Adeguamento Canone (aggiornamento ISTAT annuale, passo fisso a 12 mesi)
+  const [canoneImporto, setCanoneImporto] = React.useState("");
+  const [canoneMeseRiferimento, setCanoneMeseRiferimento] = React.useState(new Date().toISOString().slice(0, 10));
+  const [canonePercScelta, setCanonePercScelta] = React.useState("100");
+  const [canonePercAltro, setCanonePercAltro] = React.useState("");
+  const [risCanone, setRisCanone] = React.useState<any>(null);
+  const [calcolandoCanone, setCalcolandoCanone] = React.useState(false);
   // Termini memorie ex art. 171-ter c.p.c.
   const [memUdienza, setMemUdienza] = React.useState(new Date().toISOString().slice(0, 10));
   const [memEscludiFer, setMemEscludiFer] = React.useState(true);
@@ -1596,6 +1614,25 @@ export default function Calcolatori() {
     }
   };
 
+  const calcolaAdeguamentoCanone = async () => {
+    Keyboard.dismiss();
+    setCalcolandoCanone(true);
+    setRisCanone(null);
+    try {
+      const pct = canonePercScelta === "altro" ? parseNumeroIt(canonePercAltro) || 0 : Number(canonePercScelta);
+      const r = await api.post("/calc/adeguamento-canone", {
+        canone: parseNumeroIt(canoneImporto),
+        mese_riferimento: canoneMeseRiferimento,
+        percentuale_pct: pct,
+      });
+      setRisCanone(r);
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    } finally {
+      setCalcolandoCanone(false);
+    }
+  };
+
   const calcolaMemorie = async () => {
     Keyboard.dismiss();
     setCalcolandoMem(true);
@@ -1706,6 +1743,7 @@ export default function Calcolatori() {
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensModalita("rivalutazione_mensile"); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
+    setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 10)); setCanonePercScelta("100"); setCanonePercAltro("");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
@@ -2933,6 +2971,41 @@ export default function Calcolatori() {
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.totale_rata)}</Text>
                         </View>
                       ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {calcAperto === "adeguamento-canone" ? (
+                <View>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Canone attuale €</Text>
+                  <TextInput testID="canone-importo" value={canoneImporto} onChangeText={setCanoneImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Mese di riferimento per l&apos;indice ISTAT</Text>
+                  <DataInput testID="canone-mese-riferimento" value={canoneMeseRiferimento} onChange={setCanoneMeseRiferimento} />
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di adeguamento</Text>
+                  <SelectInput testID="canone-perc" value={canonePercScelta} onChange={setCanonePercScelta} opzioni={PERCENTUALI_CANONE} />
+                  {canonePercScelta === "altro" ? (
+                    <>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale %</Text>
+                      <TextInput testID="canone-perc-altro" value={canonePercAltro} onChangeText={setCanonePercAltro} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                    </>
+                  ) : null}
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
+                    Variazione dell&apos;indice FOI tra il mese di riferimento e lo stesso mese dell&apos;anno precedente (serie dal gennaio 1947).
+                  </Text>
+                  <Pressable testID="btn-calc-canone" onPress={calcolaAdeguamentoCanone} disabled={calcolandoCanone} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCanone ? 0.6 : 1 }]}>
+                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCanone ? "Calcolo..." : "Calcola"}</Text>
+                  </Pressable>
+                  {risCanone ? (
+                    <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
+                      <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>NUOVO CANONE</Text>
+                      <Text testID="canone-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCanone.nuovo_canone)}</Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
+                        Adeguamento: {formatEuro(risCanone.adeguamento)} · Variazione ISTAT: {risCanone.variazione_istat_pct}%
+                      </Text>
+                      <Text style={{ color: t.onBrandSecondary, marginTop: 2, fontSize: 11 }}>
+                        Indice FOI: {risCanone.indice_precedente} → {risCanone.indice_corrente}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
