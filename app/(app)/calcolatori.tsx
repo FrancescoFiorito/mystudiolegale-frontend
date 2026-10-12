@@ -3017,7 +3017,7 @@ export default function Calcolatori() {
                     </>
                   ) : null}
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
-                    Una rata al mese dalla data di inizio alla data di fine (incluse entrambe). Ogni rata matura rivalutazione e/o interessi per conto proprio, dalla propria scadenza — le rate non si sommano in un unico capitale cumulato.
+                    Una rata al mese dalla data di inizio alla data di fine (incluse entrambe). Le rate si sommano in un unico montante che cresce mese per mese: ogni mese si aggiunge la nuova rata, poi il montante si rivaluta e matura interessi.
                   </Text>
                   <Pressable testID="btn-calc-rivmens" onPress={calcolaRivalutazioneMensile} disabled={calcolandoRivMens} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoRivMens ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoRivMens ? "Calcolo..." : "Calcola"}</Text>
@@ -3027,12 +3027,12 @@ export default function Calcolatori() {
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>TOTALE ({risRivMens.numero_rate} {risRivMens.numero_rate === 1 ? "rata" : "rate"})</Text>
                       <Text testID="rivmens-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risRivMens.totale)}</Text>
                       <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>
-                        Capitale: {formatEuro(risRivMens.capitale_totale)} · Rivalutazione: {formatEuro(risRivMens.rivalutazione_totale)} · Interessi: {formatEuro(risRivMens.interessi_totale)}
+                        Capitale: {formatEuro(risRivMens.capitale_totale)} · Rivalutazione: {formatEuro(risRivMens.rivalutazione_totale)} · Montante rivalutato: {formatEuro(risRivMens.capitale_rivalutato)} · Interessi: {formatEuro(risRivMens.interessi_totale)}
                       </Text>
                       {(risRivMens.dettaglio || []).map((d: any, i: number) => (
                         <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, marginTop: i === 0 ? SPACING.sm : 0 }}>
-                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.data_scadenza)} ({d.giorni_maturati}gg)</Text>
-                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.totale_rata)}</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11 }}>{isoToDataIt(d.dal)} → {isoToDataIt(d.al)} ({d.giorni}gg)</Text>
+                          <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.totale)}</Text>
                         </View>
                       ))}
                     </View>
