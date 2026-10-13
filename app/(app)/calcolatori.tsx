@@ -27,7 +27,16 @@ type CalcId =
   | "termini-impugnazione" | "opposizione-decreto-ingiuntivo" | "prescrizione" | "termini-citazione"
   | "precetto" | "impugnazione-licenziamento" | "ricorso-tributario" | "ricorso-tar"
   | "termine-querela" | "disdetta-locazione" | "parametri-forensi" | "compenso-mediazione"
-  | "giorni-tra-date";
+  | "giorni-tra-date"
+  | "eta-anagrafica" | "aggiungi-giorni-lavorativi" | "termini-separazione-divorzio"
+  | "termini-esecuzioni" | "termini-procedimento-semplificato" | "termini-deposito-appello" | "termini-deposito-ctu"
+  | "scadenze-multe" | "prescrizione-reati" | "fine-pena" | "conversione-pena"
+  | "interessi-acconti" | "interessi-corso-causa" | "interessi-mora-appalti" | "maggior-danno" | "pignoramento-stipendio-pensione"
+  | "equo-indennizzo" | "compenso-curatore-fallimentare" | "compenso-delegati-vendite" | "compenso-mediatore-familiare" | "parametri-stragiudiziali"
+  | "quote-ereditarie" | "usufrutto" | "valore-catastale" | "imposte-compravendita-immobiliare" | "tassa-registro-locazione"
+  | "danno-biologico-lieve-entita" | "danno-biologico-macropermanenti" | "menomazioni-plurime"
+  | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
+  | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -90,6 +99,8 @@ const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }
   { value: "iscrizione_ipotecaria", label: "Iscrizione ipotecaria / Affari tavolari", rito: null },
   { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
 ];
+
+const MESI_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -455,6 +466,867 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     endpoint: "/calc/giorni-tra-date",
     risultato: (r) => [["Giorni", String(r.giorni)]],
   },
+  "eta-anagrafica": {
+    campi: [
+      { tipo: "data", key: "data_nascita", label: "Data di nascita" },
+      { tipo: "data_opzionale", key: "data_riferimento", label: "Data di riferimento (default oggi)" },
+    ],
+    endpoint: "/calc/eta-anagrafica",
+    buildBody: (f) => ({ data_nascita: f.data_nascita, data_riferimento: f.data_riferimento || null }),
+    risultato: (r) => [["Età", `${r.anni} anni, ${r.mesi} mesi, ${r.giorni} giorni`]],
+  },
+  "aggiungi-giorni-lavorativi": {
+    campi: [
+      { tipo: "data", key: "data", label: "Data di partenza" },
+      { tipo: "numero", key: "numero_giorni", label: "Numero di giorni", default: "" },
+      { tipo: "scelta", key: "direzione", label: "Direzione", default: "dopo", opzioni: [
+        { value: "dopo", label: "Dopo (in avanti)" }, { value: "prima", label: "Prima (a ritroso)" },
+      ] },
+      { tipo: "titolo", key: "escludi_titolo", label: "Escludi dal conteggio:" },
+      { tipo: "bool", key: "escludi_sabati", label: "Sabati", default: true },
+      { tipo: "bool", key: "escludi_domeniche", label: "Domeniche", default: true },
+      { tipo: "bool", key: "escludi_festivi", label: "Festivi", default: true },
+      { tipo: "bool", key: "escludi_chiusura_estiva", label: "Chiusura estiva (1-31 agosto)", default: false },
+    ],
+    endpoint: "/calc/aggiungi-giorni-lavorativi",
+    buildBody: (f) => ({
+      data: f.data, numero_giorni: parseNumeroIt(f.numero_giorni), direzione: f.direzione,
+      escludi_sabati: f.escludi_sabati, escludi_domeniche: f.escludi_domeniche,
+      escludi_festivi: f.escludi_festivi, escludi_chiusura_estiva: f.escludi_chiusura_estiva,
+    }),
+    risultato: (r) => [["Data calcolata", isoToDataIt(r.data_calcolata)]],
+    scadenze: (r) => [{ titolo: "Data calcolata (giorni lavorativi)", data: r.data_calcolata }],
+  },
+  "termini-separazione-divorzio": {
+    campi: [
+      { tipo: "data", key: "data_udienza", label: "Data udienza" },
+      { tipo: "scelta", key: "tipo", label: "Fase", default: "473bis17", opzioni: [
+        { value: "473bis17", label: "Memorie (udienza di prima comparizione, art. 473-bis.17 c.p.c.)" },
+        { value: "473bis28", label: "Comparse e repliche (udienza di discussione, art. 473-bis.28 c.p.c.)" },
+      ] },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+    ],
+    endpoint: "/calc/termini-separazione-divorzio",
+    risultato: (r) => [
+      ["Primo termine", isoToDataIt(r.primo_termine)],
+      ["Secondo termine", isoToDataIt(r.secondo_termine)],
+      ["Terzo termine", isoToDataIt(r.terzo_termine)],
+    ],
+    scadenze: (r) => [
+      { titolo: "Separazione/divorzio — primo termine", data: r.primo_termine },
+      { titolo: "Separazione/divorzio — secondo termine", data: r.secondo_termine },
+      { titolo: "Separazione/divorzio — terzo termine", data: r.terzo_termine },
+    ],
+  },
+  "termini-esecuzioni": {
+    campi: [
+      { tipo: "scelta", key: "tipo", label: "Tipo di pignoramento", default: "immobiliare", opzioni: [
+        { value: "mobiliare", label: "Mobiliare" }, { value: "immobiliare", label: "Immobiliare" },
+        { value: "presso_terzi", label: "Presso terzi" }, { value: "autoveicoli", label: "Autoveicoli" },
+      ] },
+      { tipo: "data", key: "data_consegna_verbale", label: "Data consegna verbale di pignoramento (UNEP)" },
+      { tipo: "data", key: "data_compimento_pignoramento", label: "Data compimento pignoramento", mostraSe: (f) => f.tipo !== "presso_terzi" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+    ],
+    endpoint: "/calc/termini-esecuzioni",
+    buildBody: (f) => ({
+      tipo: f.tipo, data_consegna_verbale: f.data_consegna_verbale,
+      data_compimento_pignoramento: f.data_compimento_pignoramento || null, escludi_feriale: f.escludi_feriale,
+    }),
+    risultato: (r) => [
+      ["Primo termine", isoToDataIt(r.primo_termine)],
+      ["Secondo termine", isoToDataIt(r.secondo_termine)],
+    ],
+    scadenze: (r) => [
+      { titolo: "Termini esecuzione — primo termine", data: r.primo_termine },
+      { titolo: "Termini esecuzione — secondo termine", data: r.secondo_termine },
+    ],
+  },
+  "termini-procedimento-semplificato": {
+    campi: [
+      { tipo: "data", key: "data_udienza", label: "Data della prima udienza" },
+      { tipo: "numero", key: "giorni_primo_termine", label: "Giorni per il primo termine", default: "" },
+      { tipo: "numero", key: "giorni_secondo_termine", label: "Giorni per il secondo termine", default: "" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+      { tipo: "bool", key: "prudenziale", label: "Calcolo prudenziale (termine più favorevole)", default: false },
+    ],
+    endpoint: "/calc/termini-procedimento-semplificato",
+    buildBody: (f) => ({
+      data_udienza: f.data_udienza, giorni_primo_termine: parseNumeroIt(f.giorni_primo_termine),
+      giorni_secondo_termine: parseNumeroIt(f.giorni_secondo_termine),
+      escludi_feriale: f.escludi_feriale, escludi_covid: f.escludi_covid, prudenziale: f.prudenziale,
+    }),
+    risultato: (r) => [
+      ["Primo termine", isoToDataIt(r.primo_termine)],
+      ["Secondo termine", isoToDataIt(r.secondo_termine)],
+    ],
+    scadenze: (r) => [
+      { titolo: "Procedimento semplificato — primo termine", data: r.primo_termine },
+      { titolo: "Procedimento semplificato — secondo termine", data: r.secondo_termine },
+    ],
+  },
+  "termini-deposito-appello": {
+    campi: [
+      { tipo: "data", key: "data_udienza", label: "Data udienza di precisazione delle conclusioni" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+    ],
+    endpoint: "/calc/termini-deposito-appello",
+    risultato: (r) => [
+      ["Note di precisazione delle conclusioni", isoToDataIt(r.note_precisazione_conclusioni)],
+      ["Comparsa conclusionale", isoToDataIt(r.comparsa_conclusionale)],
+      ["Memoria di replica", isoToDataIt(r.memoria_replica)],
+    ],
+    scadenze: (r) => [
+      { titolo: "Note di precisazione delle conclusioni", data: r.note_precisazione_conclusioni },
+      { titolo: "Comparsa conclusionale", data: r.comparsa_conclusionale },
+      { titolo: "Memoria di replica", data: r.memoria_replica },
+    ],
+  },
+  "termini-deposito-ctu": {
+    campi: [
+      { tipo: "data", key: "data_iniziale", label: "Data inizio operazioni peritali" },
+      { tipo: "numero", key: "giorni_bozza", label: "Giorni per l'invio della bozza ai CTP", default: "20" },
+      { tipo: "numero", key: "giorni_osservazioni", label: "Giorni per le osservazioni dei CTP", default: "15" },
+      { tipo: "numero", key: "giorni_deposito", label: "Giorni per il deposito della relazione definitiva", default: "15" },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "prudenziale", label: "Calcolo prudenziale (termine più favorevole)", default: false },
+    ],
+    endpoint: "/calc/termini-deposito-ctu",
+    buildBody: (f) => ({
+      data_iniziale: f.data_iniziale, giorni_bozza: parseNumeroIt(f.giorni_bozza),
+      giorni_osservazioni: parseNumeroIt(f.giorni_osservazioni), giorni_deposito: parseNumeroIt(f.giorni_deposito),
+      escludi_feriale: f.escludi_feriale, prudenziale: f.prudenziale,
+    }),
+    risultato: (r) => [
+      ["Termine bozza", isoToDataIt(r.termine_bozza)],
+      ["Termine osservazioni", isoToDataIt(r.termine_osservazioni)],
+      ["Termine deposito", isoToDataIt(r.termine_deposito)],
+    ],
+    scadenze: (r) => [
+      { titolo: "CTU — invio bozza ai CTP", data: r.termine_bozza },
+      { titolo: "CTU — osservazioni dei CTP", data: r.termine_osservazioni },
+      { titolo: "CTU — deposito relazione definitiva", data: r.termine_deposito },
+    ],
+  },
+  "scadenze-multe": {
+    campi: [
+      { tipo: "scelta", key: "stato", label: "Stato della multa", default: "contestata", opzioni: [
+        { value: "contestata", label: "Contestata immediatamente (verbale consegnato a mano)" },
+        { value: "notificata", label: "Notificata (verbale ricevuto per posta/PEC)" },
+        { value: "ricorso_prefetto_consegnato", label: "Ricorso al Prefetto consegnato a mano" },
+        { value: "ricorso_prefetto_raccomandata", label: "Ricorso al Prefetto inviato per raccomandata" },
+        { value: "ricorso_gdp_presentato", label: "Ricorso al Giudice di Pace presentato" },
+        { value: "prefetto_respinto", label: "Ricorso al Prefetto respinto" },
+      ] },
+      { tipo: "data", key: "data_riferimento", label: "Data di riferimento" },
+      { tipo: "scelta", key: "azione", label: "Cosa vuoi fare", default: "pagare",
+        mostraSe: (f) => f.stato === "contestata" || f.stato === "notificata",
+        opzioni: [
+          { value: "pagare", label: "Pagare (eventualmente con sconto)" },
+          { value: "ricorso_prefetto", label: "Fare ricorso al Prefetto" },
+          { value: "ricorso_gdp", label: "Fare ricorso al Giudice di Pace" },
+        ] },
+      { tipo: "scelta", key: "inoltro", label: "Modalità di inoltro del ricorso", default: "organo_accertatore",
+        mostraSe: (f) => f.stato === "ricorso_prefetto_raccomandata",
+        opzioni: [
+          { value: "organo_accertatore", label: "All'organo accertatore" },
+          { value: "prefetto_diretto", label: "Direttamente al Prefetto" },
+        ] },
+      { tipo: "numero", key: "sanzione", label: "Importo della sanzione € (opzionale, per lo sconto del 30%)", default: "",
+        mostraSe: (f) => (f.stato === "contestata" || f.stato === "notificata") && f.azione === "pagare" },
+    ],
+    endpoint: "/calc/scadenze-multe",
+    buildBody: (f) => ({
+      stato: f.stato, data_riferimento: f.data_riferimento,
+      azione: (f.stato === "contestata" || f.stato === "notificata") ? f.azione : null,
+      inoltro: f.stato === "ricorso_prefetto_raccomandata" ? f.inoltro : null,
+      sanzione: f.sanzione ? parseNumeroIt(f.sanzione) : null,
+    }),
+    risultato: (r) => r.nota ? [["Nota", r.nota]] : [
+      ...(r.scadenza_ricorso_prefetto ? ([["Scadenza ricorso al Prefetto", isoToDataIt(r.scadenza_ricorso_prefetto)]] as [string, string][]) : []),
+      ...(r.scadenza_ricorso_gdp ? ([["Scadenza ricorso al Giudice di Pace", isoToDataIt(r.scadenza_ricorso_gdp)]] as [string, string][]) : []),
+      ...(r.scadenza_pagamento ? ([
+        ["Scadenza pagamento", isoToDataIt(r.scadenza_pagamento)],
+        ["Scadenza pagamento scontato (5gg)", isoToDataIt(r.scadenza_sconto)],
+        ...(r.importo_scontato_30pct != null ? ([["Importo scontato del 30%", formatEuro(r.importo_scontato_30pct)]] as [string, string][]) : []),
+      ] as [string, string][]) : []),
+      ...(r.scadenza_silenzio_assenso ? ([["Scadenza per silenzio-assenso", isoToDataIt(r.scadenza_silenzio_assenso)]] as [string, string][]) : []),
+    ],
+  },
+  "prescrizione-reati": {
+    campi: [
+      { tipo: "data", key: "data_reato", label: "Data del reato" },
+      { tipo: "scelta", key: "tipo_pena", label: "Tipo di pena", default: "reclusione", opzioni: [
+        { value: "reclusione", label: "Reclusione" }, { value: "arresto", label: "Arresto" },
+        { value: "multa", label: "Multa" }, { value: "ammenda", label: "Ammenda" },
+      ] },
+      { tipo: "numero", key: "pena_edittale_anni", label: "Pena edittale massima (anni)", default: "", mostraSe: (f) => f.tipo_pena === "reclusione" || f.tipo_pena === "arresto" },
+      { tipo: "bool", key: "raddoppio", label: "Raddoppio dei termini (es. art. 157 c.8 c.p.)", default: false },
+    ],
+    endpoint: "/calc/prescrizione-reati",
+    buildBody: (f) => ({
+      data_reato: f.data_reato, tipo_pena: f.tipo_pena,
+      pena_edittale_anni: (f.tipo_pena === "reclusione" || f.tipo_pena === "arresto") ? parseNumeroIt(f.pena_edittale_anni) : null,
+      raddoppio: f.raddoppio,
+    }),
+    risultato: (r) => [["Termine massimo di prescrizione", isoToDataIt(r.termine_massimo)]],
+    scadenze: (r) => [{ titolo: "Prescrizione del reato", data: r.termine_massimo }],
+  },
+  "fine-pena": {
+    campi: [
+      { tipo: "data", key: "data_inizio", label: "Data di inizio esecuzione della pena" },
+      { tipo: "numero", key: "durata_anni", label: "Durata pena — anni", default: "0" },
+      { tipo: "numero", key: "durata_mesi", label: "Durata pena — mesi", default: "0" },
+      { tipo: "numero", key: "durata_giorni", label: "Durata pena — giorni", default: "0" },
+      { tipo: "bool", key: "liberazione_anticipata", label: "Applica liberazione anticipata (45gg a semestre)", default: false },
+      { tipo: "data_opzionale", key: "data_limite", label: "Calcola fino al (opzionale)", mostraSe: (f) => !!f.liberazione_anticipata },
+      { tipo: "bool", key: "solo_semestri_completi", label: "Conta solo i semestri completi", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
+    ],
+    endpoint: "/calc/fine-pena",
+    buildBody: (f) => ({
+      data_inizio: f.data_inizio, durata_anni: parseNumeroIt(f.durata_anni), durata_mesi: parseNumeroIt(f.durata_mesi),
+      durata_giorni: parseNumeroIt(f.durata_giorni), liberazione_anticipata: f.liberazione_anticipata,
+      data_limite: f.liberazione_anticipata ? (f.data_limite || null) : null,
+      solo_semestri_completi: f.solo_semestri_completi, crediti: [], interruzioni: [],
+    }),
+    risultato: (r) => r.fine_pena_con_liberazione_anticipata ? [
+      ["Fine pena (senza detrazioni)", isoToDataIt(r.fine_pena_senza_detrazioni)],
+      ["Giorni di detrazione spettanti", String(r.giorni_detrazione_spettanti)],
+      ["Fine pena (con liberazione anticipata)", isoToDataIt(r.fine_pena_con_liberazione_anticipata)],
+      ["Termine attivazione ufficio (90gg prima)", isoToDataIt(r.termine_attivazione_ufficio)],
+    ] : [["Fine pena", isoToDataIt(r.fine_pena_senza_detrazioni)]],
+    scadenze: (r) => [{ titolo: "Fine pena", data: r.fine_pena_con_liberazione_anticipata || r.fine_pena_senza_detrazioni }],
+  },
+  "conversione-pena": {
+    campi: [
+      { tipo: "scelta", key: "direzione", label: "Direzione", default: "pecuniaria_a_detentiva", opzioni: [
+        { value: "pecuniaria_a_detentiva", label: "Da pena pecuniaria a detentiva (ragguaglio)" },
+        { value: "detentiva_a_pecuniaria", label: "Da pena detentiva a pecuniaria" },
+      ] },
+      { tipo: "numero", key: "valore_giornaliero", label: "Valore giornaliero di ragguaglio €", default: "250" },
+      { tipo: "numero", key: "pena_pecuniaria", label: "Pena pecuniaria da convertire €", default: "", mostraSe: (f) => f.direzione === "pecuniaria_a_detentiva" },
+      { tipo: "titolo", key: "tit_congiunta", label: "Pena detentiva congiunta (se presente):", mostraSe: (f) => f.direzione === "pecuniaria_a_detentiva" },
+      { tipo: "numero", key: "pena_congiunta_anni", label: "Anni", default: "0", mostraSe: (f) => f.direzione === "pecuniaria_a_detentiva" },
+      { tipo: "numero", key: "pena_congiunta_mesi", label: "Mesi", default: "0", mostraSe: (f) => f.direzione === "pecuniaria_a_detentiva" },
+      { tipo: "numero", key: "pena_congiunta_giorni", label: "Giorni", default: "0", mostraSe: (f) => f.direzione === "pecuniaria_a_detentiva" },
+      { tipo: "titolo", key: "tit_pena", label: "Pena da convertire:", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_anni", label: "Anni", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_mesi", label: "Mesi", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_giorni", label: "Giorni", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "titolo", key: "tit_scontata", label: "Pena già scontata (se presente):", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_scontata_anni", label: "Anni", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_scontata_mesi", label: "Mesi", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+      { tipo: "numero", key: "pena_scontata_giorni", label: "Giorni", default: "0", mostraSe: (f) => f.direzione === "detentiva_a_pecuniaria" },
+    ],
+    endpoint: "/calc/conversione-pena",
+    buildBody: (f) => ({
+      direzione: f.direzione, valore_giornaliero: parseNumeroIt(f.valore_giornaliero),
+      pena_pecuniaria: f.direzione === "pecuniaria_a_detentiva" ? parseNumeroIt(f.pena_pecuniaria) : null,
+      pena_congiunta_anni: parseNumeroIt(f.pena_congiunta_anni), pena_congiunta_mesi: parseNumeroIt(f.pena_congiunta_mesi), pena_congiunta_giorni: parseNumeroIt(f.pena_congiunta_giorni),
+      pena_anni: parseNumeroIt(f.pena_anni), pena_mesi: parseNumeroIt(f.pena_mesi), pena_giorni: parseNumeroIt(f.pena_giorni),
+      pena_scontata_anni: parseNumeroIt(f.pena_scontata_anni), pena_scontata_mesi: parseNumeroIt(f.pena_scontata_mesi), pena_scontata_giorni: parseNumeroIt(f.pena_scontata_giorni),
+    }),
+    risultato: (r) => r.pena_complessiva_anni != null ? [
+      ["Pena pecuniaria", formatEuro(r.pena_pecuniaria)],
+      ["Pena complessiva", `${r.pena_complessiva_anni}a ${r.pena_complessiva_mesi}m ${r.pena_complessiva_giorni}gg`],
+    ] : [
+      ["Pena residua", `${r.pena_residua_anni}a ${r.pena_residua_mesi}m ${r.pena_residua_giorni}gg`],
+      ["Pena pecuniaria equivalente", formatEuro(r.pena_pecuniaria)],
+    ],
+  },
+  "interessi-acconti": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Data iniziale" },
+      { tipo: "data", key: "data_fine", label: "Data finale" },
+      { tipo: "scelta", key: "tipo_interesse", label: "Tipo di interesse", default: "legale", opzioni: [
+        { value: "legale", label: "Legale (art. 1284 c.c.)" }, { value: "moratori", label: "Moratori (D.Lgs. 231/2002)" }, { value: "fisso", label: "Tasso fisso" },
+      ] },
+      { tipo: "numero", key: "tasso_fisso_pct", label: "Tasso fisso annuo %", default: "", mostraSe: (f) => f.tipo_interesse === "fisso" },
+      { tipo: "bool", key: "normativa_previgente", label: "Normativa previgente (maggiorazione 7 punti, ante 2013)", default: false, mostraSe: (f) => f.tipo_interesse === "moratori" },
+      { tipo: "numero", key: "maggiorazione_extra_pct", label: "Maggiorazione extra (0, 2 o 4 punti, art. 62 c.3 D.L. 1/2012)", default: "0", mostraSe: (f) => f.tipo_interesse === "moratori" },
+    ],
+    endpoint: "/calc/interessi-acconti",
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine, tipo_interesse: f.tipo_interesse,
+      tasso_fisso_pct: f.tipo_interesse === "fisso" ? parseNumeroIt(f.tasso_fisso_pct) : null,
+      normativa_previgente: f.normativa_previgente, maggiorazione_extra_pct: parseNumeroIt(f.maggiorazione_extra_pct),
+      movimenti: [],
+    }),
+    risultato: (r) => [
+      ["Totale interessi", formatEuro(r.totale_interessi)],
+      ["Credito residuo", formatEuro(r.credito_residuo)],
+      ["Interessi residui", formatEuro(r.interessi_residui)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "interessi-corso-causa": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Decorrenza del credito" },
+      { tipo: "data", key: "data_causa", label: "Data della domanda giudiziale" },
+      { tipo: "data", key: "data_fine", label: "Data finale" },
+      { tipo: "numero", key: "tasso_fisso", label: "Tasso di mora convenzionale %, se pattuito (opzionale)", default: "" },
+      { tipo: "bool", key: "rivaluta", label: "Applica rivalutazione monetaria (Cass. SU 1712/1995)", default: true },
+      { tipo: "numero", key: "rivaluta_al_pct", label: "Percentuale di rivalutazione", default: "100", mostraSe: (f) => !!f.rivaluta },
+    ],
+    endpoint: "/calc/interessi-corso-causa",
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_causa: f.data_causa, data_fine: f.data_fine,
+      tasso_fisso: f.tasso_fisso ? parseNumeroIt(f.tasso_fisso) : null,
+      rivaluta: f.rivaluta, rivaluta_al_pct: parseNumeroIt(f.rivaluta_al_pct),
+    }),
+    risultato: (r) => [
+      ["Rivalutazione", formatEuro(r.rivalutazione)],
+      ["Totale interessi", formatEuro(r.totale_interessi)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "interessi-mora-appalti": {
+    campi: [
+      { tipo: "scelta", key: "tipo_ritardo", label: "Tipo di ritardo", default: "certificato_pagamento", opzioni: [
+        { value: "certificato_pagamento", label: "Emissione certificato di pagamento" },
+        { value: "acconto", label: "Pagamento acconto" }, { value: "saldo", label: "Pagamento saldo" },
+      ] },
+      { tipo: "numero", key: "importo", label: "Importo €", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Decorrenza del termine (es. esecuzione lavori/emissione SAL)" },
+      { tipo: "numero", key: "termine_giorni", label: "Termine contrattuale per il pagamento (giorni)", default: "45" },
+      { tipo: "data", key: "data_fine", label: "Data dell'effettivo pagamento" },
+    ],
+    endpoint: "/calc/interessi-mora-appalti",
+    buildBody: (f) => ({
+      tipo_ritardo: f.tipo_ritardo, importo: parseNumeroIt(f.importo), data_inizio: f.data_inizio,
+      termine_giorni: parseNumeroIt(f.termine_giorni), data_fine: f.data_fine,
+    }),
+    risultato: (r) => [
+      ["Interessi legali", formatEuro(r.interessi_legali)],
+      ["Interessi moratori", formatEuro(r.interessi_moratori)],
+      ["Totale interessi", formatEuro(r.totale_interessi)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "maggior-danno": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Data iniziale" },
+      { tipo: "data", key: "data_fine", label: "Data finale" },
+    ],
+    endpoint: "/calc/maggior-danno",
+    buildBody: (f) => ({ capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine, tasso_riferimento: "istat" }),
+    risultato: (r) => [
+      ["Totale interessi legali", formatEuro(r.totale_interessi_legali)],
+      ["Totale maggior danno", formatEuro(r.totale_maggior_danno)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "pignoramento-stipendio-pensione": {
+    campi: [
+      { tipo: "scelta", key: "tipo_importo", label: "Tipo di importo", default: "stipendio", opzioni: [
+        { value: "stipendio", label: "Stipendio" }, { value: "pensione", label: "Pensione" },
+      ] },
+      { tipo: "numero", key: "importo", label: "Importo netto €", default: "" },
+      { tipo: "scelta", key: "freq_importo", label: "Frequenza", default: "mensile", opzioni: [
+        { value: "mensile", label: "Mensile" }, { value: "annuale", label: "Annuale" },
+      ] },
+      { tipo: "scelta", key: "mensilita", label: "Numero di mensilità annue", default: "13", mostraSe: (f) => f.freq_importo === "annuale", opzioni: [
+        { value: "12", label: "12" }, { value: "13", label: "13" }, { value: "14", label: "14" },
+      ] },
+      { tipo: "bool", key: "accredito_conto", label: "Accreditato su conto corrente", default: false },
+      { tipo: "numero", key: "giacenza_conto", label: "Giacenza media sul conto €", default: "", mostraSe: (f) => !!f.accredito_conto },
+      { tipo: "bool", key: "credito_alimentare", label: "Credito di natura alimentare", default: false },
+      { tipo: "scelta", key: "tipo_creditore", label: "Tipo di creditore", default: "ordinario", opzioni: [
+        { value: "ordinario", label: "Ordinario" }, { value: "agenzia_entrate", label: "Agenzia delle Entrate - Riscossione" },
+      ] },
+      { tipo: "numero", key: "totale_da_pignorare", label: "Debito totale da recuperare € (opzionale)", default: "" },
+    ],
+    endpoint: "/calc/pignoramento-stipendio-pensione",
+    buildBody: (f) => ({
+      tipo_importo: f.tipo_importo, importo: parseNumeroIt(f.importo), freq_importo: f.freq_importo,
+      mensilita: parseNumeroIt(f.mensilita) || 13, accredito_conto: f.accredito_conto,
+      giacenza_conto: f.accredito_conto && f.giacenza_conto ? parseNumeroIt(f.giacenza_conto) : null,
+      credito_alimentare: f.credito_alimentare, tipo_creditore: f.tipo_creditore,
+      totale_da_pignorare: f.totale_da_pignorare ? parseNumeroIt(f.totale_da_pignorare) : null,
+    }),
+    risultato: (r) => [
+      ["Importo mensile", formatEuro(r.importo_mensile)],
+      ...(r.minimo_vitale != null ? ([["Minimo vitale (non pignorabile)", formatEuro(r.minimo_vitale)]] as [string, string][]) : []),
+      ["Frazione pignorabile", r.frazione_pignorabile],
+      ["Pignorabile mensile", formatEuro(r.pignorabile_mensile)],
+      ["Disponibile mensile", formatEuro(r.disponibile_mensile)],
+      ...(r.massimo_pignorabile_dal_conto != null ? ([["Massimo pignorabile dal conto", formatEuro(r.massimo_pignorabile_dal_conto)]] as [string, string][]) : []),
+      ...(r.mensilita_piene != null ? ([["Mensilità piene necessarie", String(r.mensilita_piene)]] as [string, string][]) : []),
+      ...(r.ultima_mensilita_residua != null ? ([["Ultima mensilità residua", formatEuro(r.ultima_mensilita_residua)]] as [string, string][]) : []),
+    ],
+  },
+  "equo-indennizzo": {
+    campi: [
+      { tipo: "numero", key: "stipendio_tabellare_annuo", label: "Stipendio tabellare annuo lordo €", default: "" },
+      { tipo: "scelta", key: "categoria", label: "Categoria di menomazione", default: "5", opzioni: [
+        { value: "1", label: "1ª categoria" }, { value: "2", label: "2ª categoria" }, { value: "3", label: "3ª categoria" },
+        { value: "4", label: "4ª categoria" }, { value: "5", label: "5ª categoria" }, { value: "6", label: "6ª categoria" },
+        { value: "7", label: "7ª categoria" }, { value: "8", label: "8ª categoria" }, { value: "9", label: "9ª categoria (indennità una tantum)" },
+      ] },
+      { tipo: "numero", key: "eta", label: "Età", default: "" },
+    ],
+    endpoint: "/calc/equo-indennizzo",
+    buildBody: (f) => ({ stipendio_tabellare_annuo: parseNumeroIt(f.stipendio_tabellare_annuo), categoria: parseNumeroIt(f.categoria), eta: parseNumeroIt(f.eta) }),
+    risultato: (r) => [
+      ["Percentuale di categoria", `${r.percentuale_categoria}%`],
+      ["Riduzione per età", `${r.riduzione_eta_pct}%`],
+      ["Equo indennizzo", formatEuro(r.equo_indennizzo)],
+    ],
+  },
+  "compenso-curatore-fallimentare": {
+    campi: [
+      { tipo: "numero", key: "attivo_realizzato", label: "Attivo realizzato €", default: "0" },
+      { tipo: "numero", key: "passivo_accertato", label: "Passivo accertato €", default: "0" },
+      { tipo: "bool", key: "esercizio_provvisorio", label: "Esercizio provvisorio dell'impresa", default: false },
+      { tipo: "numero", key: "utili_netti", label: "Utili netti dell'esercizio provvisorio €", default: "0", mostraSe: (f) => !!f.esercizio_provvisorio },
+      { tipo: "numero", key: "ricavi_lordi", label: "Ricavi lordi dell'esercizio provvisorio €", default: "0", mostraSe: (f) => !!f.esercizio_provvisorio },
+      { tipo: "numero", key: "spese_documentate", label: "Spese documentate €", default: "0" },
+      { tipo: "numero", key: "indennita_missione", label: "Indennità di missione €", default: "0" },
+    ],
+    endpoint: "/calc/compenso-curatore-fallimentare",
+    buildBody: (f) => ({
+      attivo_realizzato: parseNumeroIt(f.attivo_realizzato), passivo_accertato: parseNumeroIt(f.passivo_accertato),
+      esercizio_provvisorio: f.esercizio_provvisorio, utili_netti: parseNumeroIt(f.utili_netti), ricavi_lordi: parseNumeroIt(f.ricavi_lordi),
+      spese_documentate: parseNumeroIt(f.spese_documentate), indennita_missione: parseNumeroIt(f.indennita_missione),
+    }),
+    risultato: (r) => [
+      ["Compenso minimo", formatEuro(r.compenso_minimo)],
+      ["Compenso massimo", formatEuro(r.compenso_massimo)],
+      ["Totale minimo", formatEuro(r.totale_minimo)],
+      ["Totale massimo", formatEuro(r.totale_massimo)],
+      ["Totale medio", formatEuro(r.totale_medio)],
+    ],
+  },
+  "compenso-delegati-vendite": {
+    campi: [
+      { tipo: "scelta", key: "tipo_vendita", label: "Tipo di vendita", default: "immobili", opzioni: [
+        { value: "immobili", label: "Immobili" }, { value: "mobili", label: "Mobili" },
+      ] },
+      { tipo: "numero", key: "valore", label: "Valore di aggiudicazione €", default: "0" },
+      { tipo: "numero", key: "numero_debitori", label: "Numero debitori (fase distribuzione)", default: "1" },
+      { tipo: "numero", key: "spese_registrazione", label: "Spese di registrazione €", default: "0" },
+      { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
+      { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: true },
+      { tipo: "bool", key: "applica_contributo_cassa", label: "Applica contributo cassa previdenziale (4%)", default: true },
+    ],
+    endpoint: "/calc/compenso-delegati-vendite",
+    buildBody: (f) => ({
+      tipo_vendita: f.tipo_vendita, valore: parseNumeroIt(f.valore), fasi_selezionate: [1, 2, 3, 4],
+      numero_debitori: parseNumeroIt(f.numero_debitori) || 1, spese_registrazione: parseNumeroIt(f.spese_registrazione),
+      altre_spese: parseNumeroIt(f.altre_spese), applica_iva: f.applica_iva, pct_iva: 22.0,
+      applica_contributo_cassa: f.applica_contributo_cassa, pct_contributo_cassa: 4.0,
+    }),
+    risultato: (r) => [
+      ["Compenso tabellare", formatEuro(r.compenso_tabellare)],
+      ["Totale imponibile", formatEuro(r.totale_imponibile)],
+      ["IVA", formatEuro(r.iva)],
+      ["Netto a pagare", formatEuro(r.netto_a_pagare)],
+    ],
+  },
+  "compenso-mediatore-familiare": {
+    campi: [
+      { tipo: "scelta", key: "complessita", label: "Complessità", default: "media", opzioni: [
+        { value: "bassa", label: "Bassa" }, { value: "media", label: "Media" }, { value: "alta", label: "Alta" },
+      ] },
+      { tipo: "numero", key: "numero_incontri", label: "Numero di incontri", default: "1" },
+      { tipo: "numero", key: "spese_esenti", label: "Spese esenti €", default: "0" },
+      { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €", default: "0" },
+      { tipo: "scelta", key: "cassa", label: "Cassa previdenziale", default: "", opzioni: [
+        { value: "", label: "Nessuna" }, { value: "enpap", label: "ENPAP" }, { value: "enpam", label: "ENPAM" }, { value: "inps_gestione_separata", label: "INPS gestione separata" },
+      ] },
+      { tipo: "bool", key: "regime_semplificato", label: "Regime fiscale semplificato (no IVA)", default: false },
+    ],
+    endpoint: "/calc/compenso-mediatore-familiare",
+    buildBody: (f) => ({
+      complessita: f.complessita, numero_incontri: parseNumeroIt(f.numero_incontri) || 1,
+      spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+      cassa: f.cassa || null, regime_semplificato: f.regime_semplificato,
+    }),
+    risultato: (r) => [
+      ["Compenso", formatEuro(r.compenso)],
+      ["Totale imponibile", formatEuro(r.totale_imponibile)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "parametri-stragiudiziali": {
+    campi: [
+      { tipo: "scelta", key: "competenza", label: "Tipo di attività", default: "assistenza", opzioni: [
+        { value: "assistenza", label: "Assistenza stragiudiziale" }, { value: "mediazione", label: "Mediazione e negoziazione assistita" },
+      ] },
+      { tipo: "bool", key: "valore_indeterminabile", label: "Valore indeterminabile", default: false },
+      { tipo: "numero", key: "valore_causa", label: "Valore della pratica €", default: "", mostraSe: (f) => !f.valore_indeterminabile },
+      { tipo: "scelta", key: "complessita_indeterminabile", label: "Complessità", default: "media", mostraSe: (f) => !!f.valore_indeterminabile, opzioni: [
+        { value: "bassa", label: "Bassa" }, { value: "media", label: "Media" }, { value: "alta", label: "Alta" }, { value: "particolare_importanza", label: "Particolare importanza" },
+      ] },
+    ],
+    endpoint: "/calc/parametri-stragiudiziali",
+    buildBody: (f) => ({
+      competenza: f.competenza, valore_causa: f.valore_indeterminabile ? 0 : parseNumeroIt(f.valore_causa),
+      valore_indeterminabile: f.valore_indeterminabile, complessita_indeterminabile: f.complessita_indeterminabile,
+    }),
+    risultato: (r) => [
+      ["Totale (valore medio)", formatEuro(r.totale_medio)],
+      ["Totale minimo (-50%)", formatEuro(r.totale_minimo_discrezionale)],
+      ["Totale massimo (+50%)", formatEuro(r.totale_massimo_discrezionale)],
+    ],
+  },
+  "quote-ereditarie": {
+    campi: [
+      { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
+        { value: "legittima", label: "Successione legittima (senza testamento)" }, { value: "testamentaria", label: "Quota di legittima (con testamento)" },
+      ] },
+      { tipo: "numero", key: "patrimonio", label: "Patrimonio ereditario €", default: "" },
+      { tipo: "bool", key: "coniuge", label: "Coniuge superstite", default: false },
+      { tipo: "numero", key: "numero_figli", label: "Numero di figli", default: "0" },
+      { tipo: "numero", key: "numero_ascendenti", label: "Numero di ascendenti (genitori, max 2)", default: "0" },
+      { tipo: "numero", key: "numero_fratelli", label: "Numero di fratelli", default: "0", mostraSe: (f) => f.modalita === "legittima" },
+      { tipo: "numero", key: "numero_parenti", label: "Numero di altri parenti entro il 6° grado", default: "0", mostraSe: (f) => f.modalita === "legittima" },
+    ],
+    endpoint: "/calc/quote-ereditarie",
+    buildBody: (f) => ({
+      modalita: f.modalita, patrimonio: parseNumeroIt(f.patrimonio), coniuge: f.coniuge,
+      numero_figli: parseNumeroIt(f.numero_figli), numero_ascendenti: parseNumeroIt(f.numero_ascendenti),
+      numero_fratelli: f.modalita === "legittima" ? parseNumeroIt(f.numero_fratelli) : 0,
+      numero_parenti: f.modalita === "legittima" ? parseNumeroIt(f.numero_parenti) : 0,
+    }),
+    risultato: (r) => [
+      ...Object.entries(r.eredi || {}).map(([cat, v]: [string, any]) => [
+        `${cat} (quota ${v.quota_pct}%)`, `${formatEuro(v.importo_totale)}${v.numero > 1 ? ` — ${formatEuro(v.importo_ciascuno)} ciascuno` : ""}`,
+      ] as [string, string]),
+      ...(r.quota_disponibile_importo != null ? ([["Quota disponibile", formatEuro(r.quota_disponibile_importo)]] as [string, string][]) : []),
+    ],
+  },
+  "usufrutto": {
+    campi: [
+      { tipo: "numero", key: "valore_piena_proprieta", label: "Valore della piena proprietà €", default: "" },
+      { tipo: "scelta", key: "tipo_calcolo", label: "Tipo di usufrutto", default: "vitalizio", opzioni: [
+        { value: "vitalizio", label: "Vitalizio (per età)" }, { value: "termine", label: "A termine (per durata)" },
+      ] },
+      { tipo: "numero", key: "eta", label: "Età dell'usufruttuario", default: "", mostraSe: (f) => f.tipo_calcolo === "vitalizio" },
+      { tipo: "numero", key: "durata", label: "Durata (anni)", default: "", mostraSe: (f) => f.tipo_calcolo === "termine" },
+    ],
+    endpoint: "/calc/usufrutto",
+    buildBody: (f) => ({
+      valore_piena_proprieta: parseNumeroIt(f.valore_piena_proprieta), tipo_calcolo: f.tipo_calcolo,
+      eta: f.tipo_calcolo === "vitalizio" ? parseNumeroIt(f.eta) : null, durata: f.tipo_calcolo === "termine" ? parseNumeroIt(f.durata) : null,
+    }),
+    risultato: (r) => [
+      ["Valore usufrutto", formatEuro(r.valore_usufrutto)],
+      ["Valore nuda proprietà", formatEuro(r.valore_nuda_proprieta)],
+    ],
+  },
+  "valore-catastale": {
+    campi: [
+      { tipo: "scelta", key: "categoria_catastale", label: "Categoria catastale", default: "A/2", cercabile: true, opzioni: [
+        "A/1", "A/2", "A/3", "A/4", "A/5", "A/6", "A/7", "A/8", "A/9", "A/11",
+        "B/1", "B/2", "B/3", "B/4", "B/5", "B/6", "B/7", "B/8",
+        "C/1", "C/2", "C/3", "C/4", "C/5", "C/6", "C/7",
+        "D/1", "D/2", "D/3", "D/4", "D/5", "D/6", "D/7", "D/8", "D/9", "D/10",
+        "E/1", "E/2", "E/3", "E/4", "E/5", "E/6", "E/7", "E/8", "E/9",
+        "T",
+      ].map((v) => ({ value: v, label: v === "T" ? "Terreni" : v })) },
+      { tipo: "numero", key: "rendita_catastale", label: "Rendita catastale (o reddito dominicale per i terreni) €", default: "" },
+      { tipo: "bool", key: "abitazione_principale", label: "Abitazione principale (non di lusso)", default: false },
+    ],
+    endpoint: "/calc/valore-catastale",
+    buildBody: (f) => ({ categoria_catastale: f.categoria_catastale, rendita_catastale: parseNumeroIt(f.rendita_catastale), abitazione_principale: f.abitazione_principale }),
+    risultato: (r) => [
+      ["Rendita rivalutata", formatEuro(r.rendita_rivalutata)],
+      ["Moltiplicatore catastale", String(r.moltiplicatore_catastale)],
+      ["Valore catastale", formatEuro(r.valore_catastale)],
+    ],
+  },
+  "imposte-compravendita-immobiliare": {
+    campi: [
+      { tipo: "scelta", key: "tipo_immobile", label: "Tipo di immobile", default: "prima_casa", opzioni: [
+        { value: "prima_casa", label: "Prima casa" }, { value: "abitazione_secondaria", label: "Abitazione secondaria" }, { value: "lusso", label: "Immobile di lusso" },
+      ] },
+      { tipo: "scelta", key: "venditore", label: "Venditore", default: "privato", opzioni: [
+        { value: "privato", label: "Privato" }, { value: "costruttrice_entro_5_anni", label: "Impresa costruttrice, entro 5 anni dal fine lavori" },
+        { value: "costruttrice_oltre_5_anni", label: "Impresa costruttrice, oltre 5 anni dal fine lavori" }, { value: "non_costruttrice", label: "Impresa non costruttrice" },
+      ] },
+      { tipo: "numero", key: "valore", label: "Prezzo (o valore catastale) €", default: "" },
+    ],
+    endpoint: "/calc/imposte-compravendita-immobiliare",
+    buildBody: (f) => ({ tipo_immobile: f.tipo_immobile, venditore: f.venditore, valore: parseNumeroIt(f.valore) }),
+    risultato: (r) => [
+      ...(r.iva > 0 ? ([["IVA", formatEuro(r.iva)]] as [string, string][]) : []),
+      ["Imposta di registro", formatEuro(r.imposta_registro)],
+      ["Imposta ipotecaria", formatEuro(r.imposta_ipotecaria)],
+      ["Imposta catastale", formatEuro(r.imposta_catastale)],
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "tassa-registro-locazione": {
+    campi: [
+      { tipo: "scelta", key: "tipo_immobile", label: "Tipo di immobile", default: "abitativo", opzioni: [
+        { value: "abitativo", label: "Abitativo" }, { value: "strumentale", label: "Strumentale" }, { value: "fondo_rustico", label: "Fondo rustico" }, { value: "altro", label: "Altro" },
+      ] },
+      { tipo: "numero", key: "durata_anni", label: "Durata del contratto (anni)", default: "" },
+      { tipo: "numero", key: "canone_annuo", label: "Canone annuo €", default: "" },
+      { tipo: "bool", key: "canone_concordato", label: "Canone concordato (-30%)", default: false, mostraSe: (f) => f.tipo_immobile === "abitativo" },
+      { tipo: "bool", key: "soggetto_iva", label: "Locatore soggetto IVA", default: false, mostraSe: (f) => f.tipo_immobile === "strumentale" },
+      { tipo: "scelta", key: "pagamento", label: "Modalità di pagamento", default: "rateale", opzioni: [
+        { value: "rateale", label: "Rateale (anno per anno)" }, { value: "unica_soluzione", label: "Unica soluzione (per l'intera durata)" },
+      ] },
+    ],
+    endpoint: "/calc/tassa-registro-locazione",
+    buildBody: (f) => ({
+      tipo_immobile: f.tipo_immobile, durata_anni: parseNumeroIt(f.durata_anni), canone_annuo: parseNumeroIt(f.canone_annuo),
+      canone_concordato: f.tipo_immobile === "abitativo" ? f.canone_concordato : false,
+      soggetto_iva: f.tipo_immobile === "strumentale" ? f.soggetto_iva : false, pagamento: f.pagamento,
+    }),
+    risultato: (r) => r.pagamento === "unica_soluzione" ? [
+      ["Imposta calcolata", formatEuro(r.imposta_calcolata)],
+      ["Sconto", formatEuro(r.sconto)],
+      ["Imposta da versare", formatEuro(r.imposta_da_versare)],
+    ] : [
+      ["Prima rata", formatEuro(r.prima_rata)],
+      ["Rata successiva (annuale)", formatEuro(r.rata_successiva)],
+      ["Imposta complessiva", formatEuro(r.imposta_complessiva)],
+    ],
+  },
+  "danno-biologico-lieve-entita": {
+    campi: [
+      { tipo: "numero", key: "punti", label: "Punti di invalidità (0-9, anche con decimali 0,25/0,5/0,75)", default: "" },
+      { tipo: "numero", key: "eta", label: "Età del danneggiato", default: "" },
+      { tipo: "numero", key: "giorni_invalidita_totale", label: "Giorni di invalidità assoluta (ITT)", default: "0" },
+      { tipo: "numero", key: "pct_danno_morale", label: "Personalizzazione per danno morale (%)", default: "0" },
+      { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
+      { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
+    ],
+    endpoint: "/calc/danno-biologico-lieve-entita",
+    buildBody: (f) => ({
+      punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta), giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale),
+      giorni_invalidita_parziale: [], pct_danno_morale: parseNumeroIt(f.pct_danno_morale), danno_morale_su_temporanea: true,
+      spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
+    }),
+    risultato: (r) => [
+      ["Danno biologico permanente", formatEuro(r.danno_biologico_permanente)],
+      ["Danno biologico temporaneo", formatEuro(r.danno_biologico_temporaneo)],
+      ...(r.danno_morale > 0 ? ([["Danno morale", formatEuro(r.danno_morale)]] as [string, string][]) : []),
+      ["Totale", formatEuro(r.totale)],
+    ],
+  },
+  "danno-biologico-macropermanenti": {
+    campi: [
+      { tipo: "numero", key: "punti", label: "Punti di invalidità permanente (10-100)", default: "" },
+      { tipo: "numero", key: "eta", label: "Età al momento del sinistro", default: "" },
+      { tipo: "scelta", key: "fascia_morale", label: "Fascia danno morale", default: "media", opzioni: [
+        { value: "nessuna", label: "Nessuna" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
+      ] },
+      { tipo: "numero", key: "giorni_invalidita_totale", label: "Giorni di invalidità assoluta (ITT)", default: "0" },
+      { tipo: "numero", key: "pct_personalizzazione_itt", label: "Personalizzazione ITT (30-60%)", default: "45" },
+      { tipo: "numero", key: "pct_personalizzazione_ulteriore", label: "Personalizzazione ulteriore (fino al 30%, art. 138 c.3)", default: "0" },
+      { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
+      { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
+    ],
+    endpoint: "/calc/danno-biologico-macropermanenti",
+    buildBody: (f) => ({
+      punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta), fascia_morale: f.fascia_morale,
+      giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale), giorni_invalidita_parziale: [],
+      pct_personalizzazione_itt: parseNumeroIt(f.pct_personalizzazione_itt), pct_personalizzazione_ulteriore: parseNumeroIt(f.pct_personalizzazione_ulteriore),
+      spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
+    }),
+    risultato: (r) => [
+      ["Danno permanente complessivo", formatEuro(r.danno_permanente_complessivo)],
+      ["Danno temporaneo totale", formatEuro(r.danno_temporaneo_totale)],
+      ["Totale danno non patrimoniale", formatEuro(r.totale_danno_non_patrimoniale)],
+      ["Totale generale", formatEuro(r.totale_generale)],
+    ],
+  },
+  "menomazioni-plurime": {
+    campi: [
+      { tipo: "numero", key: "percentuale_1", label: "Percentuale invalidità menomazione 1", default: "" },
+      { tipo: "numero", key: "percentuale_2", label: "Percentuale invalidità menomazione 2", default: "" },
+      { tipo: "numero", key: "percentuale_3", label: "Percentuale invalidità menomazione 3 (opzionale)", default: "" },
+      { tipo: "numero", key: "percentuale_4", label: "Percentuale invalidità menomazione 4 (opzionale)", default: "" },
+      { tipo: "scelta", key: "metodo", label: "Metodo", default: "balthazard", opzioni: [
+        { value: "balthazard", label: "Balthazard (menomazioni coesistenti)" }, { value: "salomonica", label: "Salomonica (menomazioni concorrenti)" },
+      ] },
+    ],
+    endpoint: "/calc/menomazioni-plurime",
+    validate: (f) => (!f.percentuale_1 || !f.percentuale_2) ? "Inserire almeno due percentuali di invalidità" : null,
+    buildBody: (f) => ({
+      percentuali: [f.percentuale_1, f.percentuale_2, f.percentuale_3, f.percentuale_4].filter((v) => v).map((v) => parseNumeroIt(v)),
+      metodo: f.metodo, decimali: 2,
+    }),
+    risultato: (r) => [["Invalidità totale", `${r.invalidita_totale_pct}%`]],
+  },
+  "danno-perdita-parentale-milano": {
+    campi: [
+      { tipo: "scelta", key: "parentela", label: "Grado di parentela", default: "coniuge", opzioni: [
+        { value: "genitore", label: "Genitore" }, { value: "figlio", label: "Figlio" }, { value: "coniuge", label: "Coniuge" },
+        { value: "unione_civile", label: "Parte dell'unione civile" }, { value: "convivente_fatto", label: "Convivente di fatto" },
+        { value: "fratello", label: "Fratello" }, { value: "nonno", label: "Nonno" }, { value: "nipote", label: "Nipote" }, { value: "zio", label: "Zio" },
+      ] },
+      { tipo: "numero", key: "eta_congiunto", label: "Età del congiunto superstite", default: "" },
+      { tipo: "numero", key: "eta_vittima", label: "Età della vittima al momento del decesso", default: "" },
+      { tipo: "bool", key: "convivenza", label: "Convivenza tra congiunto e vittima", default: false },
+      { tipo: "scelta", key: "durata_convivenza", label: "Durata della convivenza", default: "meno_30",
+        mostraSe: (f) => !!f.convivenza && ["fratello", "nonno", "nipote", "zio"].includes(f.parentela),
+        opzioni: [
+          { value: "meno_30", label: "Meno di 30 anni" }, { value: "oltre_30", label: "Oltre 30 anni" }, { value: "oltre_40", label: "Oltre 40 anni" },
+        ] },
+      { tipo: "bool", key: "stesso_condominio", label: "Stesso condominio (se non convivenza)", default: false, mostraSe: (f) => !f.convivenza },
+      { tipo: "scelta", key: "altri_familiari", label: "Numero di altri familiari nel nucleo primario", default: "0", opzioni: [
+        { value: "0", label: "Nessuno" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "99", label: "Oltre 3" },
+      ] },
+      { tipo: "numero", key: "relazione", label: "Qualità/intensità della relazione affettiva (0-30)", default: "15" },
+    ],
+    endpoint: "/calc/danno-perdita-parentale-milano",
+    buildBody: (f) => ({
+      parentela: f.parentela, eta_congiunto: parseNumeroIt(f.eta_congiunto), eta_vittima: parseNumeroIt(f.eta_vittima),
+      convivenza: f.convivenza, durata_convivenza: f.durata_convivenza, stesso_condominio: f.stesso_condominio,
+      altri_familiari: parseNumeroIt(f.altri_familiari), relazione: parseNumeroIt(f.relazione),
+    }),
+    risultato: (r) => [
+      ["Punti totali", String(r.punti_totali)],
+      ["Importo", formatEuro(r.importo)],
+      ["Range (relazione min-max)", `${formatEuro(r.importo_minimo)} - ${formatEuro(r.importo_massimo)}`],
+    ],
+  },
+  "danno-perdita-parentale-roma": {
+    campi: [
+      { tipo: "scelta", key: "parentela", label: "Grado di parentela", default: "coniuge", opzioni: [
+        { value: "genitore", label: "Genitore" }, { value: "figlio", label: "Figlio" }, { value: "avo", label: "Avo" },
+        { value: "fratello", label: "Fratello" }, { value: "zio", label: "Zio" }, { value: "nipote", label: "Nipote" },
+        { value: "cugino", label: "Cugino" }, { value: "coniuge", label: "Coniuge" }, { value: "convivente", label: "Convivente" },
+      ] },
+      { tipo: "numero", key: "eta_congiunto", label: "Età del congiunto superstite", default: "" },
+      { tipo: "numero", key: "eta_vittima", label: "Età della vittima al momento del decesso", default: "" },
+      { tipo: "bool", key: "convivenza", label: "Convivenza con la vittima", default: false },
+      { tipo: "bool", key: "altri_conviventi", label: "Presenza di altri familiari conviventi del congiunto", default: false },
+      { tipo: "bool", key: "altri_familiari", label: "Presenza di altri familiari non conviventi entro il 2° grado", default: false },
+    ],
+    endpoint: "/calc/danno-perdita-parentale-roma",
+    buildBody: (f) => ({
+      parentela: f.parentela, eta_congiunto: parseNumeroIt(f.eta_congiunto), eta_vittima: parseNumeroIt(f.eta_vittima),
+      convivenza: f.convivenza, altri_conviventi: f.altri_conviventi, altri_familiari: f.altri_familiari,
+    }),
+    risultato: (r) => [
+      ["Punti totali", String(r.punti_totali)],
+      ["Importo", formatEuro(r.importo)],
+      ...(r.nota_aumento_assenza_altri_familiari ? ([["Possibile aumento (assenza altri familiari)", `fino a ${formatEuro(r.nota_aumento_assenza_altri_familiari.importo_massimo)}`]] as [string, string][]) : []),
+      ...(r.nota_riduzione_non_convivenza ? ([["Possibile riduzione (non convivenza)", `fino a ${formatEuro(r.nota_riduzione_non_convivenza.importo_minimo)}`]] as [string, string][]) : []),
+    ],
+  },
+  "risarcimento-inail": {
+    campi: [
+      { tipo: "numero", key: "punti", label: "Invalidità riconosciuta (6-100%)", default: "" },
+      { tipo: "numero", key: "eta", label: "Età del lavoratore", default: "", mostraSe: (f) => parseNumeroIt(f.punti) > 0 && parseNumeroIt(f.punti) <= 15 },
+      { tipo: "scelta", key: "inquadramento", label: "Inquadramento", default: "10", mostraSe: (f) => parseNumeroIt(f.punti) >= 16, opzioni: [
+        { value: "10", label: "Industria: tutti i lavoratori" }, { value: "20", label: "Agricoltura: a tempo indeterminato" },
+        { value: "30", label: "Agricoltura: a tempo determinato" }, { value: "40", label: "Agricoltura: lavoratore autonomo" },
+        { value: "50", label: "Sanità: medico radiologo" }, { value: "60", label: "Sanità: tecnico di radiologia autonomo" },
+      ] },
+      { tipo: "numero", key: "retribuzione", label: "Retribuzione annua di riferimento €", default: "", mostraSe: (f) => parseNumeroIt(f.punti) >= 16 && (f.inquadramento === "10" || f.inquadramento === "20") },
+      { tipo: "numero", key: "quote_integrative", label: "Numero di familiari per quote integrative", default: "0", mostraSe: (f) => parseNumeroIt(f.punti) >= 16 },
+    ],
+    endpoint: "/calc/risarcimento-inail",
+    buildBody: (f) => {
+      const punti = parseNumeroIt(f.punti);
+      return punti <= 15
+        ? { punti, eta: parseNumeroIt(f.eta) }
+        : { punti, inquadramento: f.inquadramento, retribuzione: f.retribuzione ? parseNumeroIt(f.retribuzione) : null, quote_integrative: parseNumeroIt(f.quote_integrative) };
+    },
+    risultato: (r) => r.tipo === "capitale" ? [
+      ["Risarcimento in capitale", formatEuro(r.risarcimento_capitale)],
+    ] : [
+      ["Rendita per danno biologico (annua)", formatEuro(r.rendita_biologico)],
+      ...(r.rendita_annua != null ? ([
+        ["Rendita vitalizia annua", formatEuro(r.rendita_annua)],
+        ["Rendita vitalizia mensile", formatEuro(r.rendita_mensile)],
+      ] as [string, string][]) : []),
+    ],
+  },
+  "devalutazione": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Importo da devalutare €", default: "" },
+      { tipo: "scelta", key: "mese_dal", label: "Dal mese (più recente)", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
+      { tipo: "numero", key: "anno_dal", label: "Dal anno", default: "" },
+      { tipo: "scelta", key: "mese_al", label: "Al mese (più remoto)", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
+      { tipo: "numero", key: "anno_al", label: "Al anno", default: "" },
+    ],
+    endpoint: "/calc/devalutazione",
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), mese_dal: parseNumeroIt(f.mese_dal), anno_dal: parseNumeroIt(f.anno_dal),
+      mese_al: parseNumeroIt(f.mese_al), anno_al: parseNumeroIt(f.anno_al),
+    }),
+    risultato: (r) => [
+      ["Indice di devalutazione", String(r.indice_devalutazione)],
+      ["Totale devalutazione", formatEuro(r.totale_devalutazione)],
+      ["Importo devalutato", formatEuro(r.importo_devalutato)],
+    ],
+  },
+  "inflazione": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Somma di denaro €", default: "" },
+      { tipo: "bool", key: "usa_indici_istat", label: "Usa gli indici Istat", default: true },
+      { tipo: "scelta", key: "mese_dal", label: "Dal mese", default: "1", mostraSe: (f) => !!f.usa_indici_istat, opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
+      { tipo: "numero", key: "anno_dal", label: "Dal anno", default: "", mostraSe: (f) => !!f.usa_indici_istat },
+      { tipo: "scelta", key: "mese_al", label: "Al mese", default: "1", mostraSe: (f) => !!f.usa_indici_istat, opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
+      { tipo: "numero", key: "anno_al", label: "Al anno", default: "", mostraSe: (f) => !!f.usa_indici_istat },
+      { tipo: "numero", key: "inflazione_pct_manuale", label: "Tasso di inflazione da usare (%)", default: "", mostraSe: (f) => !f.usa_indici_istat },
+    ],
+    endpoint: "/calc/inflazione",
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), usa_indici_istat: f.usa_indici_istat,
+      mese_dal: parseNumeroIt(f.mese_dal) || 1, anno_dal: parseNumeroIt(f.anno_dal) || new Date().getFullYear(),
+      mese_al: parseNumeroIt(f.mese_al) || 1, anno_al: parseNumeroIt(f.anno_al) || new Date().getFullYear(),
+      inflazione_pct_manuale: f.usa_indici_istat ? null : parseNumeroIt(f.inflazione_pct_manuale),
+    }),
+    risultato: (r) => [
+      ["Inflazione", `${r.inflazione_pct}%`],
+      ["Somma equivalente", formatEuro(r.somma_equivalente)],
+      ["Perdita di potere di acquisto", formatEuro(r.perdita_potere_acquisto)],
+    ],
+  },
+  "rivalutazione-storica": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Capitale", default: "" },
+      { tipo: "scelta", key: "valuta", label: "Valuta", default: "euro", opzioni: [
+        { value: "euro", label: "Euro" }, { value: "lire", label: "Lire" },
+      ] },
+      { tipo: "numero", key: "anno_iniziale", label: "Anno iniziale (min 1861)", default: "" },
+      { tipo: "numero", key: "anno_finale", label: "Anno finale", default: "" },
+    ],
+    endpoint: "/calc/rivalutazione-storica",
+    buildBody: (f) => ({ capitale: parseNumeroIt(f.capitale), valuta: f.valuta, anno_iniziale: parseNumeroIt(f.anno_iniziale), anno_finale: parseNumeroIt(f.anno_finale) }),
+    risultato: (r) => [
+      ["Coefficiente", String(r.coefficiente)],
+      ["Capitale rivalutato", r.valuta === "lire" ? `Lire ${Number(r.capitale_rivalutato).toLocaleString("it-IT")}` : formatEuro(r.capitale_rivalutato)],
+      ...(r.valuta === "lire" ? ([["Equivalente in Euro", formatEuro(r.euro_rivalutato)]] as [string, string][]) : []),
+    ],
+  },
+  "rivalutazione-annuale-media": {
+    campi: [
+      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
+      { tipo: "numero", key: "anno_iniziale", label: "Anno iniziale (dal 1947)", default: "" },
+      { tipo: "numero", key: "anno_finale", label: "Anno finale (massimo 20 anni dopo)", default: "" },
+    ],
+    endpoint: "/calc/rivalutazione-annuale-media",
+    buildBody: (f) => ({ capitale: parseNumeroIt(f.capitale), anno_iniziale: parseNumeroIt(f.anno_iniziale), anno_finale: parseNumeroIt(f.anno_finale) }),
+    risultato: (r) => [
+      ["Capitale rivalutato", formatEuro(r.capitale_rivalutato)],
+      ["Rivalutazione totale", formatEuro(r.rivalutazione_totale)],
+    ],
+  },
+  "coefficiente-rivalutazione-tfr": {
+    campi: [
+      { tipo: "scelta", key: "mese", label: "Mese", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
+      { tipo: "numero", key: "anno", label: "Anno (dal 1982)", default: "" },
+    ],
+    endpoint: "/calc/coefficiente-rivalutazione-tfr",
+    buildBody: (f) => ({ mese: parseNumeroIt(f.mese), anno: parseNumeroIt(f.anno) }),
+    risultato: (r) => [["Coefficiente di rivalutazione TFR", `${r.coefficiente_pct}%`]],
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -765,6 +1637,43 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-ctu", titolo: "Compenso CTU", sottotitolo: "A vacazioni, DPR 115/2002", icona: "briefcase" },
   { id: "parametri-forensi", titolo: "Parametri forensi / spese di lite", sottotitolo: "Giudice di pace, Tribunale, Appello, Cassazione", icona: "bar-chart-2" },
   { id: "compenso-mediazione", titolo: "Compenso mediazione civile", sottotitolo: "DM 150/2023", icona: "users" },
+  { id: "eta-anagrafica", titolo: "Calcolo Età Anagrafica", sottotitolo: "Età in anni, mesi e giorni a una data di riferimento", icona: "user" },
+  { id: "aggiungi-giorni-lavorativi", titolo: "Giorni Lavorativi e Festivi", sottotitolo: "Somma o sottrae giorni lavorativi a una data", icona: "calendar" },
+  { id: "termini-separazione-divorzio", titolo: "Termini Separazione e Divorzio", sottotitolo: "Art. 473-bis.17 e 473-bis.28 c.p.c.", icona: "users" },
+  { id: "termini-esecuzioni", titolo: "Termini Esecuzioni", sottotitolo: "Pignoramento mobiliare, immobiliare, presso terzi, autoveicoli", icona: "alert-triangle" },
+  { id: "termini-procedimento-semplificato", titolo: "Termini Procedimento Semplificato", sottotitolo: "Memorie integrative (art. 281-undecies c.p.c.)", icona: "calendar" },
+  { id: "termini-deposito-appello", titolo: "Termini Deposito Atti Appello", sottotitolo: "Note di precisazione, comparsa conclusionale, repliche", icona: "flag" },
+  { id: "termini-deposito-ctu", titolo: "Termini Deposito CTU", sottotitolo: "Bozza, osservazioni, relazione definitiva", icona: "file-text" },
+  { id: "scadenze-multe", titolo: "Scadenze Multe", sottotitolo: "Ricorso al Prefetto, al Giudice di Pace o pagamento", icona: "alert-octagon" },
+  { id: "prescrizione-reati", titolo: "Calcolo Prescrizione Reati", sottotitolo: "Art. 157 c.p.", icona: "rotate-ccw" },
+  { id: "fine-pena", titolo: "Calcolo Fine Pena", sottotitolo: "Con liberazione anticipata", icona: "clock" },
+  { id: "conversione-pena", titolo: "Conversione Pena", sottotitolo: "Pecuniaria-detentiva, per ragguaglio", icona: "repeat" },
+  { id: "interessi-acconti", titolo: "Interessi e Acconti", sottotitolo: "Con pagamenti parziali imputati a capitale/interessi", icona: "percent" },
+  { id: "interessi-corso-causa", titolo: "Interessi 1284 c.c. nel corso della causa", sottotitolo: "Moratori dalla domanda giudiziale, con rivalutazione", icona: "percent" },
+  { id: "interessi-mora-appalti", titolo: "Interessi Mora Appalti", sottotitolo: "Certificati di pagamento, acconti, saldo", icona: "alert-circle" },
+  { id: "maggior-danno", titolo: "Calcolo Maggior Danno", sottotitolo: "Obbligazioni pecuniarie, art. 1224 c.2 c.c.", icona: "trending-up" },
+  { id: "pignoramento-stipendio-pensione", titolo: "Pignoramento stipendio o pensione", sottotitolo: "Quota pignorabile secondo i limiti di legge", icona: "shield" },
+  { id: "equo-indennizzo", titolo: "Calcolo Equo Indennizzo", sottotitolo: "Causa di servizio, pubblico dipendente", icona: "user-check" },
+  { id: "compenso-curatore-fallimentare", titolo: "Compenso Curatore Fallimentare", sottotitolo: "DM 25/1/2012 n. 30", icona: "briefcase" },
+  { id: "compenso-delegati-vendite", titolo: "Compenso Delegati Vendite Giudiziarie", sottotitolo: "Immobili e mobili", icona: "briefcase" },
+  { id: "compenso-mediatore-familiare", titolo: "Compenso Mediatore Familiare", sottotitolo: "Per complessità e numero di incontri", icona: "users" },
+  { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
+  { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
+  { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
+  { id: "valore-catastale", titolo: "Calcolo Valore Catastale", sottotitolo: "Rendita rivalutata per moltiplicatore catastale", icona: "home" },
+  { id: "imposte-compravendita-immobiliare", titolo: "Imposte Compravendita Immobiliare", sottotitolo: "IVA, registro, ipotecaria, catastale", icona: "home" },
+  { id: "tassa-registro-locazione", titolo: "Tassa Registro Locazioni", sottotitolo: "Rateale o in unica soluzione", icona: "home" },
+  { id: "danno-biologico-lieve-entita", titolo: "Danno Biologico (lieve entità)", sottotitolo: "Micropermanenti 1-9 punti, art. 139 Cod. Ass.", icona: "activity" },
+  { id: "danno-biologico-macropermanenti", titolo: "Danno Biologico (macropermanenti)", sottotitolo: "10-100 punti, Tabella Unica Nazionale", icona: "activity" },
+  { id: "menomazioni-plurime", titolo: "Calcolo Menomazioni Plurime", sottotitolo: "Balthazard o Salomonica", icona: "activity" },
+  { id: "danno-perdita-parentale-milano", titolo: "Danno Parentale Milano", sottotitolo: "Tabelle del Tribunale di Milano 2024", icona: "heart" },
+  { id: "danno-perdita-parentale-roma", titolo: "Danno Parentale Roma", sottotitolo: "Tabelle del Tribunale di Roma 2025", icona: "heart" },
+  { id: "risarcimento-inail", titolo: "Risarcimento INAIL", sottotitolo: "Infortunio sul lavoro o malattia professionale", icona: "alert-circle" },
+  { id: "devalutazione", titolo: "Calcolo Devalutazione", sottotitolo: "Inverso della rivalutazione, tra due mesi", icona: "trending-down" },
+  { id: "inflazione", titolo: "Calcolo Inflazione", sottotitolo: "Perdita di potere d'acquisto tra due periodi", icona: "trending-up" },
+  { id: "rivalutazione-storica", titolo: "Rivalutazione Storica", sottotitolo: "Dal 1861 a oggi, Lire o Euro", icona: "trending-up" },
+  { id: "rivalutazione-annuale-media", titolo: "Rivalutazione Annuale Media", sottotitolo: "Variazione media annua dell'indice FOI", icona: "trending-up" },
+  { id: "coefficiente-rivalutazione-tfr", titolo: "Rivalutazione TFR", sottotitolo: "Coefficiente mensile di rivalutazione", icona: "percent" },
 ];
 
 // Struttura "come Andreani": le 9 macro-categorie del menu di
@@ -789,14 +1698,14 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "interessi-vari-capitale-rivalutato" },
       { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "adeguamento-canone" },
       { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
-      { nome: "Calcolo Devalutazione", tipo: "in_arrivo" },
-      { nome: "Rivalutazione Storica", tipo: "in_arrivo" },
+      { nome: "Calcolo Devalutazione", tipo: "calcolatore", calcId: "devalutazione" },
+      { nome: "Rivalutazione Storica", tipo: "calcolatore", calcId: "rivalutazione-storica" },
       { nome: "Variazioni Storiche Istat", tipo: "in_arrivo" },
       { nome: "Tabella Variazioni Istat", tipo: "in_arrivo" },
       { nome: "Ultimo Indice Istat", tipo: "in_arrivo" },
-      { nome: "Rivalutazione Annuale Media", tipo: "in_arrivo" },
-      { nome: "Rivalutazione TFR", tipo: "in_arrivo" },
-      { nome: "Calcolo Inflazione", tipo: "in_arrivo" },
+      { nome: "Rivalutazione Annuale Media", tipo: "calcolatore", calcId: "rivalutazione-annuale-media" },
+      { nome: "Rivalutazione TFR", tipo: "calcolatore", calcId: "coefficiente-rivalutazione-tfr" },
+      { nome: "Calcolo Inflazione", tipo: "calcolatore", calcId: "inflazione" },
       { nome: "Inflazione e Titoli di Stato", tipo: "in_arrivo" },
     ],
   },
@@ -806,16 +1715,17 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Calcolo Interessi Legali", tipo: "calcolatore", calcId: "interessi-legali" },
       { nome: "Calcolo Interessi di Mora", tipo: "calcolatore", calcId: "interessi-mora" },
       { nome: "Interessi a Tasso Fisso", tipo: "in_arrivo" },
-      { nome: "Interessi e Acconti", tipo: "in_arrivo" },
-      { nome: "Calcolo Maggior Danno", tipo: "in_arrivo" },
+      { nome: "Interessi e Acconti", tipo: "calcolatore", calcId: "interessi-acconti" },
+      { nome: "Calcolo Maggior Danno", tipo: "calcolatore", calcId: "maggior-danno" },
       { nome: "Interessi 1284 cc", tipo: "calcolatore", calcId: "interessi-legali" },
+      { nome: "Interessi 1284 cc nel corso della causa", tipo: "calcolatore", calcId: "interessi-corso-causa" },
       { nome: "Calcolo Ammortamento", tipo: "in_arrivo" },
       { nome: "Calcolo Surroga", tipo: "in_arrivo" },
       { nome: "Calcolo Tasso di Usura", tipo: "in_arrivo" },
       { nome: "Calcolo TAEG", tipo: "in_arrivo" },
       { nome: "Tabella Interessi Legali", tipo: "in_arrivo" },
       { nome: "Tabella Interessi di Mora", tipo: "in_arrivo" },
-      { nome: "Interessi Mora Appalti", tipo: "in_arrivo" },
+      { nome: "Interessi Mora Appalti", tipo: "calcolatore", calcId: "interessi-mora-appalti" },
       { nome: "Tabella Tassi Appalti", tipo: "in_arrivo" },
     ],
   },
@@ -825,14 +1735,14 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Calcolo Scadenze", tipo: "calcolatore", calcId: "scadenze" },
       { nome: "Termini Processuali Civili", tipo: "calcolatore", calcId: "scadenze" },
       { nome: "Termini Memorie e Repliche", tipo: "calcolatore", calcId: "termini-memorie" },
-      { nome: "Termini Separazione e Divorzio", tipo: "in_arrivo" },
-      { nome: "Termini Procedimento Semplificato", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini Separazione e Divorzio", tipo: "calcolatore", calcId: "termini-separazione-divorzio" },
+      { nome: "Termini Procedimento Semplificato", tipo: "calcolatore", calcId: "termini-procedimento-semplificato" },
       { nome: "Termini 183 + 190 cpc", tipo: "calcolatore", calcId: "scadenze" },
-      { nome: "Termini Esecuzioni", tipo: "calcolatore", calcId: "precetto" },
-      { nome: "Termini Deposito Atti Appello", tipo: "calcolatore", calcId: "termini-impugnazione" },
+      { nome: "Termini Esecuzioni", tipo: "calcolatore", calcId: "termini-esecuzioni" },
+      { nome: "Termini Deposito Atti Appello", tipo: "calcolatore", calcId: "termini-deposito-appello" },
       { nome: "Scadenze Impugnazioni", tipo: "calcolatore", calcId: "termini-impugnazione" },
-      { nome: "Scadenze Multe", tipo: "in_arrivo" },
-      { nome: "Termini Deposito CTU", tipo: "in_arrivo" },
+      { nome: "Scadenze Multe", tipo: "calcolatore", calcId: "scadenze-multe" },
+      { nome: "Termini Deposito CTU", tipo: "calcolatore", calcId: "termini-deposito-ctu" },
     ],
   },
   {
@@ -854,7 +1764,7 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Sfratto per Morosità", tipo: "in_arrivo" },
       { nome: "Atto di Precetto", tipo: "in_arrivo" },
       { nome: "Nota di Precisazione del Credito", tipo: "in_arrivo" },
-      { nome: "Pignoramento stipendio o pensione", tipo: "in_arrivo" },
+      { nome: "Pignoramento stipendio o pensione", tipo: "calcolatore", calcId: "pignoramento-stipendio-pensione" },
       { nome: "Dichiarazione 553 cpc", tipo: "in_arrivo" },
       { nome: "Indice Allegati", tipo: "in_arrivo" },
       { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
@@ -881,7 +1791,7 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Fattura Avvocati", tipo: "in_arrivo" },
       { nome: "Parametri 2014 Civile", tipo: "calcolatore", calcId: "parametri-forensi" },
       { nome: "Parametri 2014 Penale", tipo: "in_arrivo" },
-      { nome: "Parametri Stragiudiziali", tipo: "in_arrivo" },
+      { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
       { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
       { nome: "Tabelle Parametri", tipo: "calcolatore", calcId: "parametri-forensi" },
       { nome: "Parametri 2012 Civile", tipo: "in_arrivo" },
@@ -899,9 +1809,9 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
       { nome: "Visualizza Messaggi SDI", tipo: "in_arrivo" },
       { nome: "Fattura Professionisti", tipo: "in_arrivo" },
       { nome: "Calcolo Compenso CTU", tipo: "calcolatore", calcId: "compenso-ctu" },
-      { nome: "Compenso Curatore Fallimentare", tipo: "in_arrivo" },
-      { nome: "Compenso Delegati Vendite Giudiziarie", tipo: "in_arrivo" },
-      { nome: "Compenso Mediatore Familiare", tipo: "in_arrivo" },
+      { nome: "Compenso Curatore Fallimentare", tipo: "calcolatore", calcId: "compenso-curatore-fallimentare" },
+      { nome: "Compenso Delegati Vendite Giudiziarie", tipo: "calcolatore", calcId: "compenso-delegati-vendite" },
+      { nome: "Compenso Mediatore Familiare", tipo: "calcolatore", calcId: "compenso-mediatore-familiare" },
       { nome: "Calcolo Fattura Enasarco", tipo: "in_arrivo" },
       { nome: "Ricevuta Prestazione Occasionale", tipo: "in_arrivo" },
       { nome: "Calcolo Spese di Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
@@ -916,14 +1826,14 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
   {
     id: "risarcimento-danni", titolo: "Risarcimento Danni", icona: "alert-circle",
     voci: [
-      { nome: "Calcolo Danno Biologico", tipo: "in_arrivo" },
-      { nome: "Calcolo Risarcimento Danno Tabella Unica", tipo: "in_arrivo" },
+      { nome: "Calcolo Danno Biologico (lieve entità)", tipo: "calcolatore", calcId: "danno-biologico-lieve-entita" },
+      { nome: "Calcolo Risarcimento Danno Tabella Unica", tipo: "calcolatore", calcId: "danno-biologico-macropermanenti" },
       { nome: "Danno non Patrimoniale", tipo: "in_arrivo" },
-      { nome: "Danno Parentale Roma", tipo: "in_arrivo" },
-      { nome: "Danno Parentale Milano", tipo: "in_arrivo" },
-      { nome: "Calcolo Menomazioni Plurime", tipo: "in_arrivo" },
-      { nome: "Risarcimento INAIL", tipo: "in_arrivo" },
-      { nome: "Calcolo Equo Indennizzo", tipo: "in_arrivo" },
+      { nome: "Danno Parentale Roma", tipo: "calcolatore", calcId: "danno-perdita-parentale-roma" },
+      { nome: "Danno Parentale Milano", tipo: "calcolatore", calcId: "danno-perdita-parentale-milano" },
+      { nome: "Calcolo Menomazioni Plurime", tipo: "calcolatore", calcId: "menomazioni-plurime" },
+      { nome: "Risarcimento INAIL", tipo: "calcolatore", calcId: "risarcimento-inail" },
+      { nome: "Calcolo Equo Indennizzo", tipo: "calcolatore", calcId: "equo-indennizzo" },
       { nome: "Tabelle Danno Biologico", tipo: "in_arrivo" },
       { nome: "Tabella Unica Macropermanenti", tipo: "in_arrivo" },
       { nome: "Tabelle Milano e Roma", tipo: "in_arrivo" },
@@ -934,29 +1844,29 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
     id: "diritto-penale", titolo: "Diritto Penale", icona: "alert-octagon",
     voci: [
       { nome: "Aumenti/Riduzioni Pena", tipo: "in_arrivo" },
-      { nome: "Conversione Pena", tipo: "in_arrivo" },
-      { nome: "Calcolo Fine Pena", tipo: "in_arrivo" },
-      { nome: "Calcolo Prescrizione Reati", tipo: "in_arrivo" },
+      { nome: "Conversione Pena", tipo: "calcolatore", calcId: "conversione-pena" },
+      { nome: "Calcolo Fine Pena", tipo: "calcolatore", calcId: "fine-pena" },
+      { nome: "Calcolo Prescrizione Reati", tipo: "calcolatore", calcId: "prescrizione-reati" },
       { nome: "Codice di Procedura Penale", tipo: "in_arrivo" },
     ],
   },
   {
     id: "proprieta-successioni", titolo: "Proprietà, Successioni", icona: "home",
     voci: [
-      { nome: "Calcolo Eredità", tipo: "in_arrivo" },
+      { nome: "Calcolo Eredità", tipo: "calcolatore", calcId: "quote-ereditarie" },
       { nome: "Calcolo Imposte di Successione", tipo: "calcolatore", calcId: "imposta-successione" },
-      { nome: "Calcolo Usufrutto", tipo: "in_arrivo" },
+      { nome: "Calcolo Usufrutto", tipo: "calcolatore", calcId: "usufrutto" },
       { nome: "Coefficienti Usufrutto", tipo: "in_arrivo" },
       { nome: "Pensione di Reversibilità", tipo: "in_arrivo" },
       { nome: "Grado di Parentela", tipo: "in_arrivo" },
       { nome: "Calcolo IMU", tipo: "in_arrivo" },
-      { nome: "Calcolo Valore Catastale", tipo: "in_arrivo" },
+      { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
       { nome: "Categorie Catastali", tipo: "in_arrivo" },
       { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
       { nome: "Calcolo Superficie Commerciale", tipo: "in_arrivo" },
-      { nome: "Imposte Compravendita", tipo: "in_arrivo" },
+      { nome: "Imposte Compravendita", tipo: "calcolatore", calcId: "imposte-compravendita-immobiliare" },
       { nome: "Calcolo Cedolare Secca", tipo: "in_arrivo" },
-      { nome: "Tassa Registro Locazioni", tipo: "in_arrivo" },
+      { nome: "Tassa Registro Locazioni", tipo: "calcolatore", calcId: "tassa-registro-locazione" },
       { nome: "Spese Condominiali", tipo: "in_arrivo" },
     ],
   },
@@ -977,6 +1887,8 @@ const ALTRI_CALCOLATORI: VoceAndreani[] = [
   { nome: "Termine per la querela", tipo: "calcolatore", calcId: "termine-querela" },
   { nome: "Disdetta di locazione", tipo: "calcolatore", calcId: "disdetta-locazione" },
   { nome: "Giorni tra due date", tipo: "calcolatore", calcId: "giorni-tra-date" },
+  { nome: "Calcolo Età Anagrafica", tipo: "calcolatore", calcId: "eta-anagrafica" },
+  { nome: "Giorni Lavorativi e Festivi", tipo: "calcolatore", calcId: "aggiungi-giorni-lavorativi" },
 ];
 
 // Periodicità di capitalizzazione per gli interessi legali, come Andreani
