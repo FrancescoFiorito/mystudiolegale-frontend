@@ -2449,6 +2449,7 @@ export default function Calcolatori() {
   const [variAnatocismo, setVariAnatocismo] = React.useState("nessuna");
   const [variRivaluta, setVariRivaluta] = React.useState(false);
   const [variBaseRivalutazione, setVariBaseRivalutazione] = React.useState("iniziale_fissa");
+  const [variRivalutaAlPct, setVariRivalutaAlPct] = React.useState("100");
   const [variIgnoraDeflazione, setVariIgnoraDeflazione] = React.useState(false);
   const [variGiornoIniziale, setVariGiornoIniziale] = React.useState("escluso");
   const [variConvenzioneGiorni, setVariConvenzioneGiorni] = React.useState("civile");
@@ -2833,6 +2834,7 @@ export default function Calcolatori() {
         anatocismo: variAnatocismo,
         rivaluta: variRivaluta,
         base_rivalutazione: variBaseRivalutazione,
+        rivaluta_al_pct: variRivaluta ? (parseNumeroIt(variRivalutaAlPct) || 100) : 100,
         ignora_deflazione: variIgnoraDeflazione,
         giorno_iniziale: variGiornoIniziale,
         convenzione_giorni: variConvenzioneGiorni,
@@ -2959,7 +2961,7 @@ export default function Calcolatori() {
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensModalita("rivalutazione_mensile"); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
     setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 10)); setCanonePercScelta("100"); setCanonePercAltro("");
-    setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
+    setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariRivalutaAlPct("100"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
@@ -4265,6 +4267,8 @@ export default function Calcolatori() {
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità di rivalutazione</Text>
                       <SelectInput testID="vari-base-rivalutazione" value={variBaseRivalutazione} onChange={setVariBaseRivalutazione} opzioni={BASI_RIVALUTAZIONE_VARI} />
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di applicazione della rivalutazione % (100 = piena, es. 75 per clausole di adeguamento parziale)</Text>
+                      <TextInput testID="vari-rivaluta-al-pct" value={variRivalutaAlPct} onChangeText={setVariRivalutaAlPct} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                       <Pressable
                         testID="vari-ignora-deflazione"
                         onPress={() => setVariIgnoraDeflazione(!variIgnoraDeflazione)}
