@@ -13,6 +13,7 @@ import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
 import DataInput from "@/src/components/DataInput";
+import MeseAnnoInput from "@/src/components/MeseAnnoInput";
 import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
@@ -49,6 +50,10 @@ type CampoGenericoBase = { key: string; label: string; mostraSe?: (form: Record<
 type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data" })
   | (CampoGenericoBase & { tipo: "data_opzionale" })
+  // Come "data" ma fa scegliere solo mese e anno, per i campi in cui il
+  // backend ignora il giorno (adeguamento canone, devalutazione, inflazione,
+  // rivalutazione TFR). Valore in forma "AAAA-MM".
+  | (CampoGenericoBase & { tipo: "mese_anno" })
   | (CampoGenericoBase & { tipo: "numero"; default?: string })
   | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
   | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string; cercabile?: boolean })
@@ -101,7 +106,12 @@ const COMPETENZE_PARCELLA: { value: string; label: string; rito: string | null }
   { value: "fallimento", label: "Dichiarazione di fallimento", rito: null },
 ];
 
-const MESI_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+// Un campo "mese_anno" salva il valore in forma "AAAA-MM": questa funzione lo
+// scompone nei due interi mese/anno richiesti dal backend.
+function meseAnnoNum(v: string): { mese: number; anno: number } {
+  const [anno, mese] = (v || "").split("-");
+  return { mese: parseInt(mese, 10) || 0, anno: parseInt(anno, 10) || 0 };
+}
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -1250,16 +1260,14 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "devalutazione": {
     campi: [
       { tipo: "numero", key: "capitale", label: "Importo da devalutare €", default: "" },
-      { tipo: "scelta", key: "mese_dal", label: "Dal mese (più recente)", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
-      { tipo: "numero", key: "anno_dal", label: "Dal anno", default: "" },
-      { tipo: "scelta", key: "mese_al", label: "Al mese (più remoto)", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
-      { tipo: "numero", key: "anno_al", label: "Al anno", default: "" },
+      { tipo: "mese_anno", key: "dal", label: "Dal (più recente)" },
+      { tipo: "mese_anno", key: "al", label: "Al (più remoto)" },
     ],
     endpoint: "/calc/devalutazione",
-    buildBody: (f) => ({
-      capitale: parseNumeroIt(f.capitale), mese_dal: parseNumeroIt(f.mese_dal), anno_dal: parseNumeroIt(f.anno_dal),
-      mese_al: parseNumeroIt(f.mese_al), anno_al: parseNumeroIt(f.anno_al),
-    }),
+    buildBody: (f) => {
+      const dal = meseAnnoNum(f.dal); const al = meseAnnoNum(f.al);
+      return { capitale: parseNumeroIt(f.capitale), mese_dal: dal.mese, anno_dal: dal.anno, mese_al: al.mese, anno_al: al.anno };
+    },
     risultato: (r) => [
       ["Indice di devalutazione", String(r.indice_devalutazione)],
       ["Totale devalutazione", formatEuro(r.totale_devalutazione)],
@@ -1270,19 +1278,20 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "numero", key: "capitale", label: "Somma di denaro €", default: "" },
       { tipo: "bool", key: "usa_indici_istat", label: "Usa gli indici Istat", default: true },
-      { tipo: "scelta", key: "mese_dal", label: "Dal mese", default: "1", mostraSe: (f) => !!f.usa_indici_istat, opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
-      { tipo: "numero", key: "anno_dal", label: "Dal anno", default: "", mostraSe: (f) => !!f.usa_indici_istat },
-      { tipo: "scelta", key: "mese_al", label: "Al mese", default: "1", mostraSe: (f) => !!f.usa_indici_istat, opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
-      { tipo: "numero", key: "anno_al", label: "Al anno", default: "", mostraSe: (f) => !!f.usa_indici_istat },
+      { tipo: "mese_anno", key: "dal", label: "Dal", mostraSe: (f) => !!f.usa_indici_istat },
+      { tipo: "mese_anno", key: "al", label: "Al", mostraSe: (f) => !!f.usa_indici_istat },
       { tipo: "numero", key: "inflazione_pct_manuale", label: "Tasso di inflazione da usare (%)", default: "", mostraSe: (f) => !f.usa_indici_istat },
     ],
     endpoint: "/calc/inflazione",
-    buildBody: (f) => ({
-      capitale: parseNumeroIt(f.capitale), usa_indici_istat: f.usa_indici_istat,
-      mese_dal: parseNumeroIt(f.mese_dal) || 1, anno_dal: parseNumeroIt(f.anno_dal) || new Date().getFullYear(),
-      mese_al: parseNumeroIt(f.mese_al) || 1, anno_al: parseNumeroIt(f.anno_al) || new Date().getFullYear(),
-      inflazione_pct_manuale: f.usa_indici_istat ? null : parseNumeroIt(f.inflazione_pct_manuale),
-    }),
+    buildBody: (f) => {
+      const dal = meseAnnoNum(f.dal); const al = meseAnnoNum(f.al);
+      return {
+        capitale: parseNumeroIt(f.capitale), usa_indici_istat: f.usa_indici_istat,
+        mese_dal: dal.mese || 1, anno_dal: dal.anno || new Date().getFullYear(),
+        mese_al: al.mese || 1, anno_al: al.anno || new Date().getFullYear(),
+        inflazione_pct_manuale: f.usa_indici_istat ? null : parseNumeroIt(f.inflazione_pct_manuale),
+      };
+    },
     risultato: (r) => [
       ["Inflazione", `${r.inflazione_pct}%`],
       ["Somma equivalente", formatEuro(r.somma_equivalente)],
@@ -1321,11 +1330,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "coefficiente-rivalutazione-tfr": {
     campi: [
-      { tipo: "scelta", key: "mese", label: "Mese", default: "1", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] })) },
-      { tipo: "numero", key: "anno", label: "Anno (dal 1982)", default: "" },
+      { tipo: "mese_anno", key: "mese_anno", label: "Mese e anno (dal 1982)" },
     ],
     endpoint: "/calc/coefficiente-rivalutazione-tfr",
-    buildBody: (f) => ({ mese: parseNumeroIt(f.mese), anno: parseNumeroIt(f.anno) }),
+    buildBody: (f) => meseAnnoNum(f.mese_anno),
     risultato: (r) => [["Coefficiente di rivalutazione TFR", `${r.coefficiente_pct}%`]],
   },
   "ammortamento-mutuo": {
@@ -1812,6 +1820,7 @@ function defaultGenForm(idc: string): Record<string, any> {
   cfg.campi.forEach((c) => {
     if (c.tipo === "data") f[c.key] = new Date().toISOString().slice(0, 10);
     else if (c.tipo === "data_opzionale") f[c.key] = "";
+    else if (c.tipo === "mese_anno") f[c.key] = new Date().toISOString().slice(0, 7);
     else if (c.tipo === "numero") f[c.key] = c.default ?? "";
     else if (c.tipo === "bool") f[c.key] = c.default ?? false;
     else if (c.tipo === "scelta") f[c.key] = c.default ?? (typeof c.opzioni === "function" ? c.opzioni(f) : c.opzioni)[0]?.value;
@@ -2434,7 +2443,7 @@ export default function Calcolatori() {
   const [calcolandoRivMens, setCalcolandoRivMens] = React.useState(false);
   // Adeguamento Canone (aggiornamento ISTAT annuale, passo fisso a 12 mesi)
   const [canoneImporto, setCanoneImporto] = React.useState("");
-  const [canoneMeseRiferimento, setCanoneMeseRiferimento] = React.useState(new Date().toISOString().slice(0, 10));
+  const [canoneMeseRiferimento, setCanoneMeseRiferimento] = React.useState(new Date().toISOString().slice(0, 7));
   const [canonePercScelta, setCanonePercScelta] = React.useState("100");
   const [canonePercAltro, setCanonePercAltro] = React.useState("");
   const [risCanone, setRisCanone] = React.useState<any>(null);
@@ -2812,7 +2821,7 @@ export default function Calcolatori() {
       const pct = canonePercScelta === "altro" ? parseNumeroIt(canonePercAltro) || 0 : Number(canonePercScelta);
       const r = await api.post("/calc/adeguamento-canone", {
         canone: parseNumeroIt(canoneImporto),
-        mese_riferimento: canoneMeseRiferimento,
+        mese_riferimento: `${canoneMeseRiferimento}-01`,
         percentuale_pct: pct,
       });
       setRisCanone(r);
@@ -2962,7 +2971,7 @@ export default function Calcolatori() {
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
     setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensMensilmente(true); setRivMensInteressi(true); setRivMensAnnualmente(false); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
-    setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 10)); setCanonePercScelta("100"); setCanonePercAltro("");
+    setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 7)); setCanonePercScelta("100"); setCanonePercAltro("");
     setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariRivalutaAlPct("100"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
@@ -4221,7 +4230,7 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Canone attuale €</Text>
                   <TextInput testID="canone-importo" value={canoneImporto} onChangeText={setCanoneImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Mese di riferimento per l&apos;indice ISTAT</Text>
-                  <DataInput testID="canone-mese-riferimento" value={canoneMeseRiferimento} onChange={setCanoneMeseRiferimento} />
+                  <MeseAnnoInput testID="canone-mese-riferimento" value={canoneMeseRiferimento} onChange={setCanoneMeseRiferimento} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di adeguamento</Text>
                   <SelectInput testID="canone-perc" value={canonePercScelta} onChange={setCanonePercScelta} opzioni={PERCENTUALI_CANONE} />
                   {canonePercScelta === "altro" ? (
@@ -4480,6 +4489,14 @@ export default function Calcolatori() {
                           {notaData ? (
                             <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: 4, marginBottom: SPACING.sm }}>{notaData}</Text>
                           ) : null}
+                        </View>
+                      );
+                    }
+                    if (c.tipo === "mese_anno") {
+                      return (
+                        <View key={c.key}>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                          <MeseAnnoInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
                         </View>
                       );
                     }
