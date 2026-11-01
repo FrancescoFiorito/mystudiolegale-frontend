@@ -1,23 +1,94 @@
 import React from "react";
-import { View, TextInput } from "react-native";
+import { View, Text, Pressable, FlatList, NativeSyntheticEvent, NativeScrollEvent } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
 import { SPACING, RADIUS } from "@/src/theme";
-import SelectInput from "@/src/components/SelectInput";
 
 const MESI_IT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
-const OPZIONI_MESI = Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: MESI_IT[i] }));
+const ALTEZZA_VOCE = 40;
+const VOCI_VISIBILI = 5;
+const ALTEZZA_RUOTA = ALTEZZA_VOCE * VOCI_VISIBILI;
+const PADDING_RUOTA = (ALTEZZA_RUOTA - ALTEZZA_VOCE) / 2;
+const ANNO_MIN = 1940;
+const ANNO_MAX = new Date().getFullYear() + 5;
+const ANNI = Array.from({ length: ANNO_MAX - ANNO_MIN + 1 }, (_, i) => ANNO_MIN + i);
 
-function parti(value: string): { mese: string; anno: string } {
-  const [anno, mese] = (value || "").split("-");
-  return { anno: anno || "", mese: mese ? String(Number(mese)) : "" };
+function parti(value: string): { mese: number; anno: number } {
+  const [a, m] = (value || "").split("-").map(Number);
+  const oggi = new Date();
+  return {
+    mese: m >= 1 && m <= 12 ? m : oggi.getMonth() + 1,
+    anno: a >= ANNO_MIN && a <= ANNO_MAX ? a : oggi.getFullYear(),
+  };
+}
+
+// Una singola "ruota" scorrevole (mese o anno): stesso principio dello
+// spinner nativo usato da DataInput, ma implementata a mano perché
+// @react-native-community/datetimepicker non offre un modo che mostri solo
+// mese e anno (ha solo "date" con giorno incluso).
+function Ruota<T>({
+  voci, etichetta, selezionata, onSeleziona, testID,
+}: {
+  voci: T[];
+  etichetta: (v: T) => string;
+  selezionata: T;
+  onSeleziona: (v: T) => void;
+  testID?: string;
+}) {
+  const { t } = useTheme();
+  const ref = React.useRef<FlatList<T>>(null);
+  const indiceIniziale = Math.max(0, voci.findIndex((v) => v === selezionata));
+
+  const scorri = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const indice = Math.round(e.nativeEvent.contentOffset.y / ALTEZZA_VOCE);
+    const v = voci[Math.max(0, Math.min(voci.length - 1, indice))];
+    if (v !== undefined && v !== selezionata) onSeleziona(v);
+  };
+
+  const tocca = (indice: number) => {
+    ref.current?.scrollToOffset({ offset: indice * ALTEZZA_VOCE, animated: true });
+    onSeleziona(voci[indice]);
+  };
+
+  return (
+    <View style={{ flex: 1, height: ALTEZZA_RUOTA }}>
+      <View pointerEvents="none" style={{
+        position: "absolute", top: PADDING_RUOTA, left: 4, right: 4, height: ALTEZZA_VOCE,
+        backgroundColor: t.brandSecondary, borderRadius: RADIUS.sm,
+      }} />
+      <FlatList
+        testID={testID}
+        ref={ref}
+        data={voci}
+        keyExtractor={(v) => String(v)}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={ALTEZZA_VOCE}
+        decelerationRate="fast"
+        contentOffset={{ x: 0, y: indiceIniziale * ALTEZZA_VOCE }}
+        contentContainerStyle={{ paddingVertical: PADDING_RUOTA }}
+        onMomentumScrollEnd={scorri}
+        renderItem={({ item, index }) => (
+          <Pressable onPress={() => tocca(index)} style={{ height: ALTEZZA_VOCE, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{
+              fontSize: 15, color: item === selezionata ? t.brand : t.onSurface,
+              fontWeight: item === selezionata ? "700" : "400",
+            }}>
+              {etichetta(item)}
+            </Text>
+          </Pressable>
+        )}
+      />
+    </View>
+  );
 }
 
 // Selettore di mese e anno, senza giorno: usato ovunque il backend lo ignora
 // (adeguamento canone, devalutazione, inflazione, rivalutazione TFR), al
 // posto di un DataInput completo (che farebbe scegliere un giorno inutile) o
-// di due campi separati scelta+numero (che è il pattern duplicato in più
-// calcolatori che questo componente sostituisce). value/onChange usano il
-// formato "AAAA-MM".
+// di due campi separati scelta+numero. Si apre e si chiude come DataInput
+// (si tocca il campo, si apre in sede, "Fatto" per chiudere), ma con due
+// ruote (mese, anno) invece delle tre native giorno/mese/anno. value/onChange
+// usano il formato "AAAA-MM".
 export default function MeseAnnoInput({
   value, onChange, testID,
 }: {
@@ -26,32 +97,48 @@ export default function MeseAnnoInput({
   testID?: string;
 }) {
   const { t } = useTheme();
+  const [aperto, setAperto] = React.useState(false);
   const { mese, anno } = parti(value);
 
   return (
-    <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-      <View style={{ flex: 1.3 }}>
-        <SelectInput
-          testID={testID ? `${testID}-mese` : undefined}
-          value={mese}
-          onChange={(m) => onChange(`${anno}-${m.padStart(2, "0")}`)}
-          opzioni={OPZIONI_MESI}
-          placeholder="Mese"
-        />
-      </View>
-      <TextInput
-        testID={testID ? `${testID}-anno` : undefined}
-        value={anno}
-        onChangeText={(a) => onChange(`${a}-${(mese || "1").padStart(2, "0")}`)}
-        placeholder="Anno"
-        placeholderTextColor={t.onSurfaceTertiary}
-        keyboardType="numeric"
-        maxLength={4}
+    <View>
+      <Pressable
+        testID={testID}
+        onPress={() => setAperto(!aperto)}
         style={{
-          flex: 1, borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
-          backgroundColor: t.surfaceSecondary, borderColor: t.border, color: t.onSurface, fontSize: 14,
+          flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+          borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.md,
+          backgroundColor: t.surfaceSecondary, borderColor: t.border,
         }}
-      />
+      >
+        <Text style={{ color: t.onSurface, fontSize: 14, fontVariant: ["tabular-nums"] }}>
+          {MESI_IT[mese - 1]} {anno}
+        </Text>
+        <Feather name="calendar" size={16} color={t.onSurfaceTertiary} />
+      </Pressable>
+      {aperto ? (
+        <View style={{ marginTop: SPACING.xs, borderWidth: 1, borderRadius: RADIUS.md, borderColor: t.border, backgroundColor: t.surface, overflow: "hidden" }}>
+          <View style={{ flexDirection: "row" }}>
+            <Ruota
+              testID={testID ? `${testID}-mese` : undefined}
+              voci={Array.from({ length: 12 }, (_, i) => i + 1)}
+              etichetta={(m) => MESI_IT[m - 1]}
+              selezionata={mese}
+              onSeleziona={(m) => onChange(`${anno}-${String(m).padStart(2, "0")}`)}
+            />
+            <Ruota
+              testID={testID ? `${testID}-anno` : undefined}
+              voci={ANNI}
+              etichetta={(a) => String(a)}
+              selezionata={anno}
+              onSeleziona={(a) => onChange(`${a}-${String(mese).padStart(2, "0")}`)}
+            />
+          </View>
+          <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={() => setAperto(false)} style={{ paddingVertical: SPACING.sm, alignItems: "center", borderTopWidth: 1, borderTopColor: t.border }}>
+            <Text style={{ color: t.brand, fontWeight: "700" }}>Fatto</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
