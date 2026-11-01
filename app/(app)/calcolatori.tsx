@@ -2190,12 +2190,6 @@ const MODALITA_ISTAT = [
   { value: "sola_rivalutazione", label: "Sola rivalutazione (senza interessi)" },
 ];
 
-const MODALITA_RIVALUTAZIONE_MENSILE = [
-  { value: "rivalutazione_mensile", label: "Rivaluta mensilmente (ISTAT) + interessi legali" },
-  { value: "solo_interessi", label: "Solo interessi, a un tasso indicato da te" },
-  { value: "rivalutazione_annuale", label: "Rivaluta annualmente a un tasso indicato da te" },
-];
-
 const PERCENTUALI_CANONE = [
   { value: "75", label: "75% (locazioni abitative ordinarie, se la clausola lo prevede — art. 32 L. 392/1978)" },
   { value: "100", label: "100% (locazioni diverse da abitazione, assegni di mantenimento)" },
@@ -2427,7 +2421,13 @@ export default function Calcolatori() {
   const [rivMensImporto, setRivMensImporto] = React.useState("");
   const [rivMensDataInizio, setRivMensDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [rivMensDataFine, setRivMensDataFine] = React.useState(new Date().toISOString().slice(0, 10));
-  const [rivMensModalita, setRivMensModalita] = React.useState("rivalutazione_mensile");
+  // Le 3 opzioni sono indipendenti e combinabili in qualsiasi modo, come le
+  // 3 spunte del calcolatore di Andreani (es. "rivaluta annualmente" +
+  // "interessi legali" insieme sono una combinazione valida e diversa da
+  // "rivaluta annualmente" da solo).
+  const [rivMensMensilmente, setRivMensMensilmente] = React.useState(true);
+  const [rivMensInteressi, setRivMensInteressi] = React.useState(true);
+  const [rivMensAnnualmente, setRivMensAnnualmente] = React.useState(false);
   const [rivMensTassoInteressi, setRivMensTassoInteressi] = React.useState("");
   const [rivMensTassoAnnuale, setRivMensTassoAnnuale] = React.useState("");
   const [risRivMens, setRisRivMens] = React.useState<any>(null);
@@ -2788,10 +2788,12 @@ export default function Calcolatori() {
         importo_mensile: parseNumeroIt(rivMensImporto),
         data_inizio: rivMensDataInizio,
         data_fine: rivMensDataFine,
-        modalita: rivMensModalita,
+        rivaluta_mensilmente: rivMensMensilmente,
+        applica_interessi: rivMensInteressi,
+        rivaluta_annualmente: rivMensAnnualmente,
       };
-      if (rivMensModalita === "solo_interessi") body.tasso_interessi_pct = parseNumeroIt(rivMensTassoInteressi) || 100;
-      if (rivMensModalita === "rivalutazione_annuale") body.tasso_rivalutazione_annuale_pct = parseNumeroIt(rivMensTassoAnnuale) || 0;
+      if (rivMensInteressi) body.tasso_interessi_pct = parseNumeroIt(rivMensTassoInteressi) || 100;
+      if (rivMensAnnualmente) body.tasso_rivalutazione_annuale_pct = parseNumeroIt(rivMensTassoAnnuale) || 0;
       const r = await api.post("/calc/rivalutazione-mensile", body);
       setRisRivMens(r);
     } catch (e: any) {
@@ -2957,7 +2959,7 @@ export default function Calcolatori() {
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
     setRisIstat(null); setIstatCapitale(""); setIstatDataInizio(new Date().toISOString().slice(0, 10)); setIstatDataFine(new Date().toISOString().slice(0, 10)); setIstatRivalutaAlPct("100"); setIstatModalita("rivalutazione_interessi");
-    setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensModalita("rivalutazione_mensile"); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
+    setRisRivMens(null); setRivMensImporto(""); setRivMensDataInizio(new Date().toISOString().slice(0, 10)); setRivMensDataFine(new Date().toISOString().slice(0, 10)); setRivMensMensilmente(true); setRivMensInteressi(true); setRivMensAnnualmente(false); setRivMensTassoInteressi(""); setRivMensTassoAnnuale("");
     setRisCanone(null); setCanoneImporto(""); setCanoneMeseRiferimento(new Date().toISOString().slice(0, 10)); setCanonePercScelta("100"); setCanonePercAltro("");
     setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
@@ -4154,15 +4156,32 @@ export default function Calcolatori() {
                   <DataInput testID="rivmens-data-inizio" value={rivMensDataInizio} onChange={setRivMensDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fino al (di norma la data del pagamento, o oggi)</Text>
                   <DataInput testID="rivmens-data-fine" value={rivMensDataFine} onChange={setRivMensDataFine} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità</Text>
-                  <SelectInput testID="rivmens-modalita" value={rivMensModalita} onChange={setRivMensModalita} opzioni={MODALITA_RIVALUTAZIONE_MENSILE} />
-                  {rivMensModalita === "solo_interessi" ? (
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.sm }]}>Opzioni di calcolo (combinabili liberamente, come su Andreani)</Text>
+                  <Pressable testID="rivmens-check-mensile" onPress={() => setRivMensMensilmente(!rivMensMensilmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
+                    <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensMensilmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      {rivMensMensilmente ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                    </View>
+                    <Text style={{ color: t.onSurface, flex: 1 }}>Rivaluta mensilmente gli importi dovuti e non riscossi (ISTAT)</Text>
+                  </Pressable>
+                  <Pressable testID="rivmens-check-interessi" onPress={() => setRivMensInteressi(!rivMensInteressi)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
+                    <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensInteressi ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      {rivMensInteressi ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                    </View>
+                    <Text style={{ color: t.onSurface, flex: 1 }}>Calcola gli interessi legali</Text>
+                  </Pressable>
+                  {rivMensInteressi ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale del tasso legale % (100 = tasso pieno)</Text>
                       <TextInput testID="rivmens-tasso-interessi" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
-                  {rivMensModalita === "rivalutazione_annuale" ? (
+                  <Pressable testID="rivmens-check-annuale" onPress={() => setRivMensAnnualmente(!rivMensAnnualmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
+                    <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensAnnualmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
+                      {rivMensAnnualmente ? <Feather name="check" size={14} color={t.onBrand} /> : null}
+                    </View>
+                    <Text style={{ color: t.onSurface, flex: 1 }}>Rivaluta annualmente l&apos;importo dovuto, a un tasso indicato da te</Text>
+                  </Pressable>
+                  {rivMensAnnualmente ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso di rivalutazione annua %</Text>
                       <TextInput testID="rivmens-tasso-annuale" value={rivMensTassoAnnuale} onChangeText={setRivMensTassoAnnuale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
