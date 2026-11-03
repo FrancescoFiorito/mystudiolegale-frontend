@@ -1915,14 +1915,14 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
 // atto è selezionabile e apre quello; le altre sono mostrate in grigio con
 // etichetta "in arrivo" (non selezionabili), per rendere visibile a colpo
 // d'occhio il lavoro ancora da fare, categoria per categoria.
-type VoceAndreani =
+type VoceMenuCalcolatori =
   | { nome: string; tipo: "calcolatore"; calcId: CalcId }
   | { nome: string; tipo: "atto"; attoId: AttoId }
   | { nome: string; tipo: "in_arrivo" };
 
-type CategoriaAndreani = { id: string; titolo: string; icona: string; voci: VoceAndreani[] };
+type CategoriaMenuCalcolatori = { id: string; titolo: string; icona: string; voci: VoceMenuCalcolatori[] };
 
-const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
+const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
   {
     id: "rivalutazioni-istat", titolo: "Rivalutazioni Istat", icona: "trending-up",
     voci: [
@@ -2110,7 +2110,7 @@ const CATEGORIE_ANDREANI: CategoriaAndreani[] = [
 // macro-categoria del sito non coperta da questa ristrutturazione — es.
 // "Giorni tra due date" sta sotto "Applicazioni Varie"): restano comunque
 // raggiungibili da qui, in una categoria a parte.
-const ALTRI_CALCOLATORI: VoceAndreani[] = [
+const ALTRI_CALCOLATORI: VoceMenuCalcolatori[] = [
   { nome: "Prescrizione e decadenza", tipo: "calcolatore", calcId: "prescrizione" },
   { nome: "Termini di comparizione in citazione", tipo: "calcolatore", calcId: "termini-citazione" },
   { nome: "Opposizione a decreto ingiuntivo", tipo: "calcolatore", calcId: "opposizione-decreto-ingiuntivo" },
@@ -3271,7 +3271,7 @@ export default function Calcolatori() {
 
       <Text style={sezioneLbl}>Parti assistite</Text>
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-        Precompilate dal cliente collegato alla pratica (se presente), sempre modificabili. Come Andreani, puoi aggiungerne altre.
+        Precompilate dal cliente collegato alla pratica (se presente), sempre modificabili: puoi aggiungerne altre.
       </Text>
       {partiAssistite.map((parte, i) => (
         <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
@@ -3355,7 +3355,7 @@ export default function Calcolatori() {
 
       <Text style={sezioneLbl}>Attività e compensi — sezione automatica</Text>
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-        Le stesse 4 fasi del preventivo di Andreani: un importo (dai parametri forensi, per la competenza e il valore della controversia scelti sopra) con un aggiustamento percentuale discrezionale per fase.
+        Le 4 fasi standard del preventivo: un importo (dai parametri forensi, per la competenza e il valore della controversia scelti sopra) con un aggiustamento percentuale discrezionale per fase.
       </Text>
       <Pressable
         testID="par-suggerisci-parametri-forensi"
@@ -3394,7 +3394,7 @@ export default function Calcolatori() {
 
       <Text style={sezioneLbl}>Attività e compensi — sezione personalizzata</Text>
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-        Voci aggiuntive a importo libero (come il &quot;Compensi personalizzati&quot; di Andreani): usale anche per diritti o fase esecutiva, non previsti dalle 4 fasi sopra.
+        Voci aggiuntive a importo libero (&quot;Compensi personalizzati&quot;): usale anche per diritti o fase esecutiva, non previsti dalle 4 fasi sopra.
       </Text>
       {vociCustom.map((v, i) => (
         <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -3554,14 +3554,14 @@ export default function Calcolatori() {
   }
 
   const CATEGORIE_CALC: { id: string; titolo: string; icona: string }[] = [
-    ...CATEGORIE_ANDREANI.map((c) => ({ id: c.id, titolo: c.titolo, icona: c.icona })),
+    ...CATEGORIE_MENU_CALCOLATORI.map((c) => ({ id: c.id, titolo: c.titolo, icona: c.icona })),
     { id: "altri-calcolatori", titolo: "Altri calcolatori", icona: "grid" },
     { id: "atti", titolo: "Atti (bozze di documenti)", icona: "file-text" },
   ];
-  const vociCategoria = (catId: string): VoceAndreani[] => {
+  const vociCategoria = (catId: string): VoceMenuCalcolatori[] => {
     if (catId === "atti") return ATTI.map((a) => ({ nome: a.titolo, tipo: "atto" as const, attoId: a.id }));
     if (catId === "altri-calcolatori") return ALTRI_CALCOLATORI;
-    return CATEGORIE_ANDREANI.find((c) => c.id === catId)?.voci || [];
+    return CATEGORIE_MENU_CALCOLATORI.find((c) => c.id === catId)?.voci || [];
   };
 
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
@@ -4167,7 +4167,7 @@ export default function Calcolatori() {
                   <DataInput testID="rivmens-data-inizio" value={rivMensDataInizio} onChange={setRivMensDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fino al (di norma la data del pagamento, o oggi)</Text>
                   <DataInput testID="rivmens-data-fine" value={rivMensDataFine} onChange={setRivMensDataFine} />
-                  <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.sm }]}>Opzioni di calcolo (combinabili liberamente, come su Andreani)</Text>
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.sm }]}>Opzioni di calcolo (combinabili liberamente tra loro)</Text>
                   <Pressable testID="rivmens-check-mensile" onPress={() => setRivMensMensilmente(!rivMensMensilmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensMensilmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {rivMensMensilmente ? <Feather name="check" size={14} color={t.onBrand} /> : null}
@@ -4314,7 +4314,7 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Convenzione di calcolo dei giorni</Text>
                   <SelectInput testID="vari-convenzione-giorni" value={variConvenzioneGiorni} onChange={setVariConvenzioneGiorni} opzioni={CONVENZIONI_GIORNI_VARI} />
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
-                    Calcolatore avanzato: la pagina Andreani non specifica in dettaglio l&apos;interazione fra tutti questi parametri in ogni combinazione — il risultato può differire dal suo in casi particolari.
+                    Calcolatore avanzato: l&apos;interazione fra tutti questi parametri in ogni combinazione non è specificata in dettaglio — il risultato può differire in casi particolari.
                   </Text>
                   <Pressable testID="btn-calc-vari" onPress={calcolaInteressiVari} disabled={calcolandoVari} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoVari ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoVari ? "Calcolo..." : "Calcola"}</Text>
