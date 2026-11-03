@@ -6,7 +6,7 @@ import { Feather } from "@expo/vector-icons";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
@@ -2306,6 +2306,7 @@ export default function Calcolatori() {
   const { t } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
+  const navigation = useNavigation();
   const params = useLocalSearchParams<{ tab?: string; _t?: string; editId?: string; praticaId?: string }>();
   // L'unico caso che resta "a schermo diretto" (senza passare dal picker) è
   // la modifica di una parcella esistente, raggiunta da Archivio o dalla
@@ -2512,6 +2513,17 @@ export default function Calcolatori() {
   const [procuraAvvocati, setProcuraAvvocati] = React.useState<{ nome: string; cf: string; ordine: string; eletto_domicilio: boolean; indirizzo_studio: string; autentica_firme: boolean }[]>([]);
   const [attoGenerato, setAttoGenerato] = React.useState<any>(null);
   const [attoGenerando, setAttoGenerando] = React.useState(false);
+
+  // Con lo Stack nativo, tenere attivo lo swipe-indietro di questa
+  // schermata (che tornerebbe alla Home) mentre uno degli overlay qui sotto
+  // e' aperto crea un conflitto sul bordo sinistro con lo SwipeBackScreen
+  // di quell'overlay: a volte vince il gesto nativo invece di quello
+  // dell'overlay, saltando dritti alla Home invece di chiudere solo
+  // l'overlay (stesso problema e stessa soluzione di profilo.tsx).
+  // Disattivato finche' un overlay e' visibile.
+  React.useEffect(() => {
+    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto) });
+  }, [categoriaCalc, calcAperto, attoAperto, navigation]);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
