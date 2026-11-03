@@ -57,23 +57,36 @@ function Ruota<T>({
   // senza questa guardia quell'evento ricalcolava la voce dalla posizione
   // finale dello scroll, spesso diversa (di una voce) da quella toccata per
   // via della fisica dello scroll nativo — da cui il bug "il tocco seleziona
-  // la voce successiva invece di quella toccata". onScrollBeginDrag scatta
-  // solo per un trascinamento dell'utente, mai per uno scroll avviato da
-  // codice: la guardia ignora quindi solo gli eventi generati dal tocco,
-  // lasciando invariato lo scroll manuale (che infatti già funzionava).
-  const trascinamentoUtente = React.useRef(false);
+  // la voce successiva invece di quella toccata". Un tentativo precedente
+  // distingueva un trascinamento reale (onScrollBeginDrag) da uno scroll
+  // avviato dal codice, ma un tocco può comunque generare un piccolissimo
+  // spostamento che onScrollBeginDrag scambia per un trascinamento vero —
+  // da cui il bug che persisteva sul tocco (mentre lo scroll manuale, che
+  // non passa da questa funzione, ha sempre funzionato). Qui si marca
+  // invece esplicitamente, nel momento stesso del tocco, che il PROSSIMO
+  // evento di fine scroll è una sua conseguenza e va ignorato: non importa
+  // più come quell'evento viene classificato. Il timeout e' una rete di
+  // sicurezza per il caso limite in cui si tocchi la voce già selezionata
+  // (nessuno scroll da fare, quindi nessun evento di fine scroll da
+  // ignorare): senza di esso la guardia resterebbe armata per sempre,
+  // ignorando per sbaglio anche il prossimo scroll manuale.
+  const ignoraProssimoFineScroll = React.useRef(false);
 
   const scorri = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!trascinamentoUtente.current) return;
-    trascinamentoUtente.current = false;
+    if (ignoraProssimoFineScroll.current) {
+      ignoraProssimoFineScroll.current = false;
+      return;
+    }
     const indice = Math.round(e.nativeEvent.contentOffset.y / ALTEZZA_VOCE);
     const v = voci[Math.max(0, Math.min(voci.length - 1, indice))];
     if (v !== undefined && v !== selezionata) onSeleziona(v);
   };
 
   const tocca = (indice: number) => {
+    ignoraProssimoFineScroll.current = true;
     ref.current?.scrollToOffset({ offset: indice * ALTEZZA_VOCE, animated: true });
     onSeleziona(voci[indice]);
+    setTimeout(() => { ignoraProssimoFineScroll.current = false; }, 400);
   };
 
   return (
@@ -92,7 +105,6 @@ function Ruota<T>({
         decelerationRate="fast"
         getItemLayout={(_, index) => ({ length: ALTEZZA_VOCE, offset: PADDING_RUOTA + index * ALTEZZA_VOCE, index })}
         contentContainerStyle={{ paddingVertical: PADDING_RUOTA }}
-        onScrollBeginDrag={() => { trascinamentoUtente.current = true; }}
         onMomentumScrollEnd={scorri}
         renderItem={({ item, index }) => (
           <Pressable onPress={() => tocca(index)} style={{ height: ALTEZZA_VOCE, alignItems: "center", justifyContent: "center" }}>
