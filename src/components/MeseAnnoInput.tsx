@@ -38,8 +38,20 @@ function Ruota<T>({
   const { t } = useTheme();
   const ref = React.useRef<FlatList<T>>(null);
   const indiceIniziale = Math.max(0, voci.findIndex((v) => v === selezionata));
+  // Un tocco su una voce scorre la lista fino a lì programmaticamente
+  // (scrollToOffset), il che genera anch'esso un evento onMomentumScrollEnd:
+  // senza questa guardia quell'evento ricalcolava la voce dalla posizione
+  // finale dello scroll, spesso diversa (di una voce) da quella toccata per
+  // via della fisica dello scroll nativo — da cui il bug "il tocco seleziona
+  // la voce successiva invece di quella toccata". onScrollBeginDrag scatta
+  // solo per un trascinamento dell'utente, mai per uno scroll avviato da
+  // codice: la guardia ignora quindi solo gli eventi generati dal tocco,
+  // lasciando invariato lo scroll manuale (che infatti già funzionava).
+  const trascinamentoUtente = React.useRef(false);
 
   const scorri = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!trascinamentoUtente.current) return;
+    trascinamentoUtente.current = false;
     const indice = Math.round(e.nativeEvent.contentOffset.y / ALTEZZA_VOCE);
     const v = voci[Math.max(0, Math.min(voci.length - 1, indice))];
     if (v !== undefined && v !== selezionata) onSeleziona(v);
@@ -66,6 +78,7 @@ function Ruota<T>({
         decelerationRate="fast"
         contentOffset={{ x: 0, y: indiceIniziale * ALTEZZA_VOCE }}
         contentContainerStyle={{ paddingVertical: PADDING_RUOTA }}
+        onScrollBeginDrag={() => { trascinamentoUtente.current = true; }}
         onMomentumScrollEnd={scorri}
         renderItem={({ item, index }) => (
           <Pressable onPress={() => tocca(index)} style={{ height: ALTEZZA_VOCE, alignItems: "center", justifyContent: "center" }}>
