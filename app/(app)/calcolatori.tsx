@@ -113,6 +113,9 @@ function meseAnnoNum(v: string): { mese: number; anno: number } {
   return { mese: parseInt(mese, 10) || 0, anno: parseInt(anno, 10) || 0 };
 }
 
+// Solo per l'etichetta del dettaglio di "Rivalutazione TFR" qui sotto.
+const MESI_IT_TFR = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
     campi: [
@@ -1334,7 +1337,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/coefficiente-rivalutazione-tfr",
     buildBody: (f) => meseAnnoNum(f.mese_anno),
-    risultato: (r) => [["Coefficiente di rivalutazione TFR", `${r.coefficiente_pct}%`]],
+    risultato: (r) => [
+      ["Coefficiente di rivalutazione TFR", `${r.coefficiente_pct}%`],
+      [`Indice FOI a dicembre ${r.anno - 1}`, String(r.indice_dicembre_precedente)],
+      [`Indice FOI a ${MESI_IT_TFR[r.mese - 1]} ${r.anno}`, String(r.indice_mese)],
+      ["Variazione dell'indice al 100%", `${r.variazione_pct_100}%`],
+      ["Tasso fisso annuo", `${r.tasso_fisso_annuo_pct}%`],
+      ["Mesi utili", String(r.mese)],
+      ["Quota fissa (tasso rapportato ai mesi)", `${r.quota_fissa_pct}%`],
+      ["Quota variabile (75% della variazione)", `${r.quota_variabile_pct}%`],
+    ],
   },
   "ammortamento-mutuo": {
     campi: [
