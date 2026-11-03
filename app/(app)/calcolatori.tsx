@@ -71,7 +71,7 @@ type ConfigGenerico = {
   scadenze?: (r: any) => { titolo: string; data: string }[];
 };
 
-// "Competenza per giurisdizione o materia" di Andreani (Preventivo avvocato
+// "Competenza per giurisdizione o materia" del calcolatore di riferimento (Preventivo avvocato
 // civile): stessa tendina usata sia per il dato visualizzato nel documento
 // sia, dove abbiamo una tabella DM 55/2014 verificata, per suggerire gli
 // importi delle 4 fasi (vedi TABELLE_PARAMETRI_FORENSI nel backend — solo 4
@@ -119,13 +119,13 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "tipo_processo", label: "Tipo di processo", default: "civile", opzioni: [
         { value: "civile", label: "Civile" }, { value: "amministrativo", label: "Amministrativo" }, { value: "tributario", label: "Tributario" },
       ] },
-      // Come Andreani: 4 voci in "Impugnazione" (Appello, Cassazione,
+      // Come nel calcolatore di riferimento: 4 voci in "Impugnazione" (Appello, Cassazione,
       // Revocazione, Opposizione di terzo — quest'ultima assente per
       // Tributario, che non ne ha un'autonoma equivalente agli artt. 404
       // c.p.c./108 c.p.a.), non 6. La distinzione ordinaria/straordinaria
-      // (già presente da prima, più granulare di Andreani) si sceglie con
+      // (già presente da prima, più granulare di quella) si sceglie con
       // un secondo campo mostrato solo per Revocazione/Opposizione di
-      // terzo, analogo al "Dalla data di" di Andreani.
+      // terzo, analogo al "Dalla data di" di quel calcolatore.
       { tipo: "scelta", key: "categoria_impugnazione", label: "Tipo di impugnazione", default: "appello", opzioni: (f) => [
         { value: "appello", label: f.tipo_processo === "amministrativo" ? "Appello al Consiglio di Stato" : f.tipo_processo === "tributario" ? "Ricorso in Corte di Giustizia Tributaria di secondo grado" : "Appello" },
         { value: "cassazione", label: "Cassazione" },
@@ -1832,8 +1832,8 @@ function defaultGenForm(idc: string): Record<string, any> {
 // "Aggiungi scadenza" e "Crea parcella" sparsi per l'app (Dashboard,
 // Archivio, scheda pratica). Scadenze Processuali e Parcelle restano le
 // voci "storiche" (form a pagina intera, invariati nella logica); gli
-// altri sono i nuovi calcolatori legali aggiunti dopo aver studiato
-// avvocatoandreani.it.
+// altri sono i nuovi calcolatori legali aggiunti dopo aver studiato un
+// sito di riferimento esterno di calcolatori legali.
 // Ogni calcolatore produce o una data (scadenza/termine) o un importo in
 // euro: la categoria serve solo a raggruppare il picker in due sezioni,
 // cosi' l'utente trova subito il tipo di calcolo che gli serve.
@@ -1909,8 +1909,8 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "imu", titolo: "Calcolo IMU", sottotitolo: "Imposta municipale propria sugli immobili", icona: "home" },
 ];
 
-// Struttura "come Andreani": le 9 macro-categorie del menu di
-// avvocatoandreani.it (vedi analisi comparativa), ciascuna con tutte le
+// Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
+// suo menu (vedi analisi comparativa), ciascuna con tutte le
 // singole voci del sito. Una voce già coperta da un nostro calcolatore o
 // atto è selezionabile e apre quello; le altre sono mostrate in grigio con
 // etichetta "in arrivo" (non selezionabili), per rendere visibile a colpo
@@ -2106,8 +2106,8 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
 ];
 
 // Calcolatori nostri che non hanno una voce corrispondente in nessuna delle
-// 9 categorie Andreani sopra (il loro equivalente, quando esiste, sta in una
-// macro-categoria del sito non coperta da questa ristrutturazione — es.
+// 9 categorie sopra (il loro equivalente, quando esiste, sta in una
+// macro-categoria del sito di riferimento non coperta da questa ristrutturazione — es.
 // "Giorni tra due date" sta sotto "Applicazioni Varie"): restano comunque
 // raggiungibili da qui, in una categoria a parte.
 const ALTRI_CALCOLATORI: VoceMenuCalcolatori[] = [
@@ -2124,8 +2124,8 @@ const ALTRI_CALCOLATORI: VoceMenuCalcolatori[] = [
   { nome: "Giorni Lavorativi e Festivi", tipo: "calcolatore", calcId: "aggiungi-giorni-lavorativi" },
 ];
 
-// Periodicità di capitalizzazione per gli interessi legali, come Andreani
-// (4 opzioni, date fisse: 1/1 per tutte, più 1/4-1/7-1/10 a seconda della
+// Periodicità di capitalizzazione per gli interessi legali, come nel
+// calcolatore di riferimento (4 opzioni, date fisse: 1/1 per tutte, più 1/4-1/7-1/10 a seconda della
 // periodicità — vedi MESI_CAPITALIZZAZIONE nel backend).
 const CAPITALIZZAZIONI = [
   { value: "nessuna", label: "Nessuna capitalizzazione" },
@@ -2134,7 +2134,7 @@ const CAPITALIZZAZIONI = [
   { value: "annuale", label: "Annuale (1/1)" },
 ];
 
-// Contributo unificato, come Andreani: processo (civile/tributario/
+// Contributo unificato, come nel calcolatore di riferimento: processo (civile/tributario/
 // amministrativo) + giudizio + tipo di valore, più riduzione 50% (solo
 // civile) e procedimenti a contributo fisso indipendenti dal resto — v.
 // CU_* nel backend per le fonti verificate dietro ogni importo.
@@ -2191,8 +2191,8 @@ const PROCEDURE_FISSE_CU = [
   { value: "fallimento_insinuazione_passivo", label: "Insinuazione al passivo (esente)" },
 ];
 
-// Rivalutazione ISTAT: le 3 modalità di Andreani (nessuna capitalizzazione/
-// anatocismo in nessuna delle tre, come lui).
+// Rivalutazione ISTAT: le stesse 3 modalità del calcolatore di riferimento
+// (nessuna capitalizzazione/anatocismo in nessuna delle tre).
 const MODALITA_ISTAT = [
   { value: "rivalutazione_interessi", label: "Rivalutazione + interessi legali" },
   { value: "solo_interessi", label: "Solo interessi legali (senza rivalutazione)" },
@@ -2207,7 +2207,7 @@ const PERCENTUALI_CANONE = [
 
 // Interessi Vari sul Capitale Rivalutato (AND-003): tipo di interesse +
 // due modalità di rivalutazione sul montante + convenzione di calcolo dei
-// giorni, come Andreani.
+// giorni, come nel calcolatore di riferimento.
 const TIPI_INTERESSE_VARI = [
   { value: "legali", label: "Legali" },
   { value: "moratori", label: "Di mora (D.Lgs. 231/2002)" },
@@ -2227,10 +2227,10 @@ const CONVENZIONI_GIORNI_VARI = [
   { value: "giuliano", label: "Giuliano (365,25)" },
 ];
 
-// 7 voci come Andreani (stesse aliquote/franchigie di prima, solo
+// 7 voci come nel calcolatore di riferimento (stesse aliquote/franchigie di prima, solo
 // etichette più granulari — v. GRADI_PARENTELA_SUCCESSIONE nel backend).
-// Sezione "tabellare" del compenso CTU (DM 182/2002), come Andreani:
-// elenco degli articoli/sottovoci selezionabili. "richiedeValore" = true
+// Sezione "tabellare" del compenso CTU (DM 182/2002), come nel calcolatore
+// di riferimento: elenco degli articoli/sottovoci selezionabili. "richiedeValore" = true
 // per le prestazioni a percentuale/scaglioni (serve il "Valore Stimato"),
 // false per quelle a tariffa fissa — v. ARTICOLI_DM182_2002 nel backend
 // per le fonti e i valori numerici verificati.
@@ -2336,10 +2336,10 @@ export default function Calcolatori() {
   const [escludiCovid, setEscludiCovid] = React.useState(false);
   const [terminLibero, setTerminLibero] = React.useState(false);
   const [ritoTermini, setRitoTermini] = React.useState<"nuovo" | "vecchio">("nuovo");
-  // Voci notevoli del c.p.c. (come il selettore di avvocatoandreani.it):
+  // Voci notevoli del c.p.c. (come il selettore del calcolatore di riferimento):
   // precompilano termine/unità/direzione; tutti e tre restano poi bloccati
   // finché la voce è selezionata (si sbloccano solo se quella precisa voce
-  // non fissa un valore per quel campo), come fa Andreani — la voce si
+  // non fissa un valore per quel campo), come in quel calcolatore — la voce si
   // sceglie o si inserisce il termine a mano, non entrambi insieme.
   // Stesso SelectInput cercabile usato per l'elenco di prescrizione e
   // decadenza: niente apertura/chiusura a mano, evita il bug per cui uno
@@ -2359,11 +2359,11 @@ export default function Calcolatori() {
     spese_generali_pct: "15", cpa_pct: "4", iva_pct: "22", ritenuta_pct: "0",
   });
   // Sezione "personalizzata": voci libere descrizione+importo, come il form
-  // originale prima dell'allineamento ad Andreani — tenute separate dalla
+  // originale prima dell'allineamento al calcolatore di riferimento — tenute separate dalla
   // sezione automatica (le 4 fasi dei parametri forensi).
   const [vociCustom, setVociCustom] = React.useState<{ descrizione: string; importo: string }[]>([]);
   // Campi non numerici del preventivo (sezioni Avvocato/Procedimento/Altri
-  // dati di Andreani — le parti assistite sono in `partiAssistite`, sotto):
+  // dati del calcolatore di riferimento — le parti assistite sono in `partiAssistite`, sotto):
   // tenuti separati da `par` perché quest'ultimo viene convertito in blocco
   // con parseNumeroIt prima di ogni calcolo/salvataggio, il che
   // corromperebbe un testo libero.
@@ -2374,8 +2374,9 @@ export default function Calcolatori() {
     accessori_di_legge: true, luogo: "",
     data_preventivo: new Date().toISOString().slice(0, 10),
   });
-  // Parti assistite: una o più, come Andreani (nominativo/ragione sociale,
-  // persona giuridica, rappresentante legale, CF/P.IVA) — non un'unica
+  // Parti assistite: una o più, come nel calcolatore di riferimento
+  // (nominativo/ragione sociale, persona giuridica, rappresentante legale,
+  // CF/P.IVA) — non un'unica
   // "persona_giuridica"/"rappresentante_legale" ad hoc per il solo cliente
   // collegato alla pratica.
   const [partiAssistite, setPartiAssistite] = React.useState<{ nominativo: string; persona_giuridica: boolean; rappresentante_legale: string; cf_piva: string }[]>([
@@ -2391,15 +2392,15 @@ export default function Calcolatori() {
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiDataFine, setTassiDataFine] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("8");
-  // Come Andreani: due spunte che impostano la maggiorazione di conseguenza —
+  // Come nel calcolatore di riferimento: due spunte che impostano la maggiorazione di conseguenza —
   // il campo maggiorazione resta comunque modificabile a mano dopo.
   // - ante2013: 7 punti anziché 8, per le transazioni commerciali concluse
   //   entro il 31/12/2012, prima dell'innalzamento introdotto dal D.Lgs.
   //   192/2012.
   // - prodottiAgricoli: ulteriori 4 punti (art. 4 comma 2 D.Lgs. 198/2021,
   //   in vigore dal 4/7/2015 con il D.L. 51/2015), per le cessioni di
-  //   prodotti agricoli e agroalimentari. Andreani la chiama "maggiorazione
-  //   del 24%" ma la norma e le fonti indipendenti consultate descrivono
+  //   prodotti agricoli e agroalimentari. Il calcolatore di riferimento la
+  //   chiama "maggiorazione del 24%" ma la norma e le fonti indipendenti consultate descrivono
   //   un'aggiunta di 4 punti percentuali, non una moltiplicazione per 1,24:
   //   seguiamo la norma.
   const [tassiAnte2013, setTassiAnte2013] = React.useState(false);
@@ -2431,7 +2432,7 @@ export default function Calcolatori() {
   const [rivMensDataInizio, setRivMensDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [rivMensDataFine, setRivMensDataFine] = React.useState(new Date().toISOString().slice(0, 10));
   // Le 3 opzioni sono indipendenti e combinabili in qualsiasi modo, come le
-  // 3 spunte del calcolatore di Andreani (es. "rivaluta annualmente" +
+  // 3 spunte del calcolatore di riferimento (es. "rivaluta annualmente" +
   // "interessi legali" insieme sono una combinazione valida e diversa da
   // "rivaluta annualmente" da solo).
   const [rivMensMensilmente, setRivMensMensilmente] = React.useState(true);
@@ -2516,9 +2517,9 @@ export default function Calcolatori() {
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
 
   // Precompila parte assistita (dal cliente collegato) e dati del
-  // procedimento (dalla pratica) quando si collega una pratica — come fa
-  // Andreani, da cui l'utente poi corregge/completa a mano: il collegamento
-  // non è mai un requisito, solo un punto di partenza.
+  // procedimento (dalla pratica) quando si collega una pratica — come nel
+  // calcolatore di riferimento, da cui l'utente poi corregge/completa a mano:
+  // il collegamento non è mai un requisito, solo un punto di partenza.
   React.useEffect(() => {
     if (!praticaId) return;
     const p = pratiche.find((pp) => pp.id === praticaId);
@@ -2644,7 +2645,7 @@ export default function Calcolatori() {
 
   // Precompila i 4 importi di fase con i valori medi della tabella dei
   // parametri forensi per il rito e il valore causa scelti, cosi' come fa
-  // Andreani (che parte sempre dallo scaglione invece che da zero): restano
+  // il calcolatore di riferimento (che parte sempre dallo scaglione invece che da zero): restano
   // comunque modificabili a mano subito dopo, per i casi in cui l'avvocato
   // voglia pattuire un compenso diverso da quello tabellare.
   const suggerisciDaParametriForensi = async () => {
