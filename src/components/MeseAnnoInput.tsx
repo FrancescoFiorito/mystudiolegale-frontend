@@ -38,6 +38,20 @@ function Ruota<T>({
   const { t } = useTheme();
   const ref = React.useRef<FlatList<T>>(null);
   const indiceIniziale = Math.max(0, voci.findIndex((v) => v === selezionata));
+  // Il prop contentOffset posiziona la lista solo se FlatList conosce già
+  // l'altezza di tutto il contenuto che precede quel punto: per liste
+  // lunghe (gli anni sono ~90 voci, i mesi solo 12) l'offset iniziale può
+  // ricadere ben oltre quello che FlatList ha misurato finora, e viene
+  // allora silenziosamente ignorato — la ruota degli anni restava sempre
+  // ferma sulle prime voci (1940 in su) qualunque fosse il valore
+  // selezionato, da cui il bug di selezione sulla sola ruota degli anni.
+  // getItemLayout toglie il bisogno di misurare (altezza di ogni voce
+  // già nota e fissa), rendendo affidabile anche lo scrollToOffset fatto
+  // qui sotto subito al montaggio.
+  React.useEffect(() => {
+    ref.current?.scrollToOffset({ offset: indiceIniziale * ALTEZZA_VOCE, animated: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Un tocco su una voce scorre la lista fino a lì programmaticamente
   // (scrollToOffset), il che genera anch'esso un evento onMomentumScrollEnd:
   // senza questa guardia quell'evento ricalcolava la voce dalla posizione
@@ -76,7 +90,7 @@ function Ruota<T>({
         showsVerticalScrollIndicator={false}
         snapToInterval={ALTEZZA_VOCE}
         decelerationRate="fast"
-        contentOffset={{ x: 0, y: indiceIniziale * ALTEZZA_VOCE }}
+        getItemLayout={(_, index) => ({ length: ALTEZZA_VOCE, offset: PADDING_RUOTA + index * ALTEZZA_VOCE, index })}
         contentContainerStyle={{ paddingVertical: PADDING_RUOTA }}
         onScrollBeginDrag={() => { trascinamentoUtente.current = true; }}
         onMomentumScrollEnd={scorri}
