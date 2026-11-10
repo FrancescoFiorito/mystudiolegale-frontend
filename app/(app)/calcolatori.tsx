@@ -14,6 +14,7 @@ import PraticaPicker from "@/src/components/PraticaPicker";
 import OrarioInput from "@/src/components/OrarioInput";
 import DataInput from "@/src/components/DataInput";
 import MeseAnnoInput from "@/src/components/MeseAnnoInput";
+import ListaInput, { CampoRigaLista } from "@/src/components/ListaInput";
 import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
@@ -60,7 +61,12 @@ type CampoGenerico =
   // Sola intestazione di sezione (nessun valore nel form): raggruppa più
   // campi "bool" sotto un'unica frase comune, invece di ripeterla in ogni
   // singola etichetta.
-  | (CampoGenericoBase & { tipo: "titolo" });
+  | (CampoGenericoBase & { tipo: "titolo" })
+  // Elenco di righe ripetibili (aggiungi/rimuovi), per i campi in cui il
+  // backend si aspetta una lista di oggetti invece di un valore singolo
+  // (es. acconti versati nel tempo, periodi di credito pena). Il valore nel
+  // form è un array di oggetti {chiave: stringa}, uno per riga.
+  | (CampoGenericoBase & { tipo: "lista"; campiRiga: CampoRigaLista[]; etichettaAggiungi?: string });
 
 type ConfigGenerico = {
   campi: CampoGenerico[];
@@ -719,13 +725,41 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "liberazione_anticipata", label: "Applica liberazione anticipata (45gg a semestre)", default: false },
       { tipo: "data_opzionale", key: "data_limite", label: "Calcola fino al (opzionale)", mostraSe: (f) => !!f.liberazione_anticipata },
       { tipo: "bool", key: "solo_semestri_completi", label: "Conta solo i semestri completi", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
+      {
+        tipo: "lista", key: "crediti", label: "Periodi già scontati (crediti di pena)", etichettaAggiungi: "Aggiungi un periodo",
+        campiRiga: [
+          { tipo: "scelta", key: "tipo", label: "Tipo", default: "10", opzioni: [
+            { value: "10", label: "Custodia cautelare in carcere" },
+            { value: "20", label: "Custodia cautelare in detenzione domiciliare" },
+            { value: "30", label: "Detenzione domiciliare ex art. 47-ter O.P." },
+            { value: "40", label: "Periodo di detenzione all'estero riconosciuto" },
+            { value: "50", label: "Semilibertà" },
+            { value: "60", label: "Affidamento in prova al servizio sociale" },
+            { value: "70", label: "Lavoro di pubblica utilità" },
+            { value: "80", label: "Sospensione dell'esecuzione ex art. 656 c.p.p." },
+            { value: "90", label: "Periodo che rileva per la liberazione anticipata" },
+            { value: "100", label: "Periodo che non rileva per la liberazione anticipata" },
+          ] },
+          { tipo: "data", key: "dal", label: "Dal" },
+          { tipo: "data", key: "al", label: "Al" },
+        ],
+      },
+      {
+        tipo: "lista", key: "interruzioni", label: "Interruzioni dell'esecuzione", etichettaAggiungi: "Aggiungi un'interruzione",
+        campiRiga: [
+          { tipo: "data", key: "dal", label: "Dal" },
+          { tipo: "data", key: "al", label: "Al" },
+        ],
+      },
     ],
     endpoint: "/calc/fine-pena",
     buildBody: (f) => ({
       data_inizio: f.data_inizio, durata_anni: parseNumeroIt(f.durata_anni), durata_mesi: parseNumeroIt(f.durata_mesi),
       durata_giorni: parseNumeroIt(f.durata_giorni), liberazione_anticipata: f.liberazione_anticipata,
       data_limite: f.liberazione_anticipata ? (f.data_limite || null) : null,
-      solo_semestri_completi: f.solo_semestri_completi, crediti: [], interruzioni: [],
+      solo_semestri_completi: f.solo_semestri_completi,
+      crediti: (f.crediti || []).map((c: Record<string, string>) => ({ tipo: c.tipo, dal: c.dal, al: c.al })),
+      interruzioni: (f.interruzioni || []).map((i: Record<string, string>) => ({ dal: i.dal, al: i.al })),
     }),
     risultato: (r) => r.fine_pena_con_liberazione_anticipata ? [
       ["Fine pena (senza detrazioni)", isoToDataIt(r.fine_pena_senza_detrazioni)],
@@ -783,13 +817,27 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "tasso_fisso_pct", label: "Tasso fisso annuo %", default: "", mostraSe: (f) => f.tipo_interesse === "fisso" },
       { tipo: "bool", key: "normativa_previgente", label: "Normativa previgente (maggiorazione 7 punti, ante 2013)", default: false, mostraSe: (f) => f.tipo_interesse === "moratori" },
       { tipo: "numero", key: "maggiorazione_extra_pct", label: "Maggiorazione extra (0, 2 o 4 punti, art. 62 c.3 D.L. 1/2012)", default: "0", mostraSe: (f) => f.tipo_interesse === "moratori" },
+      { tipo: "bool", key: "applica_1194cc", label: "Imputa gli acconti prima agli interessi maturati, poi al capitale (art. 1194 c.c.)", default: true },
+      {
+        tipo: "lista", key: "movimenti", label: "Acconti versati e nuovi crediti nel tempo", etichettaAggiungi: "Aggiungi un movimento",
+        campiRiga: [
+          { tipo: "scelta", key: "tipo", label: "Tipo", default: "acconto", opzioni: [
+            { value: "acconto", label: "Acconto" }, { value: "credito", label: "Nuovo credito" },
+          ] },
+          { tipo: "data", key: "data", label: "Data" },
+          { tipo: "numero", key: "importo", label: "Importo €" },
+        ],
+      },
     ],
     endpoint: "/calc/interessi-acconti",
     buildBody: (f) => ({
       capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine, tipo_interesse: f.tipo_interesse,
       tasso_fisso_pct: f.tipo_interesse === "fisso" ? parseNumeroIt(f.tasso_fisso_pct) : null,
       normativa_previgente: f.normativa_previgente, maggiorazione_extra_pct: parseNumeroIt(f.maggiorazione_extra_pct),
-      movimenti: [],
+      applica_1194cc: f.applica_1194cc !== false,
+      movimenti: (f.movimenti || []).map((m: Record<string, string>) => ({
+        tipo: m.tipo, data: m.data, importo: parseNumeroIt(m.importo),
+      })),
     }),
     risultato: (r) => [
       ["Totale interessi", formatEuro(r.totale_interessi)],
@@ -1165,11 +1213,21 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_danno_morale", label: "Personalizzazione per danno morale (%)", default: "0" },
       { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
       { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
+      {
+        tipo: "lista", key: "giorni_invalidita_parziale", label: "Periodi di invalidità parziale (ITP)", etichettaAggiungi: "Aggiungi un periodo",
+        campiRiga: [
+          { tipo: "numero", key: "giorni", label: "Giorni" },
+          { tipo: "numero", key: "pct_inabilita", label: "Percentuale di inabilità %" },
+        ],
+      },
     ],
     endpoint: "/calc/danno-biologico-lieve-entita",
     buildBody: (f) => ({
       punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta), giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale),
-      giorni_invalidita_parziale: [], pct_danno_morale: parseNumeroIt(f.pct_danno_morale), danno_morale_su_temporanea: true,
+      giorni_invalidita_parziale: (f.giorni_invalidita_parziale || []).map((v: Record<string, string>) => ({
+        giorni: parseNumeroIt(v.giorni), pct_inabilita: parseNumeroIt(v.pct_inabilita),
+      })),
+      pct_danno_morale: parseNumeroIt(f.pct_danno_morale), danno_morale_su_temporanea: true,
       spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
     }),
     risultato: (r) => [
@@ -1191,11 +1249,21 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_personalizzazione_ulteriore", label: "Personalizzazione ulteriore (fino al 30%, art. 138 c.3)", default: "0" },
       { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
       { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
+      {
+        tipo: "lista", key: "giorni_invalidita_parziale", label: "Periodi di invalidità parziale (ITP)", etichettaAggiungi: "Aggiungi un periodo",
+        campiRiga: [
+          { tipo: "numero", key: "giorni", label: "Giorni" },
+          { tipo: "numero", key: "pct_inabilita", label: "Percentuale di inabilità %" },
+        ],
+      },
     ],
     endpoint: "/calc/danno-biologico-macropermanenti",
     buildBody: (f) => ({
       punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta), fascia_morale: f.fascia_morale,
-      giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale), giorni_invalidita_parziale: [],
+      giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale),
+      giorni_invalidita_parziale: (f.giorni_invalidita_parziale || []).map((v: Record<string, string>) => ({
+        giorni: parseNumeroIt(v.giorni), pct_inabilita: parseNumeroIt(v.pct_inabilita),
+      })),
       pct_personalizzazione_itt: parseNumeroIt(f.pct_personalizzazione_itt), pct_personalizzazione_ulteriore: parseNumeroIt(f.pct_personalizzazione_ulteriore),
       spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
     }),
@@ -1891,6 +1959,7 @@ function defaultGenForm(idc: string): Record<string, any> {
     if (c.tipo === "data") f[c.key] = new Date().toISOString().slice(0, 10);
     else if (c.tipo === "data_opzionale") f[c.key] = "";
     else if (c.tipo === "mese_anno") f[c.key] = new Date().toISOString().slice(0, 7);
+    else if (c.tipo === "lista") f[c.key] = [];
     else if (c.tipo === "numero") f[c.key] = c.default ?? "";
     else if (c.tipo === "bool") f[c.key] = c.default ?? false;
     else if (c.tipo === "scelta") f[c.key] = c.default ?? (typeof c.opzioni === "function" ? c.opzioni(f) : c.opzioni)[0]?.value;
@@ -4580,6 +4649,20 @@ export default function Calcolatori() {
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
                           <MeseAnnoInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
+                        </View>
+                      );
+                    }
+                    if (c.tipo === "lista") {
+                      return (
+                        <View key={c.key} style={{ marginTop: SPACING.md }}>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                          <ListaInput
+                            testID={`gen-${c.key}`}
+                            value={genForm[c.key] || []}
+                            onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
+                            campiRiga={c.campiRiga}
+                            etichettaAggiungi={c.etichettaAggiungi}
+                          />
                         </View>
                       );
                     }
