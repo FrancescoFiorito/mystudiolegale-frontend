@@ -125,6 +125,10 @@ export function usePushNotifications() {
   // giorno di quella scadenza nel calendario, invece di restare sulla
   // schermata dove si trovava l'app quando la notifica e' arrivata.
   React.useEffect(() => {
+    // Su web expo-notifications non implementa getLastNotificationResponse:
+    // la chiamata lanciava un errore non gestito (overlay rosso a ogni
+    // avvio). Le push esistono solo su iOS/Android, li' nulla cambia.
+    if (Platform.OS === "web") return;
     const apriDaNotifica = (data: any) => {
       if (data?.tipo === "scadenza" && data?.scadenza_data) {
         router.push(`/(app)/calendario?day=${data.scadenza_data}`);
