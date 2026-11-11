@@ -1253,12 +1253,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "numero", key: "punti", label: "Punti di invalidità permanente (10-100)", default: "" },
       { tipo: "numero", key: "eta", label: "Età al momento del sinistro", default: "" },
-      { tipo: "scelta", key: "fascia_morale", label: "Fascia danno morale", default: "media", opzioni: [
-        { value: "nessuna", label: "Nessuna" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
-      ] },
+      { tipo: "bool", key: "applica_personalizzazione_morale", label: "Applica la personalizzazione di fascia per danno morale", default: true },
+      { tipo: "numero", key: "pct_morale", label: "Percentuale personalizzazione danno morale % (facoltativo: lascia vuoto per il valore medio di fascia)", default: "", mostraSe: (f) => !!f.applica_personalizzazione_morale },
       { tipo: "numero", key: "giorni_invalidita_totale", label: "Giorni di invalidità assoluta (ITT)", default: "0" },
       { tipo: "numero", key: "pct_personalizzazione_itt", label: "Personalizzazione ITT (30-60%)", default: "45" },
       { tipo: "numero", key: "pct_personalizzazione_ulteriore", label: "Personalizzazione ulteriore (fino al 30%, art. 138 c.3)", default: "0" },
+      { tipo: "scelta", key: "applica_ulteriore_su", label: "Applica la personalizzazione ulteriore a", default: "permanente_itt",
+        mostraSe: (f) => !!parseNumeroIt(f.pct_personalizzazione_ulteriore),
+        opzioni: [
+          { value: "permanente_itt", label: "Danno permanente + I.T.T." }, { value: "solo_permanente", label: "Solo danno permanente" },
+        ] },
       { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
       { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
       {
@@ -1271,12 +1275,15 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/danno-biologico-macropermanenti",
     buildBody: (f) => ({
-      punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta), fascia_morale: f.fascia_morale,
+      punti: parseNumeroIt(f.punti), eta: parseNumeroIt(f.eta),
+      applica_personalizzazione_morale: !!f.applica_personalizzazione_morale,
+      pct_morale: (f.applica_personalizzazione_morale && f.pct_morale) ? parseNumeroIt(f.pct_morale) : null,
       giorni_invalidita_totale: parseNumeroIt(f.giorni_invalidita_totale),
       giorni_invalidita_parziale: (f.giorni_invalidita_parziale || []).map((v: Record<string, string>) => ({
         giorni: parseNumeroIt(v.giorni), pct_inabilita: parseNumeroIt(v.pct_inabilita),
       })),
       pct_personalizzazione_itt: parseNumeroIt(f.pct_personalizzazione_itt), pct_personalizzazione_ulteriore: parseNumeroIt(f.pct_personalizzazione_ulteriore),
+      applica_ulteriore_su: f.applica_ulteriore_su || "permanente_itt",
       spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
     }),
     risultato: (r) => [
