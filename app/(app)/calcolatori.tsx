@@ -259,7 +259,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "da_udienza", label: "Termine ultimo di notifica (da un'udienza)" },
       ] },
       { tipo: "data", key: "data", label: "Data" },
-      { tipo: "bool", key: "estero", label: "Notifica all'estero (150gg anziché 90gg)", default: false },
+      { tipo: "bool", key: "estero", label: "Notifica all'estero (150gg anziché 120gg)", default: false },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/termini-citazione",
