@@ -971,16 +971,15 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "numero", key: "attivo_realizzato", label: "Attivo realizzato €", default: "0" },
       { tipo: "numero", key: "passivo_accertato", label: "Passivo accertato €", default: "0" },
-      { tipo: "bool", key: "esercizio_provvisorio", label: "Esercizio provvisorio dell'impresa", default: false },
-      { tipo: "numero", key: "utili_netti", label: "Utili netti dell'esercizio provvisorio €", default: "0", mostraSe: (f) => !!f.esercizio_provvisorio },
-      { tipo: "numero", key: "ricavi_lordi", label: "Ricavi lordi dell'esercizio provvisorio €", default: "0", mostraSe: (f) => !!f.esercizio_provvisorio },
+      { tipo: "numero", key: "utili_netti", label: "Utili netti €", default: "0" },
+      { tipo: "numero", key: "ricavi_lordi", label: "Ricavi lordi €", default: "0" },
       { tipo: "numero", key: "spese_documentate", label: "Spese documentate €", default: "0" },
       { tipo: "numero", key: "indennita_missione", label: "Indennità di missione €", default: "0" },
     ],
     endpoint: "/calc/compenso-curatore-fallimentare",
     buildBody: (f) => ({
       attivo_realizzato: parseNumeroIt(f.attivo_realizzato), passivo_accertato: parseNumeroIt(f.passivo_accertato),
-      esercizio_provvisorio: f.esercizio_provvisorio, utili_netti: parseNumeroIt(f.utili_netti), ricavi_lordi: parseNumeroIt(f.ricavi_lordi),
+      esercizio_provvisorio: true, utili_netti: parseNumeroIt(f.utili_netti), ricavi_lordi: parseNumeroIt(f.ricavi_lordi),
       spese_documentate: parseNumeroIt(f.spese_documentate), indennita_missione: parseNumeroIt(f.indennita_missione),
     }),
     risultato: (r) => [
@@ -1014,8 +1013,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "spese_registrazione", label: "Spese di registrazione €", default: "0" },
       { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
       { tipo: "numero", key: "carico_aggiudicatario_manuale", label: "Quota a carico dell'aggiudicatario € (opzionale, se non indicata si applica il calcolo di legge)", default: "" },
-      { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: true },
-      { tipo: "bool", key: "applica_contributo_cassa", label: "Applica contributo cassa previdenziale (4%)", default: true },
+      { tipo: "bool", key: "applica_iva", label: "Applica IVA", default: true },
+      { tipo: "numero", key: "pct_iva", label: "Percentuale IVA %", default: "22", mostraSe: (f) => !!f.applica_iva },
+      { tipo: "bool", key: "applica_contributo_cassa", label: "Applica contributo previdenziale", default: true },
+      { tipo: "numero", key: "pct_contributo_cassa", label: "Percentuale di contribuzione %", default: "4", mostraSe: (f) => !!f.applica_contributo_cassa },
     ],
     endpoint: "/calc/compenso-delegati-vendite",
     validate: (f) => ([1, 2, 3, 4].some((n) => !!f[`fase_${n}`]) ? null : "Seleziona almeno una fase da compensare."),
@@ -1028,8 +1029,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       spese_registrazione: parseNumeroIt(f.spese_registrazione),
       altre_spese: parseNumeroIt(f.altre_spese),
       carico_aggiudicatario_manuale: f.carico_aggiudicatario_manuale ? parseNumeroIt(f.carico_aggiudicatario_manuale) : null,
-      applica_iva: f.applica_iva, pct_iva: 22.0,
-      applica_contributo_cassa: f.applica_contributo_cassa, pct_contributo_cassa: 4.0,
+      applica_iva: f.applica_iva, pct_iva: parseNumeroIt(f.pct_iva),
+      applica_contributo_cassa: f.applica_contributo_cassa, pct_contributo_cassa: parseNumeroIt(f.pct_contributo_cassa),
     }),
     risultato: (r) => [
       ["Compenso tabellare", formatEuro(r.compenso_tabellare)],
@@ -1182,7 +1183,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "abitativo", label: "Abitativo" }, { value: "strumentale", label: "Strumentale" }, { value: "fondo_rustico", label: "Fondo rustico" }, { value: "altro", label: "Altro" },
       ] },
       { tipo: "numero", key: "durata_anni", label: "Durata del contratto (anni)", default: "" },
-      { tipo: "numero", key: "canone_annuo", label: "Canone annuo €", default: "" },
+      { tipo: "scelta", key: "tipo_canone", label: "L'importo del canone è riferito a", default: "annuale", opzioni: [
+        { value: "annuale", label: "Un intero anno" }, { value: "mensile", label: "Un solo mese" }, { value: "intera_durata", label: "Tutta la durata del contratto" },
+      ] },
+      { tipo: "numero", key: "canone", label: "Importo del canone €", default: "" },
       { tipo: "bool", key: "canone_concordato", label: "Canone concordato (-30%)", default: false, mostraSe: (f) => f.tipo_immobile === "abitativo" },
       { tipo: "bool", key: "soggetto_iva", label: "Locatore soggetto IVA", default: false, mostraSe: (f) => f.tipo_immobile === "strumentale" },
       { tipo: "scelta", key: "pagamento", label: "Modalità di pagamento", default: "rateale", opzioni: [
@@ -1190,11 +1194,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
     ],
     endpoint: "/calc/tassa-registro-locazione",
-    buildBody: (f) => ({
-      tipo_immobile: f.tipo_immobile, durata_anni: parseNumeroIt(f.durata_anni), canone_annuo: parseNumeroIt(f.canone_annuo),
-      canone_concordato: f.tipo_immobile === "abitativo" ? f.canone_concordato : false,
-      soggetto_iva: f.tipo_immobile === "strumentale" ? f.soggetto_iva : false, pagamento: f.pagamento,
-    }),
+    buildBody: (f) => {
+      const durataAnni = parseNumeroIt(f.durata_anni);
+      const canone = parseNumeroIt(f.canone);
+      const canoneAnnuo = f.tipo_canone === "mensile" ? canone * 12 : f.tipo_canone === "intera_durata" ? canone / (durataAnni || 1) : canone;
+      return {
+        tipo_immobile: f.tipo_immobile, durata_anni: durataAnni, canone_annuo: canoneAnnuo,
+        canone_concordato: f.tipo_immobile === "abitativo" ? f.canone_concordato : false,
+        soggetto_iva: f.tipo_immobile === "strumentale" ? f.soggetto_iva : false, pagamento: f.pagamento,
+      };
+    },
     risultato: (r) => r.pagamento === "unica_soluzione" ? [
       ["Imposta calcolata", formatEuro(r.imposta_calcolata)],
       ["Sconto", formatEuro(r.sconto)],
@@ -1211,6 +1220,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "eta", label: "Età del danneggiato", default: "" },
       { tipo: "numero", key: "giorni_invalidita_totale", label: "Giorni di invalidità assoluta (ITT)", default: "0" },
       { tipo: "numero", key: "pct_danno_morale", label: "Personalizzazione per danno morale (%)", default: "0" },
+      { tipo: "scelta", key: "danno_morale_su_temporanea", label: "Calcolo del danno morale", default: "si", opzioni: [
+        { value: "si", label: "Su invalidità permanente e temporanea" }, { value: "no", label: "Solo su invalidità permanente" },
+      ] },
       { tipo: "numero", key: "spese_mediche", label: "Spese mediche €", default: "0" },
       { tipo: "numero", key: "altre_spese", label: "Altre spese €", default: "0" },
       {
@@ -1227,7 +1239,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       giorni_invalidita_parziale: (f.giorni_invalidita_parziale || []).map((v: Record<string, string>) => ({
         giorni: parseNumeroIt(v.giorni), pct_inabilita: parseNumeroIt(v.pct_inabilita),
       })),
-      pct_danno_morale: parseNumeroIt(f.pct_danno_morale), danno_morale_su_temporanea: true,
+      pct_danno_morale: parseNumeroIt(f.pct_danno_morale), danno_morale_su_temporanea: f.danno_morale_su_temporanea !== "no",
       spese_mediche: parseNumeroIt(f.spese_mediche), altre_spese: parseNumeroIt(f.altre_spese),
     }),
     risultato: (r) => [
@@ -1505,7 +1517,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "capitale", label: "Capitale del mutuo originario €", default: "" },
       { tipo: "numero", key: "tasso_annuo_pct", label: "Tasso annuale originario %", default: "" },
       { tipo: "numero", key: "durata_anni_originale", label: "Durata originaria (anni)", default: "" },
-      { tipo: "numero", key: "mesi_trascorsi", label: "Numero di rate già pagate", default: "" },
+      { tipo: "mese_anno", key: "data_inizio_mutuo", label: "Dal mese di (inizio mutuo originario)" },
+      { tipo: "mese_anno", key: "data_surroga", label: "Dal mese di (surroga)" },
       { tipo: "numero", key: "nuovo_tasso_annuo_pct", label: "Nuovo tasso annuale (surroga) %", default: "" },
       { tipo: "scelta", key: "tipo_durata_surroga", label: "Durata della surroga", default: "residua", opzioni: [
         { value: "residua", label: "Mantieni la durata residua" }, { value: "personalizzata", label: "Scegli una nuova durata" },
@@ -1513,12 +1526,17 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "nuova_durata_anni", label: "Nuova durata (anni)", default: "", mostraSe: (f) => f.tipo_durata_surroga === "personalizzata" },
     ],
     endpoint: "/calc/surroga-mutuo",
-    buildBody: (f) => ({
-      capitale: parseNumeroIt(f.capitale), tasso_annuo_pct: parseNumeroIt(f.tasso_annuo_pct),
-      durata_anni_originale: parseNumeroIt(f.durata_anni_originale), mesi_trascorsi: parseNumeroIt(f.mesi_trascorsi),
-      nuovo_tasso_annuo_pct: parseNumeroIt(f.nuovo_tasso_annuo_pct),
-      nuova_durata_anni: f.tipo_durata_surroga === "personalizzata" ? parseNumeroIt(f.nuova_durata_anni) : null,
-    }),
+    buildBody: (f) => {
+      const [annoInizio, meseInizio] = (f.data_inizio_mutuo || "").split("-").map(Number);
+      const [annoSurroga, meseSurroga] = (f.data_surroga || "").split("-").map(Number);
+      const mesiTrascorsi = (annoSurroga - annoInizio) * 12 + (meseSurroga - meseInizio);
+      return {
+        capitale: parseNumeroIt(f.capitale), tasso_annuo_pct: parseNumeroIt(f.tasso_annuo_pct),
+        durata_anni_originale: parseNumeroIt(f.durata_anni_originale), mesi_trascorsi: mesiTrascorsi,
+        nuovo_tasso_annuo_pct: parseNumeroIt(f.nuovo_tasso_annuo_pct),
+        nuova_durata_anni: f.tipo_durata_surroga === "personalizzata" ? parseNumeroIt(f.nuova_durata_anni) : null,
+      };
+    },
     risultato: (r) => [
       ["Rata originaria", formatEuro(r.rata_originale)],
       ["Capitale residuo", formatEuro(r.capitale_residuo)],
