@@ -1276,19 +1276,22 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "menomazioni-plurime": {
     campi: [
-      { tipo: "numero", key: "percentuale_1", label: "Percentuale invalidità menomazione 1", default: "" },
-      { tipo: "numero", key: "percentuale_2", label: "Percentuale invalidità menomazione 2", default: "" },
-      { tipo: "numero", key: "percentuale_3", label: "Percentuale invalidità menomazione 3 (opzionale)", default: "" },
-      { tipo: "numero", key: "percentuale_4", label: "Percentuale invalidità menomazione 4 (opzionale)", default: "" },
       { tipo: "scelta", key: "metodo", label: "Metodo", default: "balthazard", opzioni: [
         { value: "balthazard", label: "Balthazard (menomazioni coesistenti)" }, { value: "salomonica", label: "Salomonica (menomazioni concorrenti)" },
       ] },
+      {
+        tipo: "lista", key: "percentuali", label: "Percentuali di invalidità delle singole menomazioni", etichettaAggiungi: "Aggiungi una menomazione",
+        campiRiga: [{ tipo: "numero", key: "valore", label: "Percentuale invalidità %" }],
+      },
+      { tipo: "scelta", key: "decimali", label: "Decimali per l'arrotondamento", default: "0", opzioni: [
+        { value: "0", label: "0" }, { value: "1", label: "1" }, { value: "2", label: "2" },
+      ] },
     ],
     endpoint: "/calc/menomazioni-plurime",
-    validate: (f) => (!f.percentuale_1 || !f.percentuale_2) ? "Inserire almeno due percentuali di invalidità" : null,
+    validate: (f) => ((f.percentuali || []).filter((r: Record<string, string>) => r.valore).length < 2) ? "Inserire almeno due percentuali di invalidità" : null,
     buildBody: (f) => ({
-      percentuali: [f.percentuale_1, f.percentuale_2, f.percentuale_3, f.percentuale_4].filter((v) => v).map((v) => parseNumeroIt(v)),
-      metodo: f.metodo, decimali: 2,
+      percentuali: (f.percentuali || []).map((r: Record<string, string>) => parseNumeroIt(r.valore)).filter((v: number) => !isNaN(v)),
+      metodo: f.metodo, decimali: parseNumeroIt(f.decimali),
     }),
     risultato: (r) => [["Invalidità totale", `${r.invalidita_totale_pct}%`]],
   },
