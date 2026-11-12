@@ -4,6 +4,19 @@ const BASE = (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
 
 export const TOKEN_KEY = "mystudiolegale_token";
 
+// `detail` puo' essere una stringa (errore applicativo) o, sugli errori 422,
+// la lista di errori di validazione di Pydantic ([{type, loc, msg, ...}]):
+// senza questo controllo new Error(detail) la mostrerebbe come "[object
+// Object]" invece del messaggio leggibile.
+function messaggioErrore(detail: any, fallback: string): string {
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    const msgs = detail.map((d) => d?.msg).filter(Boolean);
+    if (msgs.length) return msgs.join("; ");
+  }
+  return fallback;
+}
+
 async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
   const token = await storage.secureGet<string>(TOKEN_KEY, "");
   const headers: any = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -14,7 +27,7 @@ async function req<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
     let msg = `Errore ${res.status}`;
     try {
       const j = await res.json();
-      msg = j.detail || msg;
+      msg = messaggioErrore(j.detail, msg);
     } catch {}
     throw new Error(msg);
   }
@@ -32,7 +45,7 @@ async function upload<T = any>(path: string, form: FormData): Promise<T> {
     let msg = `Errore ${res.status}`;
     try {
       const j = await res.json();
-      msg = j.detail || msg;
+      msg = messaggioErrore(j.detail, msg);
     } catch {}
     throw new Error(msg);
   }

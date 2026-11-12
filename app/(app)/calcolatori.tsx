@@ -2858,17 +2858,21 @@ export default function Calcolatori() {
   };
 
   const calcPar = async () => {
-    const body: any = { ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
-    Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
-    body.voci_spese = buildVociSpeseBody();
-    body.voci_custom = buildVociCustomBody();
-    body.parti_assistite = buildPartiAssistiteBody();
-    const r = await api.post("/calc/parcella", body);
-    setRisPar(r);
-    // In modifica il ricalcolo raffina la stessa parcella: non si deve
-    // perdere il nome/la pratica gia' collegati solo perche' si e'
-    // ritoccata una cifra.
-    if (!params.editId) setTitoloPar("");
+    try {
+      const body: any = { ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
+      Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
+      body.voci_spese = buildVociSpeseBody();
+      body.voci_custom = buildVociCustomBody();
+      body.parti_assistite = buildPartiAssistiteBody();
+      const r = await api.post("/calc/parcella", body);
+      setRisPar(r);
+      // In modifica il ricalcolo raffina la stessa parcella: non si deve
+      // perdere il nome/la pratica gia' collegati solo perche' si e'
+      // ritoccata una cifra.
+      if (!params.editId) setTitoloPar("");
+    } catch (e: any) {
+      Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
+    }
   };
 
   const saveScad = async () => {
