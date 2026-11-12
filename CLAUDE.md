@@ -13,6 +13,8 @@ App di gestione per studi legali (React Native / Expo, distribuita via TestFligh
    - `npx tsc --noEmit -p .`
    - `npx expo lint`
    Confronta l'output con gli errori/warning preesistenti (non sono regressioni introdotte dalla modifica): i confronti `"light"`/`"dark"` in `dashboard.tsx`, `profilo.tsx`, `login.tsx`, `_layout.tsx`, `ThemeContext.tsx`; l'icona `"euro"` non tipizzata in `pratica/[id].tsx`; vari `react/no-unescaped-entities` (calendario.tsx, pratica/[id].tsx, register.tsx); l'import `SHADOW` inutilizzato in `calcolatori.tsx`; alcuni `react-hooks/exhaustive-deps`. Un `npx expo lint` genera anche un `eslint.config.js` locale non versionato: cancellalo prima di committare.
+
+   **Attenzione al baseline di `tsc`**: il conteggio di righe/errori preesistenti sopra (12 righe) vale solo se `.expo/types/router.d.ts` **non esiste** (lo stato di un clone pulito, mai avviato). Quel file viene generato automaticamente appena gira `expo start` (anche `--web`, anche solo per pochi secondi, come serve per testare l'app nel browser): una volta presente, i controlli sui path di navigazione diventano più severi e compaiono ~9 errori in più (`Type '"/(app)/..."' is not assignable to type '...'` su `archivio.tsx`, `clienti.tsx`, `dashboard.tsx`, `_layout.tsx`, `index.tsx`) — non sono una regressione di codice, sono un artefatto del file generato. Se hai fatto girare `expo start` nella stessa sessione, cancella `.expo/types` (`rm -rf .expo/types`) **prima** di confrontare l'output di `tsc` con questo baseline, altrimenti rischi di scambiare questo artefatto per un bug nuovo (o viceversa).
 3. Messaggio di commit in italiano, terminato con:
    ```
    Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
