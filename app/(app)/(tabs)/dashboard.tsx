@@ -137,7 +137,17 @@ export default function Dashboard() {
   // cambiando tab (e' un pager), quindi un useEffect legato al mount da
   // solo non la ricaricherebbe mai al ritorno da un'altra tab - prima
   // serviva lo swipe-to-refresh manuale per vedere i contatori aggiornati.
-  useFocusEffect(React.useCallback(() => { load(); }, [load]));
+  // aFuoco: LoadingScreen e' un <Modal> a schermo intero, quindi copre TUTTA
+  // l'app, non solo questa tab. Se l'app si apre direttamente su un'altra
+  // tab (es. ricaricando /clienti su web, o un deep link) la Home e' montata
+  // nel pager ma mai a fuoco: load() non parte e il Modal restava sopra la
+  // tab visibile per sempre. Lo mostriamo quindi solo con la Home a fuoco.
+  const [aFuoco, setAFuoco] = React.useState(false);
+  useFocusEffect(React.useCallback(() => {
+    setAFuoco(true);
+    load();
+    return () => setAFuoco(false);
+  }, [load]));
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 
   if (!data && errore) {
@@ -154,7 +164,7 @@ export default function Dashboard() {
   }
 
   if (!data) {
-    return <LoadingScreen />;
+    return aFuoco ? <LoadingScreen /> : <View style={{ flex: 1, backgroundColor: t.surface }} />;
   }
 
   const Stat = ({ label, value, icon, color, bg, testID, onPress }: any) => (
