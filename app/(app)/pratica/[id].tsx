@@ -272,7 +272,7 @@ export default function PraticaDetail() {
               {pratica.cliente ? <View style={s.infoRow}><Feather name="user" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{pratica.cliente.ragione_sociale || `${pratica.cliente.nome} ${pratica.cliente.cognome || ""}`}</Text></View> : null}
               {pratica.controparte ? <View style={s.infoRow}><Feather name="users" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>vs {pratica.controparte}</Text></View> : null}
               {pratica.tribunale ? <View style={s.infoRow}><Feather name="home" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13 }}>{pratica.tribunale}</Text></View> : null}
-              {pratica.valore_causa ? <View style={s.infoRow}><Feather name="euro" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatEuro(pratica.valore_causa)}</Text></View> : null}
+              {pratica.valore_causa ? <View style={s.infoRow}><Feather name="dollar-sign" size={14} color={t.onSurfaceTertiary} /><Text style={{ color: t.onSurfaceSecondary, fontSize: 13, fontVariant: ["tabular-nums"] }}>{formatEuro(pratica.valore_causa)}</Text></View> : null}
             </View>
           </View>
         </View>
