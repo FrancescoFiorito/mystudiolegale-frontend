@@ -2561,7 +2561,7 @@ export default function Calcolatori() {
   const [tassiCapitale, setTassiCapitale] = React.useState("");
   const [tassiDataInizio, setTassiDataInizio] = React.useState(new Date().toISOString().slice(0, 10));
   const [tassiDataFine, setTassiDataFine] = React.useState(new Date().toISOString().slice(0, 10));
-  const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("8");
+  const [tassiMaggiorazione, setTassiMaggiorazione] = React.useState("");
   // Come nel calcolatore di riferimento: due spunte che impostano la maggiorazione di conseguenza —
   // il campo maggiorazione resta comunque modificabile a mano dopo.
   // - ante2013: 7 punti anziché 8, per le transazioni commerciali concluse
@@ -2573,7 +2573,6 @@ export default function Calcolatori() {
   //   chiama "maggiorazione del 24%" ma la norma e le fonti indipendenti consultate descrivono
   //   un'aggiunta di 4 punti percentuali, non una moltiplicazione per 1,24:
   //   seguiamo la norma.
-  const [tassiAnte2013, setTassiAnte2013] = React.useState(false);
   const [tassiProdottiAgricoli, setTassiProdottiAgricoli] = React.useState(false);
   const [tassiCapitalizzazione, setTassiCapitalizzazione] = React.useState("nessuna");
   const [risTassi, setRisTassi] = React.useState<any>(null);
@@ -2919,7 +2918,7 @@ export default function Calcolatori() {
     setRisTassi(null);
     try {
       const body: any = { capitale: parseNumeroIt(tassiCapitale), data_inizio: tassiDataInizio, data_fine: tassiDataFine };
-      if (tipo === "interessi-mora") body.maggiorazione_pct = parseNumeroIt(tassiMaggiorazione) || 8;
+      if (tipo === "interessi-mora") body.maggiorazione_pct = parseNumeroIt(tassiMaggiorazione) || 0;
       else body.capitalizzazione = tassiCapitalizzazione;
       const r = await api.post(`/calc/${tipo}`, body);
       setRisTassi(r);
@@ -4171,34 +4170,20 @@ export default function Calcolatori() {
                   {calcAperto === "interessi-mora" ? (
                     <>
                       <Pressable
-                        testID="tassi-ante-2013"
-                        onPress={() => {
-                          const nuovo = !tassiAnte2013;
-                          setTassiAnte2013(nuovo);
-                          setTassiMaggiorazione(String((nuovo ? 7 : 8) + (tassiProdottiAgricoli ? 4 : 0)));
-                        }}
-                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
-                      >
-                        <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: tassiAnte2013 ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
-                          {tassiAnte2013 ? <Feather name="check" size={14} color={t.onBrand} /> : null}
-                        </View>
-                        <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Transazione conclusa entro il 31/12/2012 (maggiorazione 7% anziché 8%, D.Lgs. 192/2012)</Text>
-                      </Pressable>
-                      <Pressable
                         testID="tassi-prodotti-agricoli"
                         onPress={() => {
                           const nuovo = !tassiProdottiAgricoli;
                           setTassiProdottiAgricoli(nuovo);
-                          setTassiMaggiorazione(String((tassiAnte2013 ? 7 : 8) + (nuovo ? 4 : 0)));
+                          setTassiMaggiorazione(nuovo ? "4" : "");
                         }}
-                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}
+                        style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                       >
                         <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: tassiProdottiAgricoli ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                           {tassiProdottiAgricoli ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                         </View>
                         <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)</Text>
                       </Pressable>
-                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione sul tasso BCE % (default 8, art. 5 D.Lgs. 231/2002)</Text>
+                      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione aggiuntiva sul tasso % (facoltativa — la maggiorazione statutaria, 7 punti fino al 2012 e 8 dal 2013, si applica già in automatico in base alla data, art. 5 D.Lgs. 231/2002)</Text>
                       <TextInput testID="tassi-maggiorazione" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : (
