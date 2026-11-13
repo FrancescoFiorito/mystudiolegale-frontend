@@ -40,7 +40,7 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -122,6 +122,35 @@ function meseAnnoNum(v: string): { mese: number; anno: number } {
 
 // Solo per l'etichetta del dettaglio di "Rivalutazione TFR" qui sotto.
 const MESI_IT_TFR = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+
+// Tabelle del calcolatore "Parametri 2014 Penale" (DM 55/2014, compensi min/medio/max per fase), per mostrare gli importi accanto a ciascuna fase.
+const TABELLE_PENALI_2014: Record<string, Record<string, Record<string, [number, number, number]>>> = {"2022":{"500":{"10":[189,378,567],"20":[237,473,710],"60":[378,756,1134],"90":[331,662,993]},"510":{"10":[426,851,1277],"20":[331,662,993],"60":[520,1040,1560],"90":[615,1229,1844]},"520":{"10":[426,851,1277],"60":[709,1418,2127]},"525":{"10":[189,378,567],"60":[237,473,710],"90":[355,709,1064]},"530":{"10":[189,378,567],"20":[615,1229,1844],"90":[709,1418,2127]},"540":{"10":[189,378,567],"20":[615,1229,1844],"90":[709,1418,2127]},"550":{"10":[426,851,1277],"20":[378,756,1134],"60":[520,1040,1560],"90":[709,1418,2127]},"560":{"10":[426,851,1277],"20":[378,756,1134],"60":[520,1040,1560],"90":[709,1418,2127]},"570":{"10":[237,473,710],"20":[284,567,851],"60":[567,1134,1701],"90":[709,1418,2127]},"580":{"10":[237,473,710],"20":[378,756,1134],"60":[709,1418,2127],"90":[709,1418,2127]},"590":{"10":[378,756,1134],"20":[709,1418,2127],"60":[1182,2363,3545],"90":[1418,2835,4253]},"600":{"10":[237,473,710],"20":[473,945,1418],"60":[709,1418,2127],"90":[709,1418,2127]},"610":{"10":[237,473,710],"20":[473,945,1418],"60":[709,1418,2127],"90":[709,1418,2127]},"615":{"10":[158,315,473],"20":[189,378,567],"90":[473,945,1418]},"620":{"10":[378,756,1134],"20":[993,1985,2978],"60":[1134,2268,3402],"90":[1168,2336,3504]},"630":{"10":[473,945,1418],"20":[1323,2646,3969],"90":[1371,2741,4112]},"640":{"10":[473,945,1418],"20":[1323,2646,3969],"90":[1371,2741,4112]}},"2014":{"500":{"10":[180,360,648],"20":[225,450,810],"60":[360,720,1296],"90":[315,630,1134]},"510":{"10":[405,810,1458],"20":[315,630,1134],"60":[495,990,1782],"90":[585,1170,2106]},"520":{"10":[405,810,1458],"60":[675,1350,2430]},"530":{"10":[180,360,648],"20":[585,1170,2106],"90":[675,1350,2430]},"540":{"10":[180,360,648],"20":[585,1170,2106],"90":[675,1350,2430]},"550":{"10":[405,810,1458],"20":[360,720,1296],"60":[495,990,1782],"90":[675,1350,2430]},"560":{"10":[405,810,1458],"20":[360,720,1296],"60":[495,990,1782],"90":[675,1350,2430]},"570":{"10":[225,450,810],"20":[270,540,972],"60":[540,1080,1944],"90":[675,1350,2430]},"580":{"10":[225,450,810],"20":[360,720,1296],"60":[675,1350,2430],"90":[675,1350,2430]},"590":{"10":[360,720,1296],"20":[675,1350,2430],"60":[1125,2250,4050],"90":[1350,2700,4860]},"600":{"10":[225,450,810],"20":[450,900,1620],"60":[675,1350,2430],"90":[675,1350,2430]},"610":{"10":[225,450,810],"20":[450,900,1620],"60":[675,1350,2430],"90":[675,1350,2430]},"620":{"10":[360,720,1296],"20":[945,1890,3402],"60":[1080,2160,3888],"90":[1113,2225,4005]},"630":{"10":[450,900,1620],"20":[1260,2520,4536],"90":[1305,2610,4698]},"640":{"10":[450,900,1620],"20":[1260,2520,4536],"90":[1305,2610,4698]}}};
+
+const COMPETENZE_PENALI_2014: { value: string; label: string }[] = [
+  { value: "500", label: "Giudice di pace" }, { value: "510", label: "Indagini preliminari" }, { value: "520", label: "Indagini difensive" },
+  { value: "525", label: "Convalida dell'arresto" }, { value: "530", label: "Cautelari personali" }, { value: "540", label: "Cautelari reali" },
+  { value: "550", label: "GIP" }, { value: "560", label: "GUP" }, { value: "570", label: "Tribunale monocratico" }, { value: "580", label: "Tribunale collegiale" },
+  { value: "590", label: "Corte d'Assise" }, { value: "600", label: "Corte d'Appello" }, { value: "610", label: "Tribunale di sorveglianza" },
+  { value: "615", label: "Magistrato di sorveglianza" }, { value: "620", label: "Corte d'Assise d'Appello" }, { value: "630", label: "Corte di Cassazione" },
+  { value: "640", label: "Magistrature superiori" },
+];
+const FASI_PENALI_2014: { cod: string; nome: string }[] = [
+  { cod: "10", nome: "Studio" }, { cod: "20", nome: "Introduttiva" }, { cod: "60", nome: "Istruttoria / dibattimentale" }, { cod: "90", nome: "Decisionale" },
+];
+function fasePenale2014(f: Record<string, any>, cod: string): [number, number, number] | null {
+  return TABELLE_PENALI_2014[f.anno]?.[f.competenza]?.[cod] ?? null;
+}
+// Percentuale massima (e predefinita) di aumento per pluralità di parti (art. 12 c.2): +30% per ciascun soggetto oltre il primo fino a 10, poi +10% fino a 30.
+function pctMaxPartiPenale2014(n: number): number {
+  return n <= 1 ? 0 : 30 * (Math.min(n, 10) - 1) + 10 * Math.max(n - 10, 0);
+}
+function opzioniPctPartiPenale2014(f: Record<string, any>): { value: string; label: string }[] {
+  const n = Math.min(30, Math.max(1, Math.round(parseNumeroIt(f.num_parti) || 1)));
+  const mx = pctMaxPartiPenale2014(n);
+  const out: { value: string; label: string }[] = [{ value: "", label: `${mx}% (massimo)` }];
+  for (let p = mx - (mx > 270 ? 5 : 10); p >= 0; p -= p > 270 ? 5 : 10) out.push({ value: String(p), label: `${p}%` });
+  return out;
+}
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -1089,6 +1118,118 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ["Totale massimo (+50%)", formatEuro(r.totale_massimo_discrezionale)],
     ],
   },
+  "parametri-penali-2014": {
+    campi: [
+      { tipo: "scelta", key: "anno", label: "Tabelle", default: "2022", opzioni: [
+        { value: "2022", label: "2022 (vigenti)" }, { value: "2014", label: "2014-2018 (precedenti)" },
+      ] },
+      { tipo: "scelta", key: "competenza", label: "Competenza", default: "570", opzioni: (f) => COMPETENZE_PENALI_2014.filter((c) => !!TABELLE_PENALI_2014[f.anno]?.[c.value]) },
+      { tipo: "scelta", key: "valore", label: "Compenso di tutte le fasi", default: "med", opzioni: [
+        { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "titolo", key: "tit_f10", label: "Fase: Studio", mostraSe: (f) => !!fasePenale2014(f, "10") },
+      { tipo: "bool", key: "f10_on", label: "Includi la fase", default: true, mostraSe: (f) => !!fasePenale2014(f, "10"),
+        nota: (f) => { const t = fasePenale2014(f, "10"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f10_val", label: "Valore", default: "", mostraSe: (f) => !!fasePenale2014(f, "10") && !!f.f10_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f10_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!fasePenale2014(f, "10") && !!f.f10_on },
+      { tipo: "titolo", key: "tit_f20", label: "Fase: Introduttiva", mostraSe: (f) => !!fasePenale2014(f, "20") },
+      { tipo: "bool", key: "f20_on", label: "Includi la fase", default: true, mostraSe: (f) => !!fasePenale2014(f, "20"),
+        nota: (f) => { const t = fasePenale2014(f, "20"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f20_val", label: "Valore", default: "", mostraSe: (f) => !!fasePenale2014(f, "20") && !!f.f20_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f20_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!fasePenale2014(f, "20") && !!f.f20_on },
+      { tipo: "titolo", key: "tit_f60", label: "Fase: Istruttoria / dibattimentale", mostraSe: (f) => !!fasePenale2014(f, "60") },
+      { tipo: "bool", key: "f60_on", label: "Includi la fase", default: true, mostraSe: (f) => !!fasePenale2014(f, "60"),
+        nota: (f) => { const t = fasePenale2014(f, "60"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f60_val", label: "Valore", default: "", mostraSe: (f) => !!fasePenale2014(f, "60") && !!f.f60_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f60_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!fasePenale2014(f, "60") && !!f.f60_on },
+      { tipo: "titolo", key: "tit_f90", label: "Fase: Decisionale", mostraSe: (f) => !!fasePenale2014(f, "90") },
+      { tipo: "bool", key: "f90_on", label: "Includi la fase", default: true, mostraSe: (f) => !!fasePenale2014(f, "90"),
+        nota: (f) => { const t = fasePenale2014(f, "90"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f90_val", label: "Valore", default: "", mostraSe: (f) => !!fasePenale2014(f, "90") && !!f.f90_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f90_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!fasePenale2014(f, "90") && !!f.f90_on },
+      { tipo: "titolo", key: "tit_aum", label: "Aumenti" },
+      { tipo: "numero", key: "num_parti", label: "Numero parti (stessa posizione processuale)", default: "1", nota: () => "Aumento per più parti, art. 12 comma 2" },
+      { tipo: "scelta", key: "pct_parti", label: "Aumento per più parti", default: "", mostraSe: (f) => (parseNumeroIt(f.num_parti) || 1) > 1, opzioni: opzioniPctPartiPenale2014 },
+      { tipo: "bool", key: "importanza", label: "Ulteriore valutazione (art. 12, comma 1)", default: false },
+      { tipo: "numero", key: "pct_importanza", label: "Aumento %", default: "", mostraSe: (f) => !!f.importanza },
+      { tipo: "titolo", key: "tit_rid", label: "Riduzioni" },
+      { tipo: "bool", key: "assenza", label: "Assenza di questioni di fatto e diritto (art. 12, comma 2)", default: false },
+      { tipo: "scelta", key: "pct_assenza", label: "Riduzione %", default: "30", mostraSe: (f) => !!f.assenza, opzioni: Array.from({ length: 30 }, (_, i) => ({ value: String(30 - i), label: `${30 - i}%` })) },
+      { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (riduzione di 1/3, art. 106 bis DPR 115/02)", default: false },
+      { tipo: "bool", key: "praticante", label: "Compenso liquidato al praticante abilitato (art. 17)", default: false },
+      { tipo: "scelta", key: "pct_praticante", label: "Riduzione %", default: "50", mostraSe: (f) => !!f.praticante, opzioni: Array.from({ length: 50 }, (_, i) => ({ value: String(50 - i), label: `${50 - i}%` })) },
+      { tipo: "titolo", key: "tit_spese", label: "Spese" },
+      { tipo: "numero", key: "spese_esenti", label: "Spese esenti € (art. 15 DPR 633/72)", default: "" },
+      { tipo: "numero", key: "spese_trasferta", label: "Spese di trasferta €", default: "" },
+      { tipo: "numero", key: "spese_imponibili", label: "Altre spese imponibili € (non relative a trasferte)", default: "" },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
+      { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
+      { tipo: "titolo", key: "tit_acc", label: "Accessori" },
+      { tipo: "bool", key: "cassa", label: "CPA (Cassa Avvocati 4%)", default: false },
+      { tipo: "bool", key: "iva", label: "IVA 22%", default: false },
+      { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto 20%", default: false },
+    ],
+    endpoint: "/calc/parametri-penali-2014",
+    validate: (f) => {
+      if (!TABELLE_PENALI_2014[f.anno]?.[f.competenza]) return "Competenza non prevista per le tabelle selezionate.";
+      if (!FASI_PENALI_2014.some((x) => fasePenale2014(f, x.cod) && f[`f${x.cod}_on`])) return "Selezionare almeno una fase.";
+      if (f.importanza && !(parseNumeroIt(f.pct_importanza) > 0)) return "Indicare la percentuale di aumento per ulteriore valutazione.";
+      const n = parseNumeroIt(f.num_parti) || 1;
+      if (n < 1 || n > 30) return "Il numero di parti deve essere compreso tra 1 e 30.";
+      return null;
+    },
+    buildBody: (f) => {
+      const n = Math.round(parseNumeroIt(f.num_parti) || 1);
+      return {
+        anno: f.anno, competenza: f.competenza, valore: f.valore,
+        fasi: FASI_PENALI_2014.filter((x) => fasePenale2014(f, x.cod)).map((x) => ({
+          cod: parseInt(x.cod, 10), attiva: !!f[`f${x.cod}_on`],
+          valore: f[`f${x.cod}_val`] || null,
+          importo: String(f[`f${x.cod}_imp`] ?? "").trim() !== "" ? parseNumeroIt(f[`f${x.cod}_imp`]) : null,
+        })),
+        num_parti: n, pct_parti: n > 1 && f.pct_parti !== "" ? parseNumeroIt(f.pct_parti) : null,
+        importanza: !!f.importanza, pct_importanza: f.importanza ? parseNumeroIt(f.pct_importanza) : null,
+        assenza_questioni: !!f.assenza, pct_assenza_questioni: parseNumeroIt(f.pct_assenza) || 30,
+        gratuito_patrocinio: !!f.gratuito_patrocinio,
+        praticante: !!f.praticante, pct_praticante: parseNumeroIt(f.pct_praticante) || 50,
+        spese_esenti: parseNumeroIt(f.spese_esenti), spese_trasferta: parseNumeroIt(f.spese_trasferta), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+        spese_generali: !!f.spese_generali, pct_spese_generali: parseNumeroIt(f.pct_spese_generali),
+        cassa: !!f.cassa, iva: !!f.iva, ritenuta: !!f.ritenuta,
+      };
+    },
+    risultato: (r) => {
+      const tipoLbl: Record<string, string> = { min: "valore minimo", med: "valore medio", max: "valore massimo", pers: "valore personalizzato" };
+      const out: [string, string][] = [["Competenza", r.competenza_nome]];
+      for (const x of r.fasi) out.push([`${x.nome} (${tipoLbl[x.tipo]})`, formatEuro(x.importo)]);
+      out.push([r.etichetta_tabellare ? `Compenso tabellare (${r.etichetta_tabellare})` : "Compenso tabellare", formatEuro(r.compenso_tabellare_fasi)]);
+      for (const a of r.aumenti) out.push([`${a.descrizione} — ${a.pct}%`, formatEuro(a.importo)]);
+      if (r.aumenti.length) out.push(["Compenso maggiorato comprensivo degli aumenti", formatEuro(r.compenso_maggiorato)]);
+      for (const x of r.riduzioni) out.push([`${x.descrizione}${x.pct != null ? ` — ${x.pct}%` : ""} su ${formatEuro(x.base)}`, formatEuro(x.importo)]);
+      if (r.riduzioni.length) out.push(["Compenso al netto delle riduzioni", formatEuro(r.compenso_totale)]);
+      out.push(["Compenso totale", formatEuro(r.compenso_totale)]);
+      if (r.spese_generali) out.push(["Spese generali", formatEuro(r.spese_generali)]);
+      if (r.spese_trasferta) out.push(["Spese di trasferta", formatEuro(r.spese_trasferta)]);
+      if (r.spese_imponibili) out.push(["Altre spese imponibili non relative a trasferte", formatEuro(r.spese_imponibili)]);
+      if (r.cassa) out.push(["Cassa Avvocati (4%)", formatEuro(r.cassa)]);
+      if (r.cassa || r.iva) out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva) out.push(["IVA 22% su imponibile", formatEuro(r.iva)]);
+      if (r.spese_esenti) out.push(["Spese esenti ex art. 15 DPR 633/72", formatEuro(r.spese_esenti)]);
+      out.push(["Ipotesi di compenso liquidabile", formatEuro(r.totale)]);
+      if (r.ritenuta) {
+        out.push(["A dedurre ritenuta d'acconto 20% (su compenso e spese imponibili)", formatEuro(r.ritenuta)]);
+        out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      }
+      return out;
+    },
+  },
   "quote-ereditarie": {
     campi: [
       { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
@@ -2052,6 +2193,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-curatore-fallimentare", titolo: "Compenso Curatore Fallimentare", sottotitolo: "DM 25/1/2012 n. 30", icona: "briefcase" },
   { id: "compenso-delegati-vendite", titolo: "Compenso Delegati Vendite Giudiziarie", sottotitolo: "Immobili e mobili", icona: "briefcase" },
   { id: "compenso-mediatore-familiare", titolo: "Compenso Mediatore Familiare", sottotitolo: "Per complessità e numero di incontri", icona: "users" },
+  { id: "parametri-penali-2014", titolo: "Parametri 2014 Penale", sottotitolo: "Compenso avvocati in ambito penale, DM 55/2014", icona: "bar-chart-2" },
   { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
   { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
   { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
@@ -2420,7 +2562,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Scorporo Importi", tipo: "calcolatore", calcId: "scorporo-importi" },
       { nome: "Fattura Avvocati", tipo: "in_arrivo" },
       { nome: "Parametri 2014 Civile", tipo: "calcolatore", calcId: "parametri-forensi" },
-      { nome: "Parametri 2014 Penale", tipo: "in_arrivo" },
+      { nome: "Parametri 2014 Penale", tipo: "calcolatore", calcId: "parametri-penali-2014" },
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
       { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
       { nome: "Tabelle Parametri", tipo: "in_arrivo" },
