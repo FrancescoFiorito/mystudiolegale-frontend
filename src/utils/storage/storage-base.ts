@@ -24,7 +24,6 @@ export abstract class StorageBase {
 
   protected warn(op: string, key: string, e: unknown) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.warn(`[storage] ${op} failed for "${key}"`, e);
     }
   }

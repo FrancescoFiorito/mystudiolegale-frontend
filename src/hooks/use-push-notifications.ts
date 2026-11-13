@@ -103,7 +103,6 @@ export async function registraPushToken(): Promise<StatoPush> {
     const stato: StatoPush = { ok: false, messaggio: String(e?.message || e), at: new Date().toISOString() };
     await salvaStatoPush(stato);
     if (__DEV__) {
-      // eslint-disable-next-line no-console
       console.log("push registration failed:", e);
     }
     return stato;

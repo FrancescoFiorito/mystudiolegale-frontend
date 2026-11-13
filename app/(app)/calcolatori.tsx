@@ -7,7 +7,7 @@ import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
 import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
-import { SPACING, RADIUS, SHADOW } from "@/src/theme";
+import { SPACING, RADIUS } from "@/src/theme";
 import Header from "@/src/components/Header";
 import PromemoriaInput from "@/src/components/PromemoriaInput";
 import PraticaPicker from "@/src/components/PraticaPicker";
@@ -1534,9 +1534,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     ],
     endpoint: "/calc/surroga-mutuo",
     buildBody: (f) => {
-      const [annoInizio, meseInizio] = (f.data_inizio_mutuo || "").split("-").map(Number);
-      const [annoSurroga, meseSurroga] = (f.data_surroga || "").split("-").map(Number);
-      const mesiTrascorsi = (annoSurroga - annoInizio) * 12 + (meseSurroga - meseInizio);
+      const inizio = meseAnnoNum(f.data_inizio_mutuo), surroga = meseAnnoNum(f.data_surroga);
+      const mesiTrascorsi = (surroga.anno - inizio.anno) * 12 + (surroga.mese - inizio.mese);
       return {
         capitale: parseNumeroIt(f.capitale), tasso_annuo_pct: parseNumeroIt(f.tasso_annuo_pct),
         durata_anni_originale: parseNumeroIt(f.durata_anni_originale), mesi_trascorsi: mesiTrascorsi,
