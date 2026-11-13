@@ -2118,8 +2118,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Interessi a Tasso Fisso", tipo: "in_arrivo" },
       { nome: "Interessi e Acconti", tipo: "calcolatore", calcId: "interessi-acconti" },
       { nome: "Calcolo Maggior Danno", tipo: "calcolatore", calcId: "maggior-danno" },
-      { nome: "Interessi 1284 cc", tipo: "calcolatore", calcId: "interessi-legali" },
-      { nome: "Interessi 1284 cc nel corso della causa", tipo: "calcolatore", calcId: "interessi-corso-causa" },
+      { nome: "Interessi 1284 cc", tipo: "calcolatore", calcId: "interessi-corso-causa" },
       { nome: "Calcolo Ammortamento", tipo: "calcolatore", calcId: "ammortamento-mutuo" },
       { nome: "Calcolo Surroga", tipo: "calcolatore", calcId: "surroga-mutuo" },
       { nome: "Calcolo Tasso di Usura", tipo: "in_arrivo" },
@@ -2133,12 +2132,12 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
   {
     id: "scadenze-termini", titolo: "Scadenze e Termini", icona: "clock",
     voci: [
-      { nome: "Calcolo Scadenze", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Calcolo Scadenze", tipo: "in_arrivo" },
       { nome: "Termini Processuali Civili", tipo: "calcolatore", calcId: "scadenze" },
       { nome: "Termini Memorie e Repliche", tipo: "calcolatore", calcId: "termini-memorie" },
       { nome: "Termini Separazione e Divorzio", tipo: "calcolatore", calcId: "termini-separazione-divorzio" },
       { nome: "Termini Procedimento Semplificato", tipo: "calcolatore", calcId: "termini-procedimento-semplificato" },
-      { nome: "Termini 183 + 190 cpc", tipo: "calcolatore", calcId: "scadenze" },
+      { nome: "Termini 183 + 190 cpc", tipo: "in_arrivo" },
       { nome: "Termini Esecuzioni", tipo: "calcolatore", calcId: "termini-esecuzioni" },
       { nome: "Termini Deposito Atti Appello", tipo: "calcolatore", calcId: "termini-deposito-appello" },
       { nome: "Scadenze Impugnazioni", tipo: "calcolatore", calcId: "termini-impugnazione" },
@@ -2176,7 +2175,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Controllo Cause a Ruolo", tipo: "in_arrivo" },
       { nome: "Tassazione Atti Giudiziari", tipo: "in_arrivo" },
       { nome: "Testimonianza Scritta (257-bis cpc)", tipo: "in_arrivo" },
-      { nome: "Verifica Gratuito Patrocinio", tipo: "calcolatore", calcId: "parametri-forensi" },
+      { nome: "Verifica Gratuito Patrocinio", tipo: "in_arrivo" },
       { nome: "Codice di Procedura Civile", tipo: "in_arrivo" },
       { nome: "Codice della Strada", tipo: "in_arrivo" },
     ],
@@ -2185,7 +2184,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     id: "fatturazione-avvocati", titolo: "Fatturazione Avvocati", icona: "dollar-sign",
     voci: [
       { nome: "Preventivo Cause Civili", tipo: "calcolatore", calcId: "parcelle" },
-      { nome: "Preventivo Attività Stragiudiziali", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Preventivo Attività Stragiudiziali", tipo: "in_arrivo" },
       { nome: "Fattura Elettronica Avvocati", tipo: "in_arrivo" },
       { nome: "Visualizzatore Fatture Elettroniche", tipo: "in_arrivo" },
       { nome: "Scorporo Importi", tipo: "calcolatore", calcId: "scorporo-importi" },
@@ -2194,11 +2193,11 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2014 Penale", tipo: "in_arrivo" },
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
       { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
-      { nome: "Tabelle Parametri", tipo: "calcolatore", calcId: "parametri-forensi" },
+      { nome: "Tabelle Parametri", tipo: "in_arrivo" },
       { nome: "Parametri 2012 Civile", tipo: "in_arrivo" },
       { nome: "Parametri 2012 Penale", tipo: "in_arrivo" },
       { nome: "Tariffe Forensi 2004", tipo: "in_arrivo" },
-      { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Calcolo Nota Spese", tipo: "in_arrivo" },
       { nome: "Modelli di Notula", tipo: "in_arrivo" },
       { nome: "Calcolo Notula Penale", tipo: "in_arrivo" },
     ],
@@ -2216,11 +2215,11 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Fattura Enasarco", tipo: "in_arrivo" },
       { nome: "Ricevuta Prestazione Occasionale", tipo: "in_arrivo" },
       { nome: "Calcolo Spese di Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
-      { nome: "Tariffe Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
+      { nome: "Tariffe Mediazione", tipo: "in_arrivo" },
       { nome: "Calcolo Compenso a Ore", tipo: "calcolatore", calcId: "compenso-ore" },
       { nome: "Calcolo Rimborso Chilometrico ACI", tipo: "in_arrivo" },
       { nome: "Calcolo Ritenuta d'Acconto", tipo: "calcolatore", calcId: "ritenuta-acconto" },
-      { nome: "Calcolo Preventivo", tipo: "calcolatore", calcId: "parcelle" },
+      { nome: "Calcolo Preventivo", tipo: "in_arrivo" },
       { nome: "Calcolatrice Online", tipo: "in_arrivo" },
     ],
   },
@@ -3811,7 +3810,7 @@ export default function Calcolatori() {
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.nome}</Text>
                     <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>
-                      {sorgente?.titolo && sorgente.titolo !== v.nome ? `Apre: ${sorgente.titolo}` : sorgente?.sottotitolo}
+                      {sorgente?.sottotitolo}
                     </Text>
                   </View>
                   <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
