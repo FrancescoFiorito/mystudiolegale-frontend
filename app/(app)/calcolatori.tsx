@@ -39,7 +39,8 @@ type CalcId =
   | "danno-biologico-lieve-entita" | "danno-biologico-macropermanenti" | "menomazioni-plurime"
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
-  | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu";
+  | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -70,7 +71,7 @@ type CampoGenerico =
 
 type ConfigGenerico = {
   campi: CampoGenerico[];
-  endpoint: string;
+  endpoint: string | ((form: Record<string, any>) => string);
   buildBody?: (form: Record<string, any>) => any;
   validate?: (form: Record<string, any>) => string | null;
   risultato: (r: any) => [string, string][];
@@ -2075,6 +2076,13 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "ritenuta-acconto", titolo: "Ritenuta d'Acconto", sottotitolo: "Dal lordo al netto e viceversa", icona: "percent" },
   { id: "scorporo-importi", titolo: "Scorporo Importi", sottotitolo: "Fattura inversa da un importo forfettario", icona: "file-text" },
   { id: "imu", titolo: "Calcolo IMU", sottotitolo: "Imposta municipale propria sugli immobili", icona: "home" },
+  { id: "interessi-tasso-fisso", titolo: "Interessi a Tasso Fisso", sottotitolo: "Tasso scelto da te, con capitalizzazione facoltativa", icona: "percent" },
+  { id: "tasso-usura", titolo: "Calcolo Tasso di Usura", sottotitolo: "Soglia di usura per tipologia, importo e trimestre", icona: "alert-triangle" },
+  { id: "calcolo-scadenze", titolo: "Calcolo Scadenze", sottotitolo: "Scadenza a N giorni e giorni tra due date", icona: "calendar" },
+  { id: "termini-183-190", titolo: "Termini 183 + 190 cpc", sottotitolo: "Memorie, comparsa conclusionale e replica", icona: "file-text" },
+  { id: "diritti-copia", titolo: "Diritti di Copia", sottotitolo: "Cancelleria di tribunale e giudice di pace", icona: "copy" },
+  { id: "diritti-copia-tributario", titolo: "Copie Processo Tributario", sottotitolo: "Diritti di copia nel processo tributario", icona: "copy" },
+  { id: "gratuito-patrocinio", titolo: "Verifica Gratuito Patrocinio", sottotitolo: "Requisito reddituale, familiari e soglia dell'anno", icona: "check-circle" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -2083,6 +2091,228 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
 // atto è selezionabile e apre quello; le altre sono mostrate in grigio con
 // etichetta "in arrivo" (non selezionabili), per rendere visibile a colpo
 // d'occhio il lavoro ancora da fare, categoria per categoria.
+// ---- Lotto A: tassi, termini, atti ----
+const GIORNO_FMT = (iso: string, giorno?: string) => `${giorno ? giorno + " " : ""}${isoToDataIt(iso)}`;
+const PCT_IT = (n: number) => `${n.toFixed(2).replace(".", ",")}%`;
+
+const OPZIONI_USURA: { value: string; label: string }[] = [
+  ...([
+    [1, "1. Apertura di credito in conto corrente"], [11, "2. Scoperti senza affidamento"], [21, "3. Anticipi su crediti e sconti, anticipo fornitori"],
+    [12, "4. Finanziamento alle imprese (fino a Mar/10)"], [13, "5. Credito personale"], [19, "6. Credito finalizzato"], [3, "7. Factoring"],
+    [23, "8. Leasing immobiliare a tasso fisso"], [24, "9. Leasing immobiliare a tasso variabile"], [14, "10. Finanziamento bancario alle famiglie (fino a Mar/10)"],
+    [18, "11. Leasing autoveicoli e aeronavale"], [15, "12. Finanziamento non bancario alle famiglie (fino a Mar/10)"], [16, "13. Leasing strumentale"],
+    [9, "14. Mutuo a tasso fisso"], [10, "15. Mutuo a tasso variabile"], [6, "16. Cessione del quinto"], [17, "17. Leasing immobiliare (fino a Mar/11)"],
+    [20, "18. Credito revolving"], [25, "19. Finanziamenti con carte di credito"], [22, "20. Altri finanziamenti"],
+  ] as [number, string][]).map(([id, l]) => ({ value: `n:${id}`, label: `Da gennaio 2010 · ${l}` })),
+  ...([
+    [1, "1. Apertura di credito in conto corrente"], [2, "2. Finanziamento bancario alle imprese"], [4, "3. Finanziamento bancario personale o alla famiglia"],
+    [3, "4. Factoring"], [5, "5. Finanziamento da intermediari non bancari"], [9, "6. Mutuo a tasso fisso"], [7, "7. Leasing"],
+    [10, "8. Mutuo a tasso variabile"], [6, "9. Cessione del quinto"], [8, "10. Acquisto rateale beni di consumo e revolving"],
+  ] as [number, string][]).map(([id, l]) => ({ value: `o:${id}`, label: `Fino al 2009 · ${l}` })),
+];
+
+const CONFIG_LOTTO_A: Record<string, ConfigGenerico> = {
+  "interessi-tasso-fisso": {
+    campi: [
+      { tipo: "numero", key: "tasso", label: "Tasso %", default: "" },
+      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Data inizio" },
+      { tipo: "data", key: "data_fine", label: "Data fine" },
+      { tipo: "scelta", key: "capitalizzazione", label: "Capitalizzazione degli interessi", default: "0", opzioni: [
+        { value: "0", label: "Nessuna capitalizzazione (sull'interesse accumulato non si calcola un ulteriore interesse)" },
+        { value: "3", label: "Trimestrale (ogni 3 mesi l'interesse maturato si aggiunge al capitale)" },
+        { value: "6", label: "Semestrale (ogni 6 mesi l'interesse maturato si aggiunge al capitale)" },
+        { value: "12", label: "Annuale (ogni 12 mesi l'interesse maturato si aggiunge al capitale)" },
+      ] },
+    ],
+    endpoint: "/calc/interessi-tasso-fisso",
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), tasso: parseNumeroIt(f.tasso), data_inizio: f.data_inizio, data_fine: f.data_fine,
+      capitalizzazione_mesi: parseInt(f.capitalizzazione, 10) || 0,
+    }),
+    risultato: (r) => [
+      ...r.righe.map((x: any): [string, string] => [`${isoToDataIt(x.dal)} - ${isoToDataIt(x.al)} · ${x.giorni} gg · capitale ${formatEuro(x.capitale)} · ${PCT_IT(x.tasso)}`, formatEuro(x.interessi)]),
+      ["Totale giorni", String(r.totale_giorni)],
+      ["Totale interessi", formatEuro(r.totale_interessi)],
+      ["Capitale + interessi", formatEuro(r.capitale_piu_interessi)],
+    ],
+  },
+  "tasso-usura": {
+    campi: [
+      { tipo: "scelta", key: "operazione", label: "Finanziamento", default: "n:1", opzioni: OPZIONI_USURA, cercabile: true },
+      { tipo: "numero", key: "importo", label: "Importo €", default: "" },
+      { tipo: "numero", key: "tasso", label: "Tasso di interesse % (vuoto = solo soglia)", default: "" },
+      { tipo: "mese_anno", key: "mese_inizio", label: "Mese di riferimento" },
+      { tipo: "bool", key: "usa_fine", label: "Indica un mese finale (più trimestri)", default: false },
+      { tipo: "mese_anno", key: "mese_fine", label: "Mese finale", mostraSe: (f) => !!f.usa_fine },
+    ],
+    endpoint: "/calc/tasso-usura",
+    buildBody: (f) => ({
+      operazione: parseInt(String(f.operazione).split(":")[1], 10), importo: parseNumeroIt(f.importo),
+      tasso: f.tasso ? parseNumeroIt(f.tasso) : null, mese_inizio: f.mese_inizio, mese_fine: f.usa_fine ? f.mese_fine : null,
+    }),
+    risultato: (r) => (r.righe.length
+      ? r.righe.map((x: any): [string, string] => [
+        `${x.anno} · ${x.periodo}`,
+        `Tasso medio ${PCT_IT(x.tasso_medio)} · Soglia ${PCT_IT(x.tasso_usura)}${x.supera === null ? "" : ` · Supera: ${x.supera ? "Sì" : "No"}`}`,
+      ])
+      : [["Nessun dato disponibile per la tipologia, l'importo e il periodo indicati", ""]]),
+  },
+  "calcolo-scadenze": {
+    campi: [
+      { tipo: "scelta", key: "modalita", label: "Cosa vuoi calcolare", default: "scadenza", opzioni: [
+        { value: "scadenza", label: "Scadenza (aggiungere o togliere un numero di giorni)" },
+        { value: "tra_date", label: "Giorni intercorrenti tra due date" },
+      ] },
+      { tipo: "data", key: "data_iniziale", label: "Data iniziale", mostraSe: (f) => f.modalita === "scadenza" },
+      { tipo: "numero", key: "giorni", label: "Numero giorni (max 365 con la sospensione, 3650 senza)", default: "", mostraSe: (f) => f.modalita === "scadenza" },
+      { tipo: "scelta", key: "direzione", label: "Prima o dopo la data iniziale", default: "dopo", mostraSe: (f) => f.modalita === "scadenza", opzioni: [
+        { value: "prima", label: "Prima" }, { value: "dopo", label: "Dopo" },
+      ] },
+      { tipo: "bool", key: "sospensione_feriale", label: "Sospensione dei termini processuali (1-31 agosto)", default: true, mostraSe: (f) => f.modalita === "scadenza" },
+      { tipo: "data", key: "data_a", label: "Data iniziale", mostraSe: (f) => f.modalita === "tra_date" },
+      { tipo: "data", key: "data_b", label: "Data finale", mostraSe: (f) => f.modalita === "tra_date" },
+    ],
+    endpoint: (f) => (f.modalita === "tra_date" ? "/calc/giorni-intercorrenti" : "/calc/calcolo-scadenze"),
+    buildBody: (f) => (f.modalita === "tra_date"
+      ? { data_inizio: f.data_a, data_fine: f.data_b }
+      : { data_iniziale: f.data_iniziale, giorni: Math.trunc(parseNumeroIt(f.giorni)), direzione: f.direzione, sospensione_feriale: !!f.sospensione_feriale }),
+    risultato: (r) => {
+      if (r.giorni !== undefined) return [["Giorni intercorrenti tra le due date", String(r.giorni)]];
+      const out: [string, string][] = [["Data di scadenza calcolata", GIORNO_FMT(r.data_calcolata, r.giorno_settimana)]];
+      if (r.festivita) out.push(["Festività", r.festivita]);
+      if (r.festivo && r.data_non_festiva) {
+        out.push([r.data_non_festiva > r.data_calcolata ? "Primo giorno successivo non festivo" : "Primo giorno precedente non festivo", GIORNO_FMT(r.data_non_festiva, r.giorno_non_festivo)]);
+      }
+      if (r.sospensione_covid_applicata) out.push(["Avviso", "Il termine tiene conto della sospensione straordinaria 2020 (emergenza coronavirus), dal 9 marzo all'11 maggio 2020."]);
+      if (r.data_molto_lontana) out.push(["Nota", "Data molto lontana nel tempo"]);
+      return out;
+    },
+    scadenze: (r) => (r.data_calcolata ? [{ titolo: "Scadenza calcolata", data: r.data_non_festiva || r.data_calcolata }] : []),
+  },
+  "termini-183-190": {
+    campi: [
+      { tipo: "data", key: "data_iniziale", label: "Data iniziale" },
+      { tipo: "scelta", key: "operazione", label: "Calcolo", default: "183", opzioni: [
+        { value: "183", label: "Memorie 183 (30 + 30 + 20 giorni)" },
+        { value: "190", label: "Comparsa e Replica 190 (60 + 20 giorni)" },
+      ] },
+      { tipo: "bool", key: "sospensione_feriale", label: "Sospensione feriale", default: true },
+      { tipo: "bool", key: "prudenziale", label: "Modalità prudenziale (il termine successivo decorre dalla scadenza non posticipata)", default: false },
+    ],
+    endpoint: "/calc/termini-183-190",
+    buildBody: (f) => ({ data_iniziale: f.data_iniziale, operazione: f.operazione, sospensione_feriale: !!f.sospensione_feriale, prudenziale: !!f.prudenziale }),
+    risultato: (r) => r.termini.flatMap((t: any): [string, string][] => [
+      [`${t.etichetta}: ${t.giorni} giorni entro`, GIORNO_FMT(t.data, t.giorno_settimana)],
+      ...t.giorni_saltati.map((s: any): [string, string] => [`   giorno saltato: il ${isoToDataIt(s.data)} è ${s.motivo}`, ""]),
+    ]),
+    scadenze: (r) => r.termini.map((t: any) => ({ titolo: t.etichetta, data: t.data })),
+  },
+  "diritti-copia": {
+    campi: [
+      { tipo: "scelta", key: "competenza", label: "Ufficio giudiziario", default: "tribunale", opzioni: [{ value: "tribunale", label: "Tribunale" }, { value: "giudice_di_pace", label: "Giudice di Pace" }] },
+      { tipo: "numero", key: "numero_copie", label: "Numero copie", default: "1" },
+      { tipo: "numero", key: "numero_pagine", label: "Numero pagine", default: "" },
+      { tipo: "scelta", key: "formato", label: "Formato", default: "cartaceo", opzioni: [{ value: "cartaceo", label: "Cartaceo" }, { value: "elettronico", label: "Elettronico" }] },
+      { tipo: "bool", key: "autentica", label: "Autentica", default: false, mostraSe: (f) => f.formato === "cartaceo" },
+      { tipo: "bool", key: "urgente", label: "Urgente", default: false },
+    ],
+    endpoint: "/calc/diritti-copia",
+    buildBody: (f) => ({
+      competenza: f.competenza, numero_copie: parseNumeroIt(f.numero_copie), numero_pagine: parseNumeroIt(f.numero_pagine),
+      formato: f.formato, autentica: f.formato === "cartaceo" && !!f.autentica, urgente: !!f.urgente,
+    }),
+    risultato: (r) => {
+      const dettaglio = r.diritto_oltre_100_pagine == null ? formatEuro(r.diritti_per_copia) : `${formatEuro(r.diritto_base)} + ${formatEuro(r.diritto_oltre_100_pagine)} = ${formatEuro(r.diritti_per_copia)}`;
+      return r.numero_copie > 1
+        ? [["Diritti per ciascuna copia", dettaglio], [`Totale per ${r.numero_copie} copie`, formatEuro(r.totale)]]
+        : [["Diritti di copia dovuti", dettaglio]];
+    },
+  },
+  "diritti-copia-tributario": {
+    campi: [
+      { tipo: "numero", key: "numero_copie", label: "Numero copie", default: "1" },
+      { tipo: "scelta", key: "formato", label: "Formato", default: "cartaceo", opzioni: [{ value: "cartaceo", label: "Cartaceo" }, { value: "elettronico", label: "Elettronico" }] },
+      { tipo: "scelta", key: "origine", label: "Documento", default: "parti", mostraSe: (f) => f.formato === "elettronico", opzioni: [{ value: "parti", label: "Prodotto dalle parti" }, { value: "archivio", label: "Da archivio" }] },
+      { tipo: "numero", key: "pagine", label: "N. pagine", default: "", mostraSe: (f) => f.formato === "cartaceo" || f.origine === "archivio" },
+      { tipo: "numero", key: "kb", label: "KBytes", default: "", mostraSe: (f) => f.formato === "elettronico" && f.origine !== "archivio" },
+      { tipo: "bool", key: "conformita", label: "Conformità (+ 9 € a copia)", default: false, mostraSe: (f) => f.formato === "cartaceo" },
+    ],
+    endpoint: "/calc/diritti-copia-tributario",
+    buildBody: (f) => ({
+      numero_copie: parseNumeroIt(f.numero_copie), formato: f.formato, origine: f.origine === "archivio" ? "archivio" : "parti",
+      valore: parseNumeroIt(f.formato === "cartaceo" || f.origine === "archivio" ? f.pagine : f.kb), conformita: f.formato === "cartaceo" && !!f.conformita,
+    }),
+    risultato: (r) => {
+      const dettaglio = r.diritto_oltre == null ? formatEuro(r.diritti_per_copia) : `${formatEuro(r.diritto_base)} + ${formatEuro(r.diritto_oltre)} = ${formatEuro(r.diritti_per_copia)}`;
+      return r.numero_copie > 1
+        ? [["Diritti per ciascuna copia", dettaglio], [`Totale per ${r.numero_copie} copie`, formatEuro(r.totale)]]
+        : [["Diritti di copia dovuti", dettaglio]];
+    },
+  },
+  "gratuito-patrocinio": {
+    campi: [
+      { tipo: "titolo", key: "t_proc", label: "Dati del procedimento" },
+      { tipo: "scelta", key: "materia", label: "Materia del procedimento", default: "1", opzioni: [
+        { value: "1", label: "Civile" }, { value: "2", label: "Penale" }, { value: "3", label: "Amministrativa" }, { value: "4", label: "Tributaria" },
+        { value: "6", label: "Contabile" }, { value: "5", label: "Volontaria giurisdizione" }, { value: "7", label: "Mediazione" },
+        { value: "8", label: "Negoziazione assistita" }, { value: "9", label: "Altra materia" },
+      ] },
+      { tipo: "scelta", key: "personalita", label: "Diritti della personalità", default: "0", opzioni: [{ value: "0", label: "No" }, { value: "1", label: "Sì" }] },
+      { tipo: "titolo", key: "t_red", label: "Redditi del richiedente" },
+      { tipo: "scelta", key: "anno", label: "Anno dei redditi", default: "2025", opzioni: Array.from({ length: 12 }, (_, i) => ({ value: String(2025 - i), label: String(2025 - i) })) },
+      { tipo: "numero", key: "imponibile", label: "Reddito imponibile €", default: "" },
+      { tipo: "numero", key: "esenti", label: "Redditi esenti €", default: "" },
+      { tipo: "numero", key: "altri", label: "Altri redditi €", default: "" },
+      {
+        tipo: "scelta", key: "aumento_penale", label: "Aumento soglia penale", default: "1",
+        opzioni: [{ value: "0", label: "No" }, { value: "1", label: "Sì" }], mostraSe: (f) => f.materia === "2",
+      },
+      { tipo: "lista", key: "familiari", label: "Familiari conviventi", etichettaAggiungi: "Nuovo familiare convivente", campiRiga: [
+        { tipo: "testo", key: "nome", label: "Nome familiare" },
+        { tipo: "scelta", key: "rapporto", label: "Rapporto familiare", default: "", opzioni: [
+          { value: "", label: "Seleziona..." }, { value: "1", label: "Coniuge" }, { value: "2", label: "Unito civilmente" }, { value: "3", label: "Figlio" },
+          { value: "4", label: "Genitore" }, { value: "5", label: "Fratello o sorella" }, { value: "9", label: "Altro familiare convivente" },
+        ] },
+        { tipo: "numero", key: "imponibile", label: "Reddito imponibile €" },
+        { tipo: "numero", key: "esenti", label: "Redditi esenti €" },
+        { tipo: "numero", key: "altri", label: "Altri redditi €" },
+        { tipo: "scelta", key: "conflitto", label: "Familiare in conflitto", default: "0", opzioni: [{ value: "0", label: "No" }, { value: "1", label: "Sì" }] },
+      ] },
+    ],
+    endpoint: "/calc/gratuito-patrocinio",
+    validate: (f) => {
+      const fam: Record<string, string>[] = f.familiari || [];
+      return fam.some((x) => !x.rapporto) ? "Indica il rapporto familiare di ogni familiare convivente." : null;
+    },
+    buildBody: (f) => ({
+      materia: parseInt(f.materia, 10), diritti_personalita: f.personalita === "1", anno_reddito: parseInt(f.anno, 10),
+      reddito_imponibile: parseNumeroIt(f.imponibile), redditi_esenti: parseNumeroIt(f.esenti), altri_redditi: parseNumeroIt(f.altri),
+      familiari: (f.familiari || []).map((x: Record<string, string>) => ({
+        nome: x.nome || "", rapporto: parseInt(x.rapporto, 10), reddito_imponibile: parseNumeroIt(x.imponibile),
+        redditi_esenti: parseNumeroIt(x.esenti), altri_redditi: parseNumeroIt(x.altri), in_conflitto: x.conflitto === "1",
+      })),
+      applica_aumento_penale: f.aumento_penale !== "0",
+    }),
+    risultato: (r) => [
+      ["PARAMETRI INSERITI", ""],
+      ...r.parametri.map(([k, v]: [string, string]): [string, string] => [k, v]),
+      ...(r.familiari.length ? [["FAMILIARI CONVIVENTI INDICATI", ""] as [string, string]] : []),
+      ...r.familiari.map((f: any): [string, string] => [
+        `${f.nome} (${f.rapporto})${f.conflitto ? " · in conflitto" : ""}`,
+        `Imponibile ${formatEuro(f.imponibile)} · Esenti ${formatEuro(f.esenti)} · Altri ${formatEuro(f.altri)} · Totale ${formatEuro(f.totale)}`,
+      ]),
+      ["SVILUPPO DEL CALCOLO", ""],
+      ...r.sviluppo.map(([k, v]: [string, string]): [string, string] => [k, v]),
+      ["CONCLUSIONI", ""],
+      ...r.conclusioni.map((c: string): [string, string] => [c, ""]),
+      ["NOTE", ""],
+      ...r.note.map((c: string): [string, string] => [c, ""]),
+    ],
+  },
+};
+Object.assign(CONFIG_GENERICI, CONFIG_LOTTO_A);
+
 type VoceMenuCalcolatori =
   | { nome: string; tipo: "calcolatore"; calcId: CalcId }
   | { nome: string; tipo: "atto"; attoId: AttoId }
@@ -2115,13 +2345,13 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     voci: [
       { nome: "Calcolo Interessi Legali", tipo: "calcolatore", calcId: "interessi-legali" },
       { nome: "Calcolo Interessi di Mora", tipo: "calcolatore", calcId: "interessi-mora" },
-      { nome: "Interessi a Tasso Fisso", tipo: "in_arrivo" },
+      { nome: "Interessi a Tasso Fisso", tipo: "calcolatore", calcId: "interessi-tasso-fisso" },
       { nome: "Interessi e Acconti", tipo: "calcolatore", calcId: "interessi-acconti" },
       { nome: "Calcolo Maggior Danno", tipo: "calcolatore", calcId: "maggior-danno" },
       { nome: "Interessi 1284 cc", tipo: "calcolatore", calcId: "interessi-corso-causa" },
       { nome: "Calcolo Ammortamento", tipo: "calcolatore", calcId: "ammortamento-mutuo" },
       { nome: "Calcolo Surroga", tipo: "calcolatore", calcId: "surroga-mutuo" },
-      { nome: "Calcolo Tasso di Usura", tipo: "in_arrivo" },
+      { nome: "Calcolo Tasso di Usura", tipo: "calcolatore", calcId: "tasso-usura" },
       { nome: "Calcolo TAEG", tipo: "calcolatore", calcId: "taeg" },
       { nome: "Tabella Interessi Legali", tipo: "in_arrivo" },
       { nome: "Tabella Interessi di Mora", tipo: "in_arrivo" },
@@ -2132,12 +2362,12 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
   {
     id: "scadenze-termini", titolo: "Scadenze e Termini", icona: "clock",
     voci: [
-      { nome: "Calcolo Scadenze", tipo: "in_arrivo" },
+      { nome: "Calcolo Scadenze", tipo: "calcolatore", calcId: "calcolo-scadenze" },
       { nome: "Termini Processuali Civili", tipo: "calcolatore", calcId: "scadenze" },
       { nome: "Termini Memorie e Repliche", tipo: "calcolatore", calcId: "termini-memorie" },
       { nome: "Termini Separazione e Divorzio", tipo: "calcolatore", calcId: "termini-separazione-divorzio" },
       { nome: "Termini Procedimento Semplificato", tipo: "calcolatore", calcId: "termini-procedimento-semplificato" },
-      { nome: "Termini 183 + 190 cpc", tipo: "in_arrivo" },
+      { nome: "Termini 183 + 190 cpc", tipo: "calcolatore", calcId: "termini-183-190" },
       { nome: "Termini Esecuzioni", tipo: "calcolatore", calcId: "termini-esecuzioni" },
       { nome: "Termini Deposito Atti Appello", tipo: "calcolatore", calcId: "termini-deposito-appello" },
       { nome: "Scadenze Impugnazioni", tipo: "calcolatore", calcId: "termini-impugnazione" },
@@ -2150,8 +2380,8 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     voci: [
       { nome: "Calcolo Contributo Unificato", tipo: "calcolatore", calcId: "contributo-unificato" },
       { nome: "Tabella Contributo Unificato", tipo: "in_arrivo" },
-      { nome: "Calcolo Diritti di Copia", tipo: "in_arrivo" },
-      { nome: "Copie Processo Tributario", tipo: "in_arrivo" },
+      { nome: "Calcolo Diritti di Copia", tipo: "calcolatore", calcId: "diritti-copia" },
+      { nome: "Copie Processo Tributario", tipo: "calcolatore", calcId: "diritti-copia-tributario" },
       { nome: "Fascicolo di Parte", tipo: "in_arrivo" },
       { nome: "Procura alle Liti", tipo: "atto", attoId: "procura_alle_liti" },
       { nome: "Attestazione Conformità", tipo: "in_arrivo" },
@@ -2175,7 +2405,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Controllo Cause a Ruolo", tipo: "in_arrivo" },
       { nome: "Tassazione Atti Giudiziari", tipo: "in_arrivo" },
       { nome: "Testimonianza Scritta (257-bis cpc)", tipo: "in_arrivo" },
-      { nome: "Verifica Gratuito Patrocinio", tipo: "in_arrivo" },
+      { nome: "Verifica Gratuito Patrocinio", tipo: "calcolatore", calcId: "gratuito-patrocinio" },
       { nome: "Codice di Procedura Civile", tipo: "in_arrivo" },
       { nome: "Codice della Strada", tipo: "in_arrivo" },
     ],
@@ -3177,7 +3407,7 @@ export default function Calcolatori() {
       const body = cfg.buildBody
         ? cfg.buildBody(genForm)
         : Object.fromEntries(cfg.campi.map((c) => [c.key, c.tipo === "numero" ? parseNumeroIt(genForm[c.key]) : genForm[c.key]]));
-      const r = await api.post(cfg.endpoint, body);
+      const r = await api.post(typeof cfg.endpoint === "function" ? cfg.endpoint(genForm) : cfg.endpoint, body);
       setGenRisultato(r);
       setGenSalvata(false);
     } catch (e: any) {

@@ -8,6 +8,7 @@ import SelectInput from "@/src/components/SelectInput";
 
 export type CampoRigaLista =
   | { tipo: "numero"; key: string; label: string; default?: string }
+  | { tipo: "testo"; key: string; label: string; default?: string }
   | { tipo: "data"; key: string; label: string; default?: string }
   | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[]; default?: string };
 
@@ -63,7 +64,7 @@ export default function ListaInput({
                   testID={testID ? `${testID}-${indice}-${c.key}` : undefined}
                   value={riga[c.key] ?? ""}
                   onChangeText={(v) => aggiorna(indice, c.key, v)}
-                  keyboardType="numeric"
+                  keyboardType={c.tipo === "testo" ? "default" : "numeric"}
                   style={{
                     borderWidth: 1, borderRadius: RADIUS.md, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm,
                     backgroundColor: t.surface, color: t.onSurface, borderColor: t.border, fontSize: 14,
