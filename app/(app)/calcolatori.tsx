@@ -40,7 +40,7 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -164,6 +164,18 @@ const FASI_PENALI_2012: { cod: string; nome: string; orario?: boolean }[] = [
   { cod: "10", nome: "Studio" }, { cod: "20", nome: "Introduttiva" }, { cod: "30", nome: "Istruttoria" }, { cod: "40", nome: "Decisoria" }, { cod: "50", nome: "Esecutiva", orario: true },
 ];
 const OPZIONI_PCT_5_100 = Array.from({ length: 20 }, (_, i) => ({ value: String(100 - i * 5), label: `${100 - i * 5}%` }));
+
+// Tabelle del calcolatore "Parametri 2012 Civile" (DM 140/2012) per competenza e scaglione di valore.
+const TABELLE_CIVILI_2012: Record<string, Record<string, Record<string, [number, number, number]>>> = {"10":{"100":{"10":[120,300,450],"20":[60,150,225],"30":[60,300,600],"40":[120,400,520]},"110":{"10":[165,330,528],"20":[90,180,288],"30":[99,330,825],"40":[210,420,672]}},"20":{"10":{"10":[275,550,880],"20":[150,300,480],"30":[165,550,1375],"40":[350,700,1120],"60":[200,400,640],"70":[450,900,1440],"80":[180,360,576],"90":[160,320,512]},"20":{"10":[600,1200,1920],"20":[300,600,960],"30":[360,1200,3000],"40":[750,1500,2400],"60":[400,800,1280],"70":[900,1800,2880],"80":[360,720,1152],"90":[320,640,1024]},"30":{"10":[950,1900,3040],"20":[500,1000,1600],"30":[600,2000,5000],"40":[1300,2600,4160],"60":[650,1300,2080],"70":[1450,2900,4640],"80":[585,1170,1872],"90":[520,1040,1664]},"40":{"10":[1625,3250,5200],"20":[825,1650,2640],"30":[975,3250,8125],"40":[2025,4050,6480],"60":[1050,2100,3360],"70":[2400,4800,7680],"80":[945,1890,3024],"90":[840,1680,2688]},"50":{"10":[2700,5400,8640],"20":[1350,2700,4320],"30":[1620,5400,13500],"40":[3375,6750,10800],"60":[1800,3600,5760],"70":[4050,8100,12960],"80":[1620,3240,5184],"90":[1440,2880,4608]},"60":{"10":[2700,5400,8640],"20":[1350,2700,4320],"30":[1620,5400,13500],"40":[3375,6750,10800],"60":[1800,3600,5760],"70":[4050,8100,12960],"80":[1620,3240,5184],"90":[1440,2880,4608]},"999":{"10":[600,1200,3000],"20":[300,600,1500],"30":[600,1200,3000],"40":[750,1500,3750],"60":[400,800,2000],"70":[900,1800,4500],"80":[360,720,1800],"90":[320,640,1600]}},"30":{"10":{"10":[275,550,880],"20":[150,300,480],"30":[165,550,1375],"40":[350,700,1120],"60":[200,400,640],"70":[450,900,1440],"80":[180,360,576],"90":[160,320,512]},"20":{"10":[600,1200,1920],"20":[300,600,960],"30":[360,1200,3000],"40":[750,1500,2400],"60":[400,800,1280],"70":[900,1800,2880],"80":[360,720,1152],"90":[320,640,1024]},"30":{"10":[950,1900,3040],"20":[500,1000,1600],"30":[600,2000,5000],"40":[1300,2600,4160],"60":[650,1300,2080],"70":[1450,2900,4640],"80":[585,1170,1872],"90":[520,1040,1664]},"40":{"10":[1625,3250,5200],"20":[825,1650,2640],"30":[975,3250,8125],"40":[2025,4050,6480],"60":[1050,2100,3360],"70":[2400,4800,7680],"80":[945,1890,3024],"90":[840,1680,2688]},"50":{"10":[2700,5400,8640],"20":[1350,2700,4320],"30":[1620,5400,13500],"40":[3375,6750,10800],"60":[1800,3600,5760],"70":[4050,8100,12960],"80":[1620,3240,5184],"90":[1440,2880,4608]},"60":{"10":[2700,5400,8640],"20":[1350,2700,4320],"30":[1620,5400,13500],"40":[3375,6750,10800],"60":[1800,3600,5760],"70":[4050,8100,12960],"80":[1620,3240,5184],"90":[1440,2880,4608]},"999":{"10":[600,1200,3000],"20":[300,600,1500],"30":[600,1200,3000],"40":[750,1500,3750],"60":[400,800,2000],"70":[900,1800,4500],"80":[360,720,1800],"90":[320,640,1600]}},"40":{"10":{"10":[330,660,1056],"20":[180,360,576],"30":[198,660,1650],"40":[420,840,1344],"60":[240,480,768],"70":[540,1080,1728],"80":[216,432,691],"90":[192,384,614]},"20":{"10":[720,1440,2304],"20":[360,720,1152],"30":[432,1440,3600],"40":[900,1800,2880],"60":[480,960,1536],"70":[1080,2160,3456],"80":[432,864,1382],"90":[384,768,1229]},"30":{"10":[1140,2280,3648],"20":[600,1200,1920],"30":[720,2400,6000],"40":[1560,3120,4992],"60":[780,1560,2496],"70":[1740,3480,5568],"80":[702,1404,2246],"90":[624,1248,1997]},"40":{"10":[1950,3900,6240],"20":[990,1980,3168],"30":[1170,3900,9750],"40":[2430,4860,7776],"60":[1260,2520,4032],"70":[2880,5760,9216],"80":[1134,2268,3629],"90":[1008,2016,3226]},"50":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"60":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"999":{"10":[720,1440,3600],"20":[360,720,1800],"30":[720,1440,3600],"40":[900,1800,4500],"60":[480,960,2400],"70":[1080,2160,5400],"80":[432,864,2160],"90":[384,768,1920]}},"50":{"10":{"10":[330,660,1056],"20":[180,360,576],"30":[198,660,1650],"40":[420,840,1344],"60":[240,480,768],"70":[540,1080,1728],"80":[216,432,691],"90":[192,384,614]},"20":{"10":[720,1440,2304],"20":[360,720,1152],"30":[432,1440,3600],"40":[900,1800,2880],"60":[480,960,1536],"70":[1080,2160,3456],"80":[432,864,1382],"90":[384,768,1229]},"30":{"10":[1140,2280,3648],"20":[600,1200,1920],"30":[720,2400,6000],"40":[1560,3120,4992],"60":[780,1560,2496],"70":[1740,3480,5568],"80":[702,1404,2246],"90":[624,1248,1997]},"40":{"10":[1950,3900,6240],"20":[990,1980,3168],"30":[1170,3900,9750],"40":[2430,4860,7776],"60":[1260,2520,4032],"70":[2880,5760,9216],"80":[1134,2268,3629],"90":[1008,2016,3226]},"50":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"60":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"999":{"10":[720,1440,3600],"20":[360,720,1800],"30":[720,1440,3600],"40":[900,1800,4500],"60":[480,960,2400],"70":[1080,2160,5400],"80":[432,864,2160],"90":[384,768,1920]}},"60":{"10":{"10":[330,660,1056],"20":[180,360,576],"30":[198,660,1650],"40":[420,840,1344],"60":[240,480,768],"70":[540,1080,1728],"80":[216,432,691],"90":[192,384,614]},"20":{"10":[720,1440,2304],"20":[360,720,1152],"30":[432,1440,3600],"40":[900,1800,2880],"60":[480,960,1536],"70":[1080,2160,3456],"80":[432,864,1382],"90":[384,768,1229]},"30":{"10":[1140,2280,3648],"20":[600,1200,1920],"30":[720,2400,6000],"40":[1560,3120,4992],"60":[780,1560,2496],"70":[1740,3480,5568],"80":[702,1404,2246],"90":[624,1248,1997]},"40":{"10":[1950,3900,6240],"20":[990,1980,3168],"30":[1170,3900,9750],"40":[2430,4860,7776],"60":[1260,2520,4032],"70":[2880,5760,9216],"80":[1134,2268,3629],"90":[1008,2016,3226]},"50":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"60":{"10":[3240,6480,10368],"20":[1620,3240,5184],"30":[1944,6480,16200],"40":[4050,8100,12960],"60":[2160,4320,6912],"70":[4860,9720,15552],"80":[1944,3888,6221],"90":[1728,3456,5530]},"999":{"10":[720,1440,3600],"20":[360,720,1800],"30":[720,1440,3600],"40":[900,1800,4500],"60":[480,960,2400],"70":[1080,2160,5400],"80":[432,864,2160],"90":[384,768,1920]}},"70":{"10":{"10":[360,720,1224],"20":[225,450,720],"40":[428,855,1454]},"20":{"10":[800,1600,2720],"20":[500,1000,1600],"40":[950,1900,3230]},"30":{"10":[1320,2640,4488],"20":[825,1650,2640],"40":[1568,3135,5330]},"40":{"10":[2160,4320,7344],"20":[1350,2700,4320],"40":[2565,5130,8721]},"50":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"60":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"999":{"10":[800,1600,4000],"20":[500,1000,2500],"40":[950,1900,4750]}},"80":{"10":{"10":[360,720,1224],"20":[225,450,720],"40":[428,855,1454]},"20":{"10":[800,1600,2720],"20":[500,1000,1600],"40":[950,1900,3230]},"30":{"10":[1320,2640,4488],"20":[825,1650,2640],"40":[1568,3135,5330]},"40":{"10":[2160,4320,7344],"20":[1350,2700,4320],"40":[2565,5130,8721]},"50":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"60":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"999":{"10":[800,1600,4000],"20":[500,1000,2500],"40":[950,1900,4750]}},"90":{"10":{"10":[360,720,1224],"20":[225,450,720],"40":[428,855,1454]},"20":{"10":[800,1600,2720],"20":[500,1000,1600],"40":[950,1900,3230]},"30":{"10":[1320,2640,4488],"20":[825,1650,2640],"40":[1568,3135,5330]},"40":{"10":[2160,4320,7344],"20":[1350,2700,4320],"40":[2565,5130,8721]},"50":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"60":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"999":{"10":[800,1600,4000],"20":[500,1000,2500],"40":[950,1900,4750]}},"100":{"10":{"10":[360,720,1224],"20":[225,450,720],"40":[428,855,1454]},"20":{"10":[800,1600,2720],"20":[500,1000,1600],"40":[950,1900,3230]},"30":{"10":[1320,2640,4488],"20":[825,1650,2640],"40":[1568,3135,5330]},"40":{"10":[2160,4320,7344],"20":[1350,2700,4320],"40":[2565,5130,8721]},"50":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"60":{"10":[3600,7200,12240],"20":[2250,4500,7200],"40":[4275,8550,14535]},"999":{"10":[800,1600,4000],"20":[500,1000,2500],"40":[950,1900,4750]}},"110":{"10":{"10":[383,765,1301],"20":[248,495,792],"40":[450,900,1530]},"20":{"10":[850,1700,2890],"20":[550,1100,1760],"40":[1000,2000,3400]},"30":{"10":[1403,2805,4769],"20":[908,1815,2904],"40":[1650,3300,5610]},"40":{"10":[2295,4590,7803],"20":[1485,2970,4752],"40":[2700,5400,9180]},"50":{"10":[3825,7650,13005],"20":[2475,4950,7920],"40":[4500,9000,15300]},"60":{"10":[3825,7650,13005],"20":[2475,4950,7920],"40":[4500,9000,15300]},"999":{"10":[850,1700,4250],"20":[550,1100,2750],"40":[1000,2000,5000]}},"120":{"10":{"10":[383,765,1301],"20":[248,495,792],"40":[450,900,1530]},"20":{"10":[850,1700,2890],"20":[550,1100,1760],"40":[1000,2000,3400]},"30":{"10":[1403,2805,4769],"20":[908,1815,2904],"40":[1650,3300,5610]},"40":{"10":[2295,4590,7803],"20":[1485,2970,4752],"40":[2700,5400,9180]},"50":{"10":[3825,7650,13005],"20":[2475,4950,7920],"40":[4500,9000,15300]},"60":{"10":[3825,7650,13005],"20":[2475,4950,7920],"40":[4500,9000,15300]},"999":{"10":[850,1700,4250],"20":[550,1100,2750],"40":[1000,2000,5000]}},"130":{"200":{"0":[50,375,700]},"210":{"0":[400,1200,2000]},"220":{"0":[1000,1750,2500]}},"140":{"300":{"0":[20,60,100]},"310":{"0":[150,250,350]},"320":{"0":[400,500,600]},"330":{"0":[700,800,900]}}};
+const SCAGLIONI_CIVILI_2012: Record<string, { value: string; label: string }[]> = {"10":[{"value":"100","label":"Fino a € 5.000"},{"value":"110","label":"Da € 5.001 a € 25.000"}],"20":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"30":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"40":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"50":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"60":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"70":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"80":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"90":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"100":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"110":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"120":[{"value":"10","label":"Fino a € 25.000"},{"value":"20","label":"Da € 25.001 a € 50.000"},{"value":"30","label":"Da € 50.001 a € 100.000"},{"value":"40","label":"Da € 100.001 a € 500.000"},{"value":"50","label":"Da € 500.001 a € 1.500.000"},{"value":"60","label":"Oltre € 1.500.000"},{"value":"999","label":"Indeterminato / indeterminabile"}],"130":[{"value":"200","label":"Fino a € 5.000"},{"value":"210","label":"Da € 5.001 a € 500.000"},{"value":"220","label":"Da € 500.001 a € 1.500.000"}],"140":[{"value":"300","label":"Fino a € 5.000"},{"value":"310","label":"Da € 5.001 a € 500.000"},{"value":"320","label":"Da € 500.001 a € 1.500.000"},{"value":"330","label":"Oltre € 1.500.000"}]};
+const COMPETENZE_CIVILI_2012: { value: string; label: string }[] = [{"value":"10","label":"Giudice di pace civile"},{"value":"20","label":"Tribunale ordinario civile"},{"value":"30","label":"Commissione tributaria di I° grado"},{"value":"40","label":"T.A.R."},{"value":"50","label":"Corte d'Appello"},{"value":"60","label":"Commissione tributaria regionale"},{"value":"70","label":"Corte di Cassazione"},{"value":"80","label":"Consiglio di Stato"},{"value":"90","label":"Magistrature superiori"},{"value":"100","label":"Tribunale di prima istanza UE"},{"value":"110","label":"Corte Costituzionale"},{"value":"120","label":"Altri organi sovranazionali"},{"value":"130","label":"Procedimento per ingiunzione"},{"value":"140","label":"Precetto"}];
+const FASI_CIVILI_2012: { cod: string; nome: string }[] = [
+  { cod: "0", nome: "Fase unica" }, { cod: "10", nome: "Studio" }, { cod: "20", nome: "Introduttiva" }, { cod: "30", nome: "Istruttoria" }, { cod: "40", nome: "Decisoria" },
+  { cod: "60", nome: "Esecutiva mobiliare" }, { cod: "70", nome: "Esecutiva immobiliare" }, { cod: "80", nome: "Espropriazione presso terzi, consegna o rilascio" }, { cod: "90", nome: "Affari tavolari" },
+];
+function faseCivile2012(f: Record<string, any>, cod: string): [number, number, number] | null {
+  return TABELLE_CIVILI_2012[f.competenza]?.[f.scaglione]?.[cod] ?? null;
+}
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -1355,6 +1367,154 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "parametri-civili-2012": {
+    campi: [
+      { tipo: "scelta", key: "competenza", label: "Competenza", default: "20", opzioni: COMPETENZE_CIVILI_2012 },
+      { tipo: "scelta", key: "scaglione", label: "Valore della causa", default: "20", opzioni: (f) => SCAGLIONI_CIVILI_2012[f.competenza] ?? [],
+        nota: (f) => (SCAGLIONI_CIVILI_2012[f.competenza]?.some((s) => s.value === f.scaglione) ? null : "Seleziona lo scaglione di valore.") },
+      { tipo: "scelta", key: "valore", label: "Compenso di tutte le fasi", default: "med", opzioni: [
+        { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "titolo", key: "tit_f0", label: "Fase: Fase unica", mostraSe: (f) => !!faseCivile2012(f, "0") },
+      { tipo: "bool", key: "f0_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "0"),
+        nota: (f) => { const t = faseCivile2012(f, "0"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f0_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "0") && !!f.f0_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f0_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "0") && !!f.f0_on },
+      { tipo: "titolo", key: "tit_f10", label: "Fase: Studio", mostraSe: (f) => !!faseCivile2012(f, "10") },
+      { tipo: "bool", key: "f10_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "10"),
+        nota: (f) => { const t = faseCivile2012(f, "10"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f10_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "10") && !!f.f10_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f10_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "10") && !!f.f10_on },
+      { tipo: "titolo", key: "tit_f20", label: "Fase: Introduttiva", mostraSe: (f) => !!faseCivile2012(f, "20") },
+      { tipo: "bool", key: "f20_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "20"),
+        nota: (f) => { const t = faseCivile2012(f, "20"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f20_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "20") && !!f.f20_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f20_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "20") && !!f.f20_on },
+      { tipo: "titolo", key: "tit_f30", label: "Fase: Istruttoria", mostraSe: (f) => !!faseCivile2012(f, "30") },
+      { tipo: "bool", key: "f30_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "30"),
+        nota: (f) => { const t = faseCivile2012(f, "30"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f30_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "30") && !!f.f30_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f30_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "30") && !!f.f30_on },
+      { tipo: "titolo", key: "tit_f40", label: "Fase: Decisoria", mostraSe: (f) => !!faseCivile2012(f, "40") },
+      { tipo: "bool", key: "f40_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "40"),
+        nota: (f) => { const t = faseCivile2012(f, "40"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f40_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "40") && !!f.f40_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f40_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "40") && !!f.f40_on },
+      { tipo: "titolo", key: "tit_f60", label: "Fase: Esecutiva mobiliare", mostraSe: (f) => !!faseCivile2012(f, "60") },
+      { tipo: "bool", key: "f60_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "60"),
+        nota: (f) => { const t = faseCivile2012(f, "60"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f60_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "60") && !!f.f60_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f60_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "60") && !!f.f60_on },
+      { tipo: "titolo", key: "tit_f70", label: "Fase: Esecutiva immobiliare", mostraSe: (f) => !!faseCivile2012(f, "70") },
+      { tipo: "bool", key: "f70_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "70"),
+        nota: (f) => { const t = faseCivile2012(f, "70"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f70_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "70") && !!f.f70_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f70_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "70") && !!f.f70_on },
+      { tipo: "titolo", key: "tit_f80", label: "Fase: Espropriazione presso terzi, consegna o rilascio", mostraSe: (f) => !!faseCivile2012(f, "80") },
+      { tipo: "bool", key: "f80_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "80"),
+        nota: (f) => { const t = faseCivile2012(f, "80"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f80_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "80") && !!f.f80_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f80_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "80") && !!f.f80_on },
+      { tipo: "titolo", key: "tit_f90", label: "Fase: Affari tavolari", mostraSe: (f) => !!faseCivile2012(f, "90") },
+      { tipo: "bool", key: "f90_on", label: "Includi la fase", default: true, mostraSe: (f) => !!faseCivile2012(f, "90"),
+        nota: (f) => { const t = faseCivile2012(f, "90"); return t ? `Min ${formatEuro(t[0])} · Med ${formatEuro(t[1])} · Max ${formatEuro(t[2])}` : null; } },
+      { tipo: "scelta", key: "f90_val", label: "Valore", default: "", mostraSe: (f) => !!faseCivile2012(f, "90") && !!f.f90_on, opzioni: [
+        { value: "", label: "Come la scelta generale" }, { value: "min", label: "Minimo" }, { value: "med", label: "Medio" }, { value: "max", label: "Massimo" },
+      ] },
+      { tipo: "numero", key: "f90_imp", label: "Compenso personalizzato € (facoltativo)", default: "", mostraSe: (f) => !!faseCivile2012(f, "90") && !!f.f90_on },
+      { tipo: "titolo", key: "tit_aum", label: "Aumenti (tutti calcolati sul compenso tabellare)" },
+      { tipo: "bool", key: "collegiale", label: "Incarico collegiale (art. 1, comma 4)", default: false },
+      { tipo: "scelta", key: "pct_collegiale", label: "Aumento %", default: "100", mostraSe: (f) => !!f.collegiale, opzioni: OPZIONI_PCT_5_100 },
+      { tipo: "bool", key: "piu_parti", label: "Più parti (art. 4, comma 4)", default: false },
+      { tipo: "scelta", key: "pct_piu_parti", label: "Aumento %", default: "100", mostraSe: (f) => !!f.piu_parti, opzioni: OPZIONI_PCT_5_100 },
+      { tipo: "bool", key: "class_action", label: "Class action (art. 4, comma 4)", default: false },
+      { tipo: "scelta", key: "pct_class_action", label: "Aumento %", default: "200", mostraSe: (f) => !!f.class_action, opzioni: Array.from({ length: 20 }, (_, i) => ({ value: String(200 - i * 10), label: `${200 - i * 10}%` })) },
+      { tipo: "bool", key: "conciliazione", label: "Causa conciliata (art. 4, comma 5)", default: false },
+      { tipo: "scelta", key: "pct_conciliazione", label: "Aumento %", default: "25", mostraSe: (f) => !!f.conciliazione, opzioni: Array.from({ length: 25 }, (_, i) => ({ value: String(25 - i), label: `${25 - i}%` })) },
+      { tipo: "bool", key: "importanza", label: "Ulteriore valutazione (art. 4, commi 2 e 3)", default: false },
+      { tipo: "numero", key: "pct_importanza", label: "Aumento %", default: "", mostraSe: (f) => !!f.importanza },
+      { tipo: "titolo", key: "tit_rid", label: "Riduzioni (a scalare)" },
+      { tipo: "bool", key: "lavoro", label: "Causa di lavoro di valore inferiore a 1000 (art. 8, comma 1)", default: false },
+      { tipo: "scelta", key: "pct_lavoro", label: "Riduzione %", default: "50", mostraSe: (f) => !!f.lavoro, opzioni: Array.from({ length: 50 }, (_, i) => ({ value: String(50 - i), label: `${50 - i}%` })) },
+      { tipo: "bool", key: "indennizzo", label: "Indennizzo per irragionevole durata del processo (art. 9, comma 1)", default: false },
+      { tipo: "scelta", key: "pct_indennizzo", label: "Riduzione %", default: "50", mostraSe: (f) => !!f.indennizzo, opzioni: Array.from({ length: 50 }, (_, i) => ({ value: String(50 - i), label: `${50 - i}%` })) },
+      { tipo: "bool", key: "responsabilita", label: "Responsabilità art. 96 c.p.c. o pronunce in rito (50%, art. 10, comma 1)", default: false },
+      { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (50%, art. 9, comma 1)", default: false },
+      { tipo: "titolo", key: "tit_spese", label: "Spese" },
+      { tipo: "numero", key: "spese_esenti", label: "Spese esenti € (art. 15 DPR 633/72)", default: "" },
+      { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €", default: "" },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
+      { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
+      { tipo: "titolo", key: "tit_acc", label: "Accessori" },
+      { tipo: "bool", key: "cassa", label: "CPA (Cassa Avvocati 4%)", default: false },
+      { tipo: "bool", key: "iva", label: "IVA 22%", default: false },
+      { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto 20%", default: false },
+    ],
+    endpoint: "/calc/parametri-civili-2012",
+    validate: (f) => {
+      if (!TABELLE_CIVILI_2012[f.competenza]?.[f.scaglione]) return "Seleziona il valore della causa per la competenza scelta.";
+      if (!FASI_CIVILI_2012.some((x) => faseCivile2012(f, x.cod) && f[`f${x.cod}_on`])) return "Non hai selezionato alcuna fase.";
+      if (f.importanza && !(parseNumeroIt(f.pct_importanza) > 0)) return "Specifica un valore per la percentuale di ulteriore valutazione.";
+      return null;
+    },
+    buildBody: (f) => ({
+      competenza: f.competenza, scaglione: f.scaglione, valore: f.valore,
+      fasi: FASI_CIVILI_2012.filter((x) => faseCivile2012(f, x.cod)).map((x) => ({
+        cod: parseInt(x.cod, 10), attiva: !!f[`f${x.cod}_on`],
+        valore: f[`f${x.cod}_val`] || null,
+        importo: String(f[`f${x.cod}_imp`] ?? "").trim() !== "" ? parseNumeroIt(f[`f${x.cod}_imp`]) : null,
+      })),
+      collegiale: !!f.collegiale, pct_collegiale: parseNumeroIt(f.pct_collegiale) || 100,
+      piu_parti: !!f.piu_parti, pct_piu_parti: parseNumeroIt(f.pct_piu_parti) || 100,
+      class_action: !!f.class_action, pct_class_action: parseNumeroIt(f.pct_class_action) || 200,
+      conciliazione: !!f.conciliazione, pct_conciliazione: parseNumeroIt(f.pct_conciliazione) || 25,
+      importanza: !!f.importanza, pct_importanza: f.importanza ? parseNumeroIt(f.pct_importanza) : null,
+      lavoro: !!f.lavoro, pct_lavoro: parseNumeroIt(f.pct_lavoro) || 50,
+      indennizzo: !!f.indennizzo, pct_indennizzo: parseNumeroIt(f.pct_indennizzo) || 50,
+      responsabilita: !!f.responsabilita, gratuito_patrocinio: !!f.gratuito_patrocinio,
+      spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+      spese_generali: !!f.spese_generali, pct_spese_generali: parseNumeroIt(f.pct_spese_generali),
+      cassa: !!f.cassa, iva: !!f.iva, ritenuta: !!f.ritenuta,
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [["Competenza", r.competenza_nome], ["Valore della causa", r.scaglione_etichetta]];
+      for (const x of r.fasi) out.push([x.nome, formatEuro(x.importo)]);
+      out.push(["Compenso tabellare ex art. 11", formatEuro(r.compenso_tabellare)]);
+      for (const a of r.aumenti) out.push([`${a.descrizione} — ${a.pct}%`, formatEuro(a.importo)]);
+      if (r.aumenti.length) out.push(["Compenso maggiorato (comprensivo degli aumenti)", formatEuro(r.compenso_maggiorato)]);
+      for (const x of r.riduzioni) out.push([`${x.descrizione} — ${x.pct}% su ${formatEuro(x.base)}`, formatEuro(x.importo)]);
+      if (r.riduzioni.length) out.push(["Compenso al netto delle riduzioni", formatEuro(r.compenso_totale)]);
+      out.push(["Compenso totale", formatEuro(r.compenso_totale)]);
+      if (r.spese_generali) out.push(["Spese generali", formatEuro(r.spese_generali)]);
+      if (r.spese_imponibili) out.push(["Spese imponibili", formatEuro(r.spese_imponibili)]);
+      if (r.cassa) out.push(["Cassa Avvocati (4%)", formatEuro(r.cassa)]);
+      if (r.cassa || r.iva) out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva) out.push(["IVA 22% su imponibile", formatEuro(r.iva)]);
+      if (r.spese_esenti) out.push(["Spese esenti ex art. 15 DPR 633/72", formatEuro(r.spese_esenti)]);
+      out.push(["Ipotesi di compenso liquidabile", formatEuro(r.totale)]);
+      if (r.ritenuta) {
+        out.push(["A dedurre ritenuta d'acconto 20% (su compenso e spese)", formatEuro(r.ritenuta)]);
+        out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      }
+      return out;
+    },
+  },
   "quote-ereditarie": {
     campi: [
       { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
@@ -2320,6 +2480,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-mediatore-familiare", titolo: "Compenso Mediatore Familiare", sottotitolo: "Per complessità e numero di incontri", icona: "users" },
   { id: "parametri-penali-2014", titolo: "Parametri 2014 Penale", sottotitolo: "Compenso avvocati in ambito penale, DM 55/2014", icona: "bar-chart-2" },
   { id: "parametri-penali-2012", titolo: "Parametri 2012 Penale", sottotitolo: "Compenso avvocati in ambito penale, DM 140/2012", icona: "bar-chart-2" },
+  { id: "parametri-civili-2012", titolo: "Parametri 2012 Civile", sottotitolo: "Compenso avvocati in ambito civile, DM 140/2012", icona: "bar-chart-2" },
   { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
   { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
   { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
@@ -2692,7 +2853,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
       { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
       { nome: "Tabelle Parametri", tipo: "in_arrivo" },
-      { nome: "Parametri 2012 Civile", tipo: "in_arrivo" },
+      { nome: "Parametri 2012 Civile", tipo: "calcolatore", calcId: "parametri-civili-2012" },
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
       { nome: "Tariffe Forensi 2004", tipo: "in_arrivo" },
       { nome: "Calcolo Nota Spese", tipo: "in_arrivo" },
