@@ -10,12 +10,12 @@ export type CampoRigaLista =
   | { tipo: "numero"; key: string; label: string; default?: string }
   | { tipo: "testo"; key: string; label: string; default?: string }
   | { tipo: "data"; key: string; label: string; default?: string }
-  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[]; default?: string };
+  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string };
 
 function rigaVuota(campiRiga: CampoRigaLista[]): Record<string, string> {
   const riga: Record<string, string> = {};
   campiRiga.forEach((c) => {
-    riga[c.key] = c.default ?? (c.tipo === "scelta" ? c.opzioni[0]?.value ?? "" : "");
+    riga[c.key] = c.default ?? (c.tipo === "scelta" && typeof c.opzioni !== "function" ? c.opzioni[0]?.value ?? "" : "");
   });
   return riga;
 }
@@ -27,13 +27,15 @@ function rigaVuota(campiRiga: CampoRigaLista[]): Record<string, string> {
 // usato per le parti assistite delle parcelle (riquadro con cestino per
 // riga, "+ aggiungi" sotto), qui reso generico per qualunque forma di riga.
 export default function ListaInput({
-  value, onChange, campiRiga, testID, etichettaAggiungi = "Aggiungi una voce",
+  value, onChange, campiRiga, testID, etichettaAggiungi = "Aggiungi una voce", form,
 }: {
   value: Record<string, string>[];
   onChange: (v: Record<string, string>[]) => void;
   campiRiga: CampoRigaLista[];
   testID?: string;
   etichettaAggiungi?: string;
+  // Stato del form che contiene la lista: serve alle opzioni dinamiche (funzione) di un campo "scelta".
+  form?: Record<string, any>;
 }) {
   const { t } = useTheme();
 
@@ -58,7 +60,7 @@ export default function ListaInput({
               {c.tipo === "data" ? (
                 <DataInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} />
               ) : c.tipo === "scelta" ? (
-                <SelectInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} opzioni={c.opzioni} />
+                <SelectInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} opzioni={typeof c.opzioni === "function" ? c.opzioni(form || {}) : c.opzioni} />
               ) : (
                 <TextInput
                   testID={testID ? `${testID}-${indice}-${c.key}` : undefined}

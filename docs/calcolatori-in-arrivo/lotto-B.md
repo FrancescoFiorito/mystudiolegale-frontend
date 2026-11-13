@@ -12,7 +12,7 @@ Valori attesi = quelli letti dal sito di riferimento in questa sessione (Chromiu
 | Spese Trasferta Avvocati | allineato dopo correzioni | 30 scenari / 76 righe |
 | Tariffe Forensi 2004 | **non implementato**: è un tariffario consultabile (elenco prestazioni/tariffe per valore, con ricerca), non un calcolatore | — |
 | Calcolo Nota Spese | **resta "in arrivo"** (non indagato oltre il form) | — |
-| Calcolo Notula Penale | **resta "in arrivo"**, endpoint non collegato | — |
+| Calcolo Notula Penale | allineato, con 1 scarto residuo noto (anticipi con spese imponibili: 1 centesimo) | ~110 casi via UI reale: 24+30+36+30 casuali (attività, tariffe, regimi, bollo, anticipi, riparametrazione) + ~60 mirati |
 | Preventivo Attività Stragiudiziali | **resta "in arrivo"**, non indagato | — |
 
 ## Regole ricavate dal sito
@@ -25,9 +25,17 @@ Valori attesi = quelli letti dal sito di riferimento in questa sessione (Chromiu
 - Il sito 2014 mostra tabelle vuote per le competenze non previste nell'anno: qui la competenza non è selezionabile / errore.
 - Spese Trasferta: Località e Data sono solo campi descrittivi (il sito non li usa nel calcolo); max 8 trasferte come sul sito.
 - Non replicati: tab "Dati Documento", salvataggio documento, stampa/PDF/Word, fattura da prospetto.
-- **Notula Penale / Nota Spese**: il sito è un costruttore di notula a più passi con stato di sessione (Imposta le attività → Calcola Notula), con regime semplificato (forfettario/vantaggio/minimi), bollo, anticipi, riparametrazione (ricalcolo min/med/max, ±%, forzatura totale). L'endpoint esistente `/calc/notula-penale-tariffario-2004` non copre queste funzioni e non l'ho ricontrollato: resta non esposto.
+- **Nota Spese**: non indagata (stesso impianto della Notula Penale ma con Diritti/Onorari/Stragiudiziale); resta "in arrivo".
+- **Notula Penale** (guidata via UI reale: Imposta le attività → Salva e chiudi → Calcola Notula). Regole: quantità intera 1-99 (0 → errore); tariffa specificata senza limiti min/max (0 → errore); le attività 7.5 di GdP/GIP/GUP hanno solo tariffa specificata (l'endpoint aveva 0/60/180: errato); spese generali sugli onorari, CPA 4% su onorari+spese generali+spese imponibili(+bollo), IVA 22% solo regime ordinario, ritenuta 20% su stessa base (CPA esclusa) nei regimi ordinario e minimi, mai nei regimi 1-2. **Bollo**: 2 € solo nei regimi 1-3, se spuntato e se il totale prima del bollo (spese esenti comprese) supera 77,47 €; la nota "Imposta di bollo assolta sull'originale" compare sopra soglia anche senza bollo spuntato. **Anticipi**: l'onorario anticipato X è quello il cui totale con la catena diretta (spese generali fisse 15%, CPA, IVA, al netto di ritenuta se spuntata) coincide con anticipo − spese esenti − spese imponibili ricalcolate; il resto della notula si calcola su onorari − X, spese − anticipate (anche negative). **Riparametrazione**: tariffa (min/med/max, anche personalizzate se spuntato: sostituite), variazione ±% (per unità, arrotondata), forza totale (più piccolo onorario il cui totale con la catena reale raggiunge quello richiesto, poi fattore = onorario/Σ(tariffa×qtà) a precisione piena, tariffe per unità arrotondate).
+- **Differenza residua nota (Notula Penale)**: con anticipi che includono *spese imponibili* l'onorario anticipato può differire di 1 centesimo dal sito (in una griglia di 24 anticipi: 5 casi, tutti con spese imponibili; senza spese imponibili 0 differenze su ~25). Non ho trovato la regola esatta di arrotondamento.
 
 ## Esempi (campi del form del sito → output letto)
+**Notula Penale** (`IdCompetenza(4)=1` Tribunale Monocratico, tariffa predefinita Media)
+1. `Sel(0)` qta 2 (1.1 Corrispondenza informativa), `Sel(1)` 1.2 con `Tar(1)=3` e `SpEse(1)=10,00`, `SpNon(1)=5,00` → onorari 68,00; spese gen. 10,20; cassa 3,33; imponibile 86,53; IVA 19,04; esenti 10,00; totale 115,57; ritenuta 16,64; netto 98,93.
+2. Stessa notula con `RegimeSempl`, `TipoRegime=1` → totale documento 96,53, senza IVA né ritenuta; con `DoBollo` e totale >77,47 → bollo 2,00, cassa 3,41, totale 98,61.
+3. Attività 1.1 qta 9 con anticipo `AntVal(0)=100,00` (ritenuta attiva, ordinario) → di cui anticipi 81,36; totale onorari 8,64; liquidabile 12,61; netto 10,62.
+
+
 **Parametri 2014 Penale** (`Competenza=570`, `Anno=2022`, tutte le fasi, valori medi, spese generali 15%)
 1. Nessuna variazione → Compenso tabellare 3.592,00; spese generali 538,80; ipotesi liquidabile 4.130,80.
 2. `PiuParti=3`, `PctPiuParti=60`, `Importanza` 25% → tabellare 4.490,00; aumento parti 2.694,00; totale 7.184,00.
