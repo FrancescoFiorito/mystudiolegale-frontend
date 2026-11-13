@@ -23,6 +23,7 @@ Tutti e 7 i calcolatori sono veri calcolatori (form con risultato numerico o di 
 - **Gratuito patrocinio**: limite per anno (11.528,41 / 11.493,82 / 11.746,68 / 12.838,01 / 13.659,64 €), +1.032,91 € per ogni familiare nel penale; familiari in conflitto o diritti della personalità esclusi dalla somma; reddito uguale al limite = requisito rispettato.
 
 ## Differenze residue / scelte
+- **Gratuito patrocinio** (aggiunto dopo la verifica in produzione): nel penale mancava la scelta "Aumento soglia penale" Sì/No del sito, che compare solo per la materia Penale (default Sì). Aggiunta nel backend (PR #148, `applica_aumento_penale`) e nel form; con "No" la riga dell'aumento resta a € 0,00 come sul sito.
 - **Gratuito patrocinio**: il nome di un familiare con tag HTML (`<b>x</b>`) viene ripulito dai tag e messo con l'iniziale maiuscola; il sito lo stampa come HTML interpretato. Nessun effetto sui calcoli.
 - **Gratuito patrocinio**: il testo di riferimento normativo per il 2022-2024 è copiato dal sito ("Decreto 10 maggio 2023, pubblicato sulla G.U. n. 130 del 6 giugno 2022"): l'anno della G.U. sembra un refuso del sito (probabile 2023), da verificare.
 - **Scadenze**: il messaggio d'errore del calcolo a ritroso usa uno spazio normale invece dello spazio non separabile del sito. Il sito mostra anche una battuta ("forse serve una macchina del tempo?") per risultati oltre l'anno corrente + 5: riprodotta come nota "Data molto lontana nel tempo".
@@ -31,6 +32,7 @@ Tutti e 7 i calcolatori sono veri calcolatori (form con risultato numerico o di 
 - Fuori lotto, non toccate: "Tabella Interessi Legali/di Mora/Tassi Appalti" ecc.
 
 ## Deploy e verifica in produzione
+- **Verifica in produzione fatta dalla sessione di coordinamento** dopo il merge: 19 casi (2-3 per calcolatore) letti dal sito e confrontati con l'API live, tutti coincidenti; unico scarto trovato quello sull'aumento penale, corretto come sopra.
 - Backend PR #146 (`354ee82`): gli endpoint erano definiti dopo `app.include_router(api)` → 404 in produzione pur con deploy "live" (non rilevabile con i test locali che chiamano le funzioni direttamente). Corretto con la PR #147 (`506dfc9`), deploy Render `dep-dbrmqkjl550s73cuhg0g`.
 - **Verificato in produzione**: le 8 rotte `/api/calc/...` rispondono (401 senza token). **Non verificato**: i valori. La registrazione dell'utente usa-e-getta su produzione è stata bloccata dalle regole di permesso della sessione, quindi la riesecuzione dei casi contro l'API live non è stata fatta. Da fare: registrare un utente di prova e rilanciare i confronti (script nello scratchpad della sessione, non versionati).
 - Auto-deploy Render risulta attivo sul servizio, ma per il merge #146 non è partito nulla da solo: il deploy è stato lanciato a mano.

@@ -2264,6 +2264,10 @@ const CONFIG_LOTTO_A: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "imponibile", label: "Reddito imponibile €", default: "" },
       { tipo: "numero", key: "esenti", label: "Redditi esenti €", default: "" },
       { tipo: "numero", key: "altri", label: "Altri redditi €", default: "" },
+      {
+        tipo: "scelta", key: "aumento_penale", label: "Aumento soglia penale", default: "1",
+        opzioni: [{ value: "0", label: "No" }, { value: "1", label: "Sì" }], mostraSe: (f) => f.materia === "2",
+      },
       { tipo: "lista", key: "familiari", label: "Familiari conviventi", etichettaAggiungi: "Nuovo familiare convivente", campiRiga: [
         { tipo: "testo", key: "nome", label: "Nome familiare" },
         { tipo: "scelta", key: "rapporto", label: "Rapporto familiare", default: "", opzioni: [
@@ -2288,6 +2292,7 @@ const CONFIG_LOTTO_A: Record<string, ConfigGenerico> = {
         nome: x.nome || "", rapporto: parseInt(x.rapporto, 10), reddito_imponibile: parseNumeroIt(x.imponibile),
         redditi_esenti: parseNumeroIt(x.esenti), altri_redditi: parseNumeroIt(x.altri), in_conflitto: x.conflitto === "1",
       })),
+      applica_aumento_penale: f.aumento_penale !== "0",
     }),
     risultato: (r) => [
       ["PARAMETRI INSERITI", ""],
