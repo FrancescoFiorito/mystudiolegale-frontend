@@ -40,7 +40,7 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -1515,6 +1515,59 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "spese-trasferta-avvocati": {
+    campi: [
+      { tipo: "numero", key: "pct_rimborso_carburante", label: "Rimborso carburante % (massimo 20%)", default: "20" },
+      { tipo: "numero", key: "pct_costi_accessori", label: "Costi accessori albergo % (massimo 10%)", default: "10" },
+      {
+        tipo: "lista", key: "trasferte", label: "Trasferte (massimo 8)", etichettaAggiungi: "Aggiungi una trasferta",
+        campiRiga: [
+          { tipo: "testo", key: "localita", label: "Località" },
+          { tipo: "testo", key: "data", label: "Data" },
+          { tipo: "numero", key: "costo_carburante_litro", label: "Costo carburante al litro €" },
+          { tipo: "numero", key: "km", label: "Chilometri" },
+          { tipo: "numero", key: "pedaggi", label: "Pedaggi €" },
+          { tipo: "numero", key: "parcheggio", label: "Parcheggio €" },
+          { tipo: "numero", key: "albergo", label: "Albergo €" },
+          { tipo: "numero", key: "treno", label: "Treno €" },
+          { tipo: "numero", key: "aereo", label: "Aereo €" },
+          { tipo: "numero", key: "altri_trasporti", label: "Altri trasporti €" },
+          { tipo: "numero", key: "vitto", label: "Vitto €" },
+          { tipo: "numero", key: "spese_varie", label: "Spese varie €" },
+        ],
+      },
+    ],
+    endpoint: "/calc/spese-trasferta-avvocati",
+    validate: (f) => {
+      if (!(f.trasferte || []).length) return "Inserire almeno una trasferta.";
+      if ((f.trasferte || []).length > 8) return "Il calcolatore prevede al massimo 8 trasferte.";
+      return null;
+    },
+    buildBody: (f) => ({
+      pct_rimborso_carburante: Math.min(20, Math.max(0, parseNumeroIt(f.pct_rimborso_carburante))),
+      pct_costi_accessori: Math.min(10, Math.max(0, parseNumeroIt(f.pct_costi_accessori))),
+      trasferte: (f.trasferte || []).map((t: Record<string, string>) => ({
+        costo_carburante_litro: parseNumeroIt(t.costo_carburante_litro), km: parseNumeroIt(t.km),
+        pedaggi: parseNumeroIt(t.pedaggi), parcheggio: parseNumeroIt(t.parcheggio), albergo: parseNumeroIt(t.albergo),
+        treno: parseNumeroIt(t.treno), aereo: parseNumeroIt(t.aereo), altri_trasporti: parseNumeroIt(t.altri_trasporti),
+        vitto: parseNumeroIt(t.vitto), spese_varie: parseNumeroIt(t.spese_varie),
+      })),
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      r.dettaglio.forEach((d: any, i: number) => {
+        const n = r.dettaglio.length > 1 ? ` (trasferta ${i + 1})` : "";
+        if (d.rimborso_carburante) out.push([`Rimborso carburante${n}`, formatEuro(d.rimborso_carburante)]);
+        out.push([`Totale spese auto${n}`, formatEuro(d.totale_spese_auto)]);
+        if (d.costi_accessori) out.push([`Costi accessori albergo${n}`, formatEuro(d.costi_accessori)]);
+        out.push([`Totale albergo${n}`, formatEuro(d.totale_albergo)]);
+        out.push([`Totale trasporti${n}`, formatEuro(d.totale_trasporti)]);
+        out.push([`Totale trasferta${n}`, formatEuro(d.totale_trasferta)]);
+      });
+      out.push(["Totale generale", formatEuro(r.totale_generale)]);
+      return out;
+    },
+  },
   "quote-ereditarie": {
     campi: [
       { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
@@ -2481,6 +2534,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "parametri-penali-2014", titolo: "Parametri 2014 Penale", sottotitolo: "Compenso avvocati in ambito penale, DM 55/2014", icona: "bar-chart-2" },
   { id: "parametri-penali-2012", titolo: "Parametri 2012 Penale", sottotitolo: "Compenso avvocati in ambito penale, DM 140/2012", icona: "bar-chart-2" },
   { id: "parametri-civili-2012", titolo: "Parametri 2012 Civile", sottotitolo: "Compenso avvocati in ambito civile, DM 140/2012", icona: "bar-chart-2" },
+  { id: "spese-trasferta-avvocati", titolo: "Spese Trasferta Avvocati", sottotitolo: "Rimborso chilometrico, albergo, trasporti e vitto", icona: "map-pin" },
   { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
   { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
   { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
@@ -2851,7 +2905,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2014 Civile", tipo: "calcolatore", calcId: "parametri-forensi" },
       { nome: "Parametri 2014 Penale", tipo: "calcolatore", calcId: "parametri-penali-2014" },
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
-      { nome: "Spese Trasferta Avvocati", tipo: "in_arrivo" },
+      { nome: "Spese Trasferta Avvocati", tipo: "calcolatore", calcId: "spese-trasferta-avvocati" },
       { nome: "Tabelle Parametri", tipo: "in_arrivo" },
       { nome: "Parametri 2012 Civile", tipo: "calcolatore", calcId: "parametri-civili-2012" },
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
