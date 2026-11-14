@@ -41,7 +41,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -3007,6 +3007,46 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "grado-parentela": {
+    campi: [
+      { tipo: "scelta", key: "parentela", label: "Parentela", default: "0", cercabile: true, opzioni: [
+        { value: "0", label: "padre" },
+        { value: "1", label: "madre" },
+        { value: "2", label: "nonno" },
+        { value: "3", label: "bisnonno" },
+        { value: "4", label: "trisnonno" },
+        { value: "5", label: "figlio" },
+        { value: "6", label: "nipote" },
+        { value: "7", label: "nipote (di zio)" },
+        { value: "8", label: "pronipote" },
+        { value: "9", label: "pronipote (di zio)" },
+        { value: "10", label: "pro-pronipote" },
+        { value: "11", label: "pro-pronipote (di zio)" },
+        { value: "12", label: "fratello" },
+        { value: "13", label: "sorella" },
+        { value: "14", label: "zio" },
+        { value: "15", label: "prozio" },
+        { value: "16", label: "pro-prozio" },
+        { value: "17", label: "cugino" },
+        { value: "18", label: "cugino di 2° grado" },
+        { value: "19", label: "cugino di 3° grado" },
+        { value: "20", label: "suocero" },
+        { value: "21", label: "cognato" },
+        { value: "22", label: "prosuocero" },
+      ] },
+    ],
+    endpoint: "/calc/grado-parentela",
+    buildBody: (f) => ({ parentela: parseInt(f.parentela, 10) }),
+    risultato: (r) => {
+      const out: [string, string][] = [
+        [r.tipo === "affinità" ? "Affinità" : "Parentela", r.frase],
+        ["Grado", `${r.grado}°`],
+      ];
+      if (r.linea) out.push(["Linea", r.linea]);
+      if (r.alberi_genealogici) out.push(["Alberi genealogici possibili", String(r.alberi_genealogici)]);
+      return out;
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -3384,6 +3424,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "diritti-copia-tributario", titolo: "Copie Processo Tributario", sottotitolo: "Diritti di copia nel processo tributario", icona: "copy" },
   { id: "gratuito-patrocinio", titolo: "Verifica Gratuito Patrocinio", sottotitolo: "Requisito reddituale, familiari e soglia dell'anno", icona: "check-circle" },
   { id: "aumenti-riduzioni-pena", titolo: "Aumenti/Riduzioni Pena", sottotitolo: "Fino a 4 variazioni consecutive della pena base", icona: "repeat" },
+  { id: "grado-parentela", titolo: "Grado di Parentela", sottotitolo: "Parentela e affinità, in linea retta e collaterale", icona: "users" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -3789,7 +3830,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Usufrutto", tipo: "calcolatore", calcId: "usufrutto" },
       { nome: "Coefficienti Usufrutto", tipo: "in_arrivo" },
       { nome: "Pensione di Reversibilità", tipo: "in_arrivo" },
-      { nome: "Grado di Parentela", tipo: "in_arrivo" },
+      { nome: "Grado di Parentela", tipo: "calcolatore", calcId: "grado-parentela" },
       { nome: "Calcolo IMU", tipo: "calcolatore", calcId: "imu" },
       { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
       { nome: "Categorie Catastali", tipo: "in_arrivo" },
