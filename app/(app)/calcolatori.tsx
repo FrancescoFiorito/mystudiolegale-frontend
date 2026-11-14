@@ -41,7 +41,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -225,6 +225,27 @@ const TIPI_REGIME_SEMPLIFICATO = [
 ];
 const PERCENTUALI_1_20 = Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
 const PERCENTUALI_1_25 = Array.from({ length: 25 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+
+// Superficie commerciale: voci selezionabili per gruppo (codice del sito di riferimento), come nelle tendine
+// dei vani e delle pertinenze; per le pertinenze si indica anche se è prevista la spunta "comunicante".
+const SUP_GRUPPI_OPZ = [
+  { value: "1", label: "Abitazioni residenziali (da A/1 a A/6)" },
+  { value: "2", label: "Abitazioni in villino e in villa (A/7 e A/8)" },
+  { value: "4", label: "Uffici, studi e laboratori professionali" },
+  { value: "8", label: "Negozi e locali assimilabili" },
+];
+const SUP_VANI_PER_GRUPPO: Record<string, { value: string; label: string }[]> = {
+  "1": [{ value: "v12", label: "Bagno" }, { value: "v1", label: "Camera da letto" }, { value: "v13", label: "Corridoio" }, { value: "v2", label: "Cucina" }, { value: "v14", label: "Disimpegno" }, { value: "v15", label: "Guardaroba" }, { value: "v16", label: "Ingresso" }, { value: "v17", label: "Ripostiglio" }, { value: "v4", label: "Sala" }, { value: "v5", label: "Salotto" }, { value: "v18", label: "Scala (proiezione)" }, { value: "v6", label: "Soggiorno" }, { value: "v8", label: "Studio" }, { value: "v9", label: "Taverna (non cantina)" }, { value: "v20", label: "Veranda" }, { value: "v22", label: "Altro vano accessorio diretto" }, { value: "v11", label: "Altro vano principale" }],
+  "2": [{ value: "v12", label: "Bagno" }, { value: "v1", label: "Camera da letto" }, { value: "v13", label: "Corridoio" }, { value: "v2", label: "Cucina" }, { value: "v14", label: "Disimpegno" }, { value: "v15", label: "Guardaroba" }, { value: "v16", label: "Ingresso" }, { value: "v17", label: "Ripostiglio" }, { value: "v4", label: "Sala" }, { value: "v5", label: "Salotto" }, { value: "v18", label: "Scala (proiezione)" }, { value: "v6", label: "Soggiorno" }, { value: "v8", label: "Studio" }, { value: "v9", label: "Taverna (non cantina)" }, { value: "v20", label: "Veranda" }, { value: "v22", label: "Altro vano accessorio diretto" }, { value: "v11", label: "Altro vano principale" }],
+  "4": [{ value: "v14", label: "Disimpegno" }, { value: "v15", label: "Guardaroba" }, { value: "v18", label: "Scala (proiezione)" }, { value: "v8", label: "Studio" }, { value: "v20", label: "Veranda" }, { value: "v21", label: "W.C." }, { value: "v22", label: "Altro vano accessorio diretto" }, { value: "v11", label: "Altro vano principale" }],
+  "8": [{ value: "v3", label: "Retrobottega" }, { value: "v17", label: "Ripostiglio" }, { value: "v19", label: "Sottonegozio" }, { value: "v7", label: "Spazio espositivo" }, { value: "v10", label: "Ufficio" }, { value: "v21", label: "W.C." }, { value: "v22", label: "Altro vano accessorio diretto" }, { value: "v11", label: "Altro vano principale" }],
+};
+const SUP_PERT_PER_GRUPPO: Record<string, { value: string; label: string }[]> = {
+  "1": [{ value: "v24", label: "Balcone" }, { value: "v25", label: "Box" }, { value: "v27", label: "Cantina" }, { value: "v26", label: "Garage" }, { value: "v30", label: "Giardino" }, { value: "v31", label: "Legnaia" }, { value: "v38", label: "Posto auto scoperto" }, { value: "v41", label: "Soffitta >= 1,50 mt" }, { value: "v42", label: "Soppalco >= 1,50 mt" }, { value: "v43", label: "Terrazza" }, { value: "v44", label: "Altra area scoperta" }, { value: "v45", label: "Altra pertinenza di servizio" }],
+  "2": [{ value: "v24", label: "Balcone" }, { value: "v25", label: "Box" }, { value: "v27", label: "Cantina" }, { value: "v28", label: "Cortile" }, { value: "v26", label: "Garage" }, { value: "v30", label: "Giardino" }, { value: "v31", label: "Legnaia" }, { value: "v32", label: "Locale tecnico" }, { value: "v35", label: "Parco" }, { value: "v36", label: "Patio" }, { value: "v37", label: "Portico" }, { value: "v38", label: "Posto auto scoperto" }, { value: "v41", label: "Soffitta >= 1,50 mt" }, { value: "v42", label: "Soppalco >= 1,50 mt" }, { value: "v43", label: "Terrazza" }, { value: "v44", label: "Altra area scoperta" }, { value: "v45", label: "Altra pertinenza di servizio" }],
+  "4": [{ value: "v23", label: "Archivio" }, { value: "v24", label: "Balcone" }, { value: "v25", label: "Box" }, { value: "v27", label: "Cantina" }, { value: "v28", label: "Cortile" }, { value: "v29", label: "Deposito" }, { value: "v26", label: "Garage" }, { value: "v30", label: "Giardino" }, { value: "v32", label: "Locale tecnico" }, { value: "v34", label: "Parcheggio privato" }, { value: "v36", label: "Patio" }, { value: "v37", label: "Portico" }, { value: "v38", label: "Posto auto scoperto" }, { value: "v39", label: "Sala d'attesa" }, { value: "v40", label: "Sala riunioni" }, { value: "v41", label: "Soffitta >= 1,50 mt" }, { value: "v42", label: "Soppalco >= 1,50 mt" }, { value: "v43", label: "Terrazza" }, { value: "v44", label: "Altra area scoperta" }, { value: "v45", label: "Altra pertinenza di servizio" }],
+  "8": [{ value: "v28", label: "Cortile" }, { value: "v29", label: "Deposito" }, { value: "v30", label: "Giardino" }, { value: "v32", label: "Locale tecnico" }, { value: "v33", label: "Magazzino" }, { value: "v34", label: "Parcheggio privato" }, { value: "v37", label: "Portico" }, { value: "v38", label: "Posto auto scoperto" }, { value: "v42", label: "Soppalco >= 1,50 mt" }, { value: "v44", label: "Altra area scoperta" }, { value: "v45", label: "Altra pertinenza di servizio" }],
+};
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -3047,6 +3068,60 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "superficie-commerciale": {
+    campi: [
+      { tipo: "scelta", key: "gruppo", label: "Tipo di immobile", default: "1", opzioni: SUP_GRUPPI_OPZ },
+      { tipo: "scelta", key: "tipo_superficie", label: "Superficie", default: "complessiva", opzioni: [
+        { value: "complessiva", label: "Complessiva" }, { value: "singoli_vani", label: "Singoli vani" },
+      ] },
+      { tipo: "numero", key: "superficie", label: "Superficie dei vani principali e accessori diretti (Mq)", default: "", mostraSe: (f) => f.tipo_superficie !== "singoli_vani" },
+      {
+        tipo: "lista", key: "vani", label: "Vani principali e vani accessori diretti (massimo 32)", etichettaAggiungi: "Aggiungi un vano", mostraSe: (f) => f.tipo_superficie === "singoli_vani",
+        campiRiga: [
+          { tipo: "scelta", key: "codice", label: "Vano", opzioni: (f) => [{ value: "", label: "" }, ...(SUP_VANI_PER_GRUPPO[f.gruppo] || [])] },
+          { tipo: "numero", key: "superficie", label: "Superficie (Mq)" },
+        ],
+      },
+      {
+        tipo: "lista", key: "pertinenze", label: "Pertinenze esclusive (massimo 32)", etichettaAggiungi: "Aggiungi una pertinenza",
+        campiRiga: [
+          { tipo: "scelta", key: "codice", label: "Pertinenza", opzioni: (f) => [{ value: "", label: "" }, ...(SUP_PERT_PER_GRUPPO[f.gruppo] || [])] },
+          { tipo: "numero", key: "superficie", label: "Superficie (Mq)" },
+          { tipo: "scelta", key: "comunicante", label: "Comunicante con i vani (dove previsto)", default: "", opzioni: [
+            { value: "", label: "Come da impostazione del tipo" }, { value: "si", label: "Sì" }, { value: "no", label: "No" },
+          ] },
+        ],
+      },
+    ],
+    endpoint: "/calc/superficie-commerciale",
+    validate: (f) => {
+      if ((f.vani || []).length > 32 || (f.pertinenze || []).length > 32) return "Al massimo 32 vani e 32 pertinenze.";
+      return null;
+    },
+    buildBody: (f) => ({
+      gruppo: parseInt(f.gruppo, 10), tipo_superficie: f.tipo_superficie,
+      superficie: f.tipo_superficie !== "singoli_vani" && f.superficie ? parseNumeroIt(f.superficie) : null,
+      vani: f.tipo_superficie === "singoli_vani"
+        ? (f.vani || []).map((v: Record<string, string>) => ({ codice: v.codice || null, superficie: v.superficie ? parseNumeroIt(v.superficie) : null }))
+        : [],
+      pertinenze: (f.pertinenze || []).map((p: Record<string, string>) => ({
+        codice: p.codice || null, superficie: p.superficie ? parseNumeroIt(p.superficie) : null,
+        comunicante: p.comunicante === "si" ? true : p.comunicante === "no" ? false : null,
+      })),
+    }),
+    risultato: (r) => {
+      const mq = (x: number) => `${fmtPct(x)} Mq`;
+      const out: [string, string][] = [["Superficie commerciale calcolata", `${r.superficie_commerciale} Mq`]];
+      if (r.messaggio) out.push(["Nota", r.messaggio]);
+      const riga = (lab: string, v: any) => { if (v) out.push([lab, `${mq(v.totale)} → ${mq(v.commerciale)}`]); };
+      riga("Vani principali e accessori diretti (totale → commerciale)", r.vani);
+      riga("Pertinenze di ornamento", r.pertinenze_ornamento);
+      riga("Pertinenze di servizio", r.pertinenze_servizio);
+      riga("Totale pertinenze", r.totale_pertinenze);
+      riga("Totale immobile", r.totale_immobile);
+      return out;
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -3425,6 +3500,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "gratuito-patrocinio", titolo: "Verifica Gratuito Patrocinio", sottotitolo: "Requisito reddituale, familiari e soglia dell'anno", icona: "check-circle" },
   { id: "aumenti-riduzioni-pena", titolo: "Aumenti/Riduzioni Pena", sottotitolo: "Fino a 4 variazioni consecutive della pena base", icona: "repeat" },
   { id: "grado-parentela", titolo: "Grado di Parentela", sottotitolo: "Parentela e affinità, in linea retta e collaterale", icona: "users" },
+  { id: "superficie-commerciale", titolo: "Superficie Commerciale", sottotitolo: "Vani e pertinenze, criteri D.P.R. 138/1998", icona: "home" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -3835,7 +3911,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
       { nome: "Categorie Catastali", tipo: "in_arrivo" },
       { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
-      { nome: "Calcolo Superficie Commerciale", tipo: "in_arrivo" },
+      { nome: "Calcolo Superficie Commerciale", tipo: "calcolatore", calcId: "superficie-commerciale" },
       { nome: "Imposte Compravendita", tipo: "calcolatore", calcId: "imposte-compravendita-immobiliare" },
       { nome: "Calcolo Cedolare Secca", tipo: "in_arrivo" },
       { nome: "Tassa Registro Locazioni", tipo: "calcolatore", calcId: "tassa-registro-locazione" },
