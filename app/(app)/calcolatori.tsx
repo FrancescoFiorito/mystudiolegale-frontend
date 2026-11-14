@@ -41,7 +41,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca" | "pensione-reversibilita";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -3181,6 +3181,47 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "pensione-reversibilita": {
+    campi: [
+      { tipo: "scelta", key: "anno", label: "Anno", default: "2026", opzioni: [{ value: "2026", label: "2026" }, { value: "2025", label: "2025" }, { value: "2024", label: "2024" }, { value: "2023", label: "2023" }, { value: "2022", label: "2022" }, { value: "2021", label: "2021" }, { value: "2020", label: "2020" }, { value: "2019", label: "2019" }, { value: "2018", label: "2018" }, { value: "2017", label: "2017" }, { value: "2016", label: "2016" }, { value: "2015", label: "2015" }, { value: "2014", label: "2014" }, { value: "2013", label: "2013" }, { value: "2012", label: "2012" }, { value: "2011", label: "2011" }, { value: "2010", label: "2010" }, { value: "2009", label: "2009" }] },
+      { tipo: "numero", key: "pensione", label: "Importo pensione €", default: "" },
+      { tipo: "scelta", key: "tipo_importo", label: "L'importo della pensione è", default: "mensile", opzioni: [
+        { value: "mensile", label: "Mensile" }, { value: "annuale", label: "Annuale" },
+      ] },
+      { tipo: "titolo", key: "tit_parenti", label: "Indica solo i parenti aventi diritto:" },
+      { tipo: "bool", key: "coniuge", label: "Coniuge", default: true },
+      { tipo: "bool", key: "coniuge_percepisce_reddito", label: "Il coniuge ha un reddito", default: false, mostraSe: (f) => !!f.coniuge },
+      { tipo: "numero", key: "reddito_coniuge", label: "Reddito del coniuge all'anno €", default: "", mostraSe: (f) => !!f.coniuge && !!f.coniuge_percepisce_reddito },
+      { tipo: "scelta", key: "figli", label: "Figli o nipoti aventi diritto", default: "", opzioni: [
+        { value: "", label: "Nessuno" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }, { value: "9", label: "9" }, { value: "10", label: "10" },
+      ] },
+      { tipo: "scelta", key: "genitori", label: "Genitori aventi diritto (senza coniuge e figli)", default: "", mostraSe: (f) => !f.coniuge && !f.figli, opzioni: [
+        { value: "", label: "Nessuno" }, { value: "1", label: "1" }, { value: "2", label: "2" },
+      ] },
+      { tipo: "scelta", key: "fratelli", label: "Fratelli aventi diritto (senza coniuge, figli e genitori)", default: "", mostraSe: (f) => !f.coniuge && !f.figli && !f.genitori, opzioni: [
+        { value: "", label: "Nessuno" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "4", label: "4" }, { value: "5", label: "5" }, { value: "6", label: "6" }, { value: "7", label: "7" }, { value: "8", label: "8" }, { value: "9", label: "9" }, { value: "10", label: "10" },
+      ] },
+    ],
+    endpoint: "/calc/pensione-reversibilita",
+    buildBody: (f) => {
+      const conIgnore = !!f.coniuge || !!f.figli;
+      return {
+        anno: parseInt(f.anno, 10), pensione: parseNumeroIt(f.pensione), tipo_importo: f.tipo_importo,
+        coniuge: !!f.coniuge, coniuge_percepisce_reddito: !!f.coniuge && !!f.coniuge_percepisce_reddito,
+        reddito_coniuge: f.coniuge && f.coniuge_percepisce_reddito && f.reddito_coniuge ? parseNumeroIt(f.reddito_coniuge) : null,
+        figli: f.figli ? parseInt(f.figli, 10) : 0,
+        genitori: !conIgnore && f.genitori ? parseInt(f.genitori, 10) : 0,
+        fratelli: !conIgnore && !f.genitori && f.fratelli ? parseInt(f.fratelli, 10) : 0,
+      };
+    },
+    risultato: (r) => {
+      const etichette: Record<string, string> = {
+        coniuge: "Coniuge", nota: "Nota", riduzione: "Riduzione per il reddito", effettiva: "Pensione effettiva",
+        figli: "Figli o nipoti", genitori: "Genitori", fratelli: "Fratelli",
+      };
+      return r.righe.map((x: any) => [etichette[x.tipo] || "", x.frase] as [string, string]);
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -3561,6 +3602,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "grado-parentela", titolo: "Grado di Parentela", sottotitolo: "Parentela e affinità, in linea retta e collaterale", icona: "users" },
   { id: "superficie-commerciale", titolo: "Superficie Commerciale", sottotitolo: "Vani e pertinenze, criteri D.P.R. 138/1998", icona: "home" },
   { id: "cedolare-secca", titolo: "Calcolo Cedolare Secca", sottotitolo: "Convenienza rispetto all'IRPEF, primi 4 anni", icona: "percent" },
+  { id: "pensione-reversibilita", titolo: "Pensione di Reversibilità", sottotitolo: "Quote ai superstiti e riduzione per il reddito del coniuge", icona: "users" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -3965,7 +4007,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Imposte di Successione", tipo: "calcolatore", calcId: "imposta-successione" },
       { nome: "Calcolo Usufrutto", tipo: "calcolatore", calcId: "usufrutto" },
       { nome: "Coefficienti Usufrutto", tipo: "in_arrivo" },
-      { nome: "Pensione di Reversibilità", tipo: "in_arrivo" },
+      { nome: "Pensione di Reversibilità", tipo: "calcolatore", calcId: "pensione-reversibilita" },
       { nome: "Grado di Parentela", tipo: "calcolatore", calcId: "grado-parentela" },
       { nome: "Calcolo IMU", tipo: "calcolatore", calcId: "imu" },
       { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
