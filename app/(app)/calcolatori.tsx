@@ -40,7 +40,7 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -200,6 +200,20 @@ const NS_COMP_ONORARI = [
 function opzioniNotaSpese(righe: [string, string][] | undefined): { value: string; label: string }[] {
   return (righe || []).map((r, i) => ({ value: String(i), label: `${r[0]} ${r[1]}` }));
 }
+
+const PV_SCAGLIONI_ASSISTENZA = [
+  { value: "10", label: "Fino a € 1.100" }, { value: "20", label: "Da € 1.101 a € 5.200" }, { value: "30", label: "Da € 5.201 a € 26.000" },
+  { value: "40", label: "Da € 26.001 a € 52.000" }, { value: "50", label: "Da € 52.001 a € 260.000" }, { value: "60", label: "Da € 260.001 a € 520.000" },
+];
+const PV_SCAGLIONI_MEDIAZIONE = [
+  ...PV_SCAGLIONI_ASSISTENZA,
+  { value: "70", label: "Da € 520.001 a € 1.000.000" }, { value: "80", label: "Da € 1.000.001 a € 2.000.000" }, { value: "90", label: "Da € 2.000.001 a € 4.000.000" },
+  { value: "100", label: "Da € 4.000.001 a € 8.000.000" }, { value: "110", label: "Da € 8.000.001 a € 16.000.000" }, { value: "120", label: "Da € 16.000.001 a € 32.000.000" },
+];
+const PV_INDETERMINABILI = [
+  { value: "901", label: "Indeterminabile - complessità bassa" }, { value: "902", label: "Indeterminabile - complessità media" },
+  { value: "903", label: "Indeterminabile - complessità alta" }, { value: "910", label: "Indeterminabile di particolare importanza" },
+];
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -1871,6 +1885,92 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "preventivo-stragiudiziale": {
+    campi: [
+      { tipo: "scelta", key: "competenza", label: "Tipo attività", default: "assistenza", opzioni: [
+        { value: "assistenza", label: "Assistenza stragiudiziale" }, { value: "mediazione", label: "Mediazione e Negoziazione assistita" },
+      ] },
+      { tipo: "scelta", key: "tipo_compenso", label: "Calcolo compenso", default: "tabellare", mostraSe: (f) => f.competenza === "assistenza", opzioni: [
+        { value: "tabellare", label: "Tabellare" }, { value: "percentuale", label: "In percentuale" },
+      ] },
+      { tipo: "scelta", key: "scaglione", label: "Valore della pratica", default: "30", mostraSe: (f) => !(f.competenza === "assistenza" && f.tipo_compenso === "percentuale"),
+        opzioni: (f) => [...(f.competenza === "mediazione" ? PV_SCAGLIONI_MEDIAZIONE : PV_SCAGLIONI_ASSISTENZA), ...PV_INDETERMINABILI] },
+      { tipo: "numero", key: "valore_causa", label: "Valore della pratica €", default: "", mostraSe: (f) => f.competenza === "assistenza" && f.tipo_compenso === "percentuale" },
+      { tipo: "numero", key: "pct_compenso", label: "Percentuale del compenso (massimo 5%)", default: "", mostraSe: (f) => f.competenza === "assistenza" && f.tipo_compenso === "percentuale" },
+      { tipo: "titolo", key: "pv_tit0", label: "Fase 1: Compenso (assistenza) / Fase dell'attivazione (mediazione)", mostraSe: (f) => true },
+      { tipo: "bool", key: "pv_f0_on", label: "Includi la fase", default: true, mostraSe: (f) => true },
+      { tipo: "numero", key: "pv_f0_pct", label: "Variazione % sul valore medio (da -100 a 100)", default: "0", mostraSe: (f) => true && !!f.pv_f0_on },
+      { tipo: "numero", key: "pv_f0_imp", label: "Compenso personalizzato € (facoltativo, sostituisce il calcolato)", default: "", mostraSe: (f) => true && !!f.pv_f0_on },
+      { tipo: "titolo", key: "pv_tit1", label: "Fase 2: Fase di negoziazione", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
+      { tipo: "bool", key: "pv_f1_on", label: "Includi la fase", default: true, mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
+      { tipo: "numero", key: "pv_f1_pct", label: "Variazione % sul valore medio (da -100 a 100)", default: "0", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") && !!f.pv_f1_on },
+      { tipo: "numero", key: "pv_f1_imp", label: "Compenso personalizzato € (facoltativo, sostituisce il calcolato)", default: "", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") && !!f.pv_f1_on },
+      { tipo: "titolo", key: "pv_tit2", label: "Fase 3: Conciliazione", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
+      { tipo: "bool", key: "pv_f2_on", label: "Includi la fase", default: true, mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
+      { tipo: "numero", key: "pv_f2_pct", label: "Variazione % sul valore medio (da -100 a 100)", default: "0", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") && !!f.pv_f2_on },
+      { tipo: "numero", key: "pv_f2_imp", label: "Compenso personalizzato € (facoltativo, sostituisce il calcolato)", default: "", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") && !!f.pv_f2_on },
+      {
+        tipo: "lista", key: "compensi", label: "Altre voci di compenso", etichettaAggiungi: "Aggiungi una voce di compenso",
+        campiRiga: [
+          { tipo: "testo", key: "descrizione", label: "Descrizione" },
+          { tipo: "numero", key: "importo", label: "Importo €" },
+        ],
+      },
+      {
+        tipo: "lista", key: "spese", label: "Spese ipotizzabili", etichettaAggiungi: "Aggiungi una spesa",
+        campiRiga: [
+          { tipo: "testo", key: "descrizione", label: "Descrizione (es. Trasferte)" },
+          { tipo: "numero", key: "esente", label: "Spesa esente €" },
+          { tipo: "numero", key: "non_esente", label: "Spesa non esente €" },
+        ],
+      },
+      { tipo: "bool", key: "accessori", label: "Includi gli accessori di legge", default: true },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true, mostraSe: (f) => !!f.accessori },
+      { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.accessori && !!f.spese_generali },
+      { tipo: "bool", key: "cassa", label: "Cassa Avvocati (4%)", default: true, mostraSe: (f) => !!f.accessori },
+      { tipo: "bool", key: "iva", label: "IVA 22%", default: true, mostraSe: (f) => !!f.accessori },
+    ],
+    endpoint: "/calc/preventivo-stragiudiziale",
+    validate: (f) => {
+      if (f.competenza === "assistenza" && f.tipo_compenso === "percentuale") {
+        if (!(parseNumeroIt(f.valore_causa) > 0)) return "Indica il valore della pratica.";
+        if (!(parseNumeroIt(f.pct_compenso) > 0)) return "Indica la percentuale del compenso.";
+      }
+      return null;
+    },
+    buildBody: (f) => {
+      const perc = f.competenza === "assistenza" && f.tipo_compenso === "percentuale";
+      const nfasi = f.competenza === "mediazione" ? 3 : 1;
+      return {
+        competenza: f.competenza, tipo_compenso: f.competenza === "assistenza" ? f.tipo_compenso : "tabellare",
+        scaglione: perc ? "30" : f.scaglione, valore_causa: perc ? parseNumeroIt(f.valore_causa) : 0, pct_compenso: perc ? parseNumeroIt(f.pct_compenso) : 0,
+        fasi: Array.from({ length: nfasi }, (_, i) => ({
+          attiva: !!f[`pv_f${i}_on`], variazione_pct: Math.max(-100, Math.min(100, parseNumeroIt(f[`pv_f${i}_pct`]))),
+          importo: String(f[`pv_f${i}_imp`] ?? "").trim() !== "" ? parseNumeroIt(f[`pv_f${i}_imp`]) : null,
+        })),
+        compensi: (f.compensi || []).map((r: Record<string, string>) => ({ descrizione: r.descrizione || "", importo: parseNumeroIt(r.importo) })),
+        spese: (f.spese || []).map((r: Record<string, string>) => ({ descrizione: r.descrizione || "", esente: parseNumeroIt(r.esente), non_esente: parseNumeroIt(r.non_esente) })),
+        accessori: !!f.accessori, spese_generali: !!f.spese_generali, pct_spese_generali: parseNumeroIt(f.pct_spese_generali),
+        cassa: !!f.cassa, iva: !!f.iva,
+      };
+    },
+    risultato: (r) => {
+      const out: [string, string][] = [["Valore dell'affare", r.valore_affare]];
+      for (const x of r.fasi) if (x.attiva) out.push([x.nome, formatEuro(x.importo)]);
+      for (const x of r.compensi_aggiuntivi) out.push([x.descrizione, formatEuro(x.importo)]);
+      out.push(["Totale compenso", formatEuro(r.compenso_totale)]);
+      for (const s of r.spese) {
+        if (s.esente) out.push([`${s.descrizione} (esente)`, formatEuro(s.esente)]);
+        if (s.non_esente) out.push([`${s.descrizione} (non esente)`, formatEuro(s.non_esente)]);
+      }
+      if (r.spese_generali) out.push(["Spese generali", formatEuro(r.spese_generali)]);
+      if (r.cassa) out.push(["Cassa Avvocati (4%)", formatEuro(r.cassa)]);
+      if (r.iva) out.push(["IVA 22%", formatEuro(r.iva)]);
+      if (r.totale_accessori) out.push(["Totale accessori", formatEuro(r.totale_accessori)]);
+      out.push(["TOTALE PREVENTIVO", formatEuro(r.totale)]);
+      return out;
+    },
+  },
   "quote-ereditarie": {
     campi: [
       { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
@@ -2840,6 +2940,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "spese-trasferta-avvocati", titolo: "Spese Trasferta Avvocati", sottotitolo: "Rimborso chilometrico, albergo, trasporti e vitto", icona: "map-pin" },
   { id: "notula-penale-tariffario-2004", titolo: "Calcolo Notula Penale", sottotitolo: "Tariffario forense 2004: attività, regimi, anticipi", icona: "file-text" },
   { id: "nota-spese-tariffe-2004", titolo: "Calcolo Nota Spese", sottotitolo: "Diritti, onorari e stragiudiziale, tariffe forensi 2004", icona: "file-text" },
+  { id: "preventivo-stragiudiziale", titolo: "Preventivo Attività Stragiudiziali", sottotitolo: "Compenso, spese e accessori di un preventivo stragiudiziale", icona: "file-text" },
   { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
   { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
   { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
@@ -3202,7 +3303,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     id: "fatturazione-avvocati", titolo: "Fatturazione Avvocati", icona: "dollar-sign",
     voci: [
       { nome: "Preventivo Cause Civili", tipo: "calcolatore", calcId: "parcelle" },
-      { nome: "Preventivo Attività Stragiudiziali", tipo: "in_arrivo" },
+      { nome: "Preventivo Attività Stragiudiziali", tipo: "calcolatore", calcId: "preventivo-stragiudiziale" },
       { nome: "Fattura Elettronica Avvocati", tipo: "in_arrivo" },
       { nome: "Visualizzatore Fatture Elettroniche", tipo: "in_arrivo" },
       { nome: "Scorporo Importi", tipo: "calcolatore", calcId: "scorporo-importi" },
