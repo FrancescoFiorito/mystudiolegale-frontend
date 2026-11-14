@@ -214,7 +214,6 @@ const PV_INDETERMINABILI = [
   { value: "901", label: "Indeterminabile - complessità bassa" }, { value: "902", label: "Indeterminabile - complessità media" },
   { value: "903", label: "Indeterminabile - complessità alta" }, { value: "910", label: "Indeterminabile di particolare importanza" },
 ];
-const PV_FASI_MEDIAZIONE = ["Fase dell'attivazione", "Fase di negoziazione", "Conciliazione"];
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
