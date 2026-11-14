@@ -1,0 +1,56 @@
+name: Verifica App Store Connect
+
+# Diagnostica: interroga l'API di App Store Connect con la stessa chiave
+# usata da ios-build.yml per il caricamento su TestFlight e stampa le
+# risposte di Apple. Non compila e non carica nulla.
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: pip install --quiet pyjwt cryptography
+
+      - name: Interroga App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, time, urllib.error, urllib.request
+          import jwt
+
+          key = os.environ["ASC_KEY"].strip()
+          print("Chiave privata: inizia con BEGIN PRIVATE KEY:", key.startswith("-----BEGIN PRIVATE KEY-----"),
+                "| righe:", len(key.splitlines()))
+          now = int(time.time())
+          try:
+              token = jwt.encode(
+                  {"iss": os.environ["ASC_ISSUER_ID"].strip(), "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
+                  key, algorithm="ES256", headers={"kid": os.environ["ASC_KEY_ID"].strip(), "typ": "JWT"},
+              )
+          except Exception as e:
+              raise SystemExit(f"Impossibile firmare il token con la chiave: {type(e).__name__}: {e}")
+
+          base = "https://api.appstoreconnect.apple.com/v1"
+          for nome, url in [
+              ("App con il bundle ID della build", base + "/apps?filter[bundleId]=com.emergent.legalcasehub.isoikp"),
+              ("App con l'ID di eas.json (6789960969)", base + "/apps/6789960969"),
+              ("Tutte le app visibili alla chiave", base + "/apps?limit=20&fields[apps]=name,bundleId"),
+          ]:
+              req = urllib.request.Request(url, headers={"Authorization": "Bearer " + token})
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      body = json.load(r)
+                      data = body.get("data")
+                      items = data if isinstance(data, list) else [data]
+                      print(f"\n== {nome}: HTTP {r.status}, {len(items)} risultati")
+                      for a in items:
+                          at = (a or {}).get("attributes", {})
+                          print("   id", (a or {}).get("id"), "| bundleId", at.get("bundleId"), "| nome", at.get("name"))
+              except urllib.error.HTTPError as e:
+                  print(f"\n== {nome}: HTTP {e.code}")
+                  print(e.read().decode()[:2000])
+          EOF
