@@ -41,7 +41,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -3122,6 +3122,65 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "cedolare-secca": {
+    campi: [
+      { tipo: "scelta", key: "tipo_contratto", label: "Tipologia del contratto", default: "libero", opzioni: [
+        { value: "libero", label: "Libero" }, { value: "concordato", label: "Concordato e agevolato" },
+      ] },
+      { tipo: "numero", key: "canone", label: "Canone di locazione €", default: "" },
+      { tipo: "scelta", key: "tipo_importo", label: "Il canone indicato è", default: "annuale", opzioni: [
+        { value: "annuale", label: "Annuale" }, { value: "mensile", label: "Mensile" },
+      ] },
+      { tipo: "bool", key: "rivalutazione_istat", label: "Rivalutazione Istat prevista", default: true },
+      { tipo: "numero", key: "pct_istat", label: "Rivalutazione Istat prevista al % (andamento)", default: "2,1", mostraSe: (f) => !!f.rivalutazione_istat },
+      { tipo: "scelta", key: "pct_applicazione", label: "Applica rivalutazione al", default: "75", mostraSe: (f) => !!f.rivalutazione_istat, opzioni: [
+        { value: "50", label: "50%" }, { value: "75", label: "75%" }, { value: "100", label: "100%" },
+      ] },
+      { tipo: "numero", key: "reddito", label: "Reddito annuo €", default: "" },
+      { tipo: "scelta", key: "canone_incluso", label: "Il reddito annuo è", default: "0", opzioni: [
+        { value: "1", label: "Compreso il canone" }, { value: "0", label: "Escluso il canone" },
+      ] },
+      { tipo: "numero", key: "oneri_deducibili", label: "Totale oneri deducibili €", default: "" },
+      { tipo: "numero", key: "detrazioni", label: "Totale detrazioni e crediti d'imposta €", default: "" },
+      { tipo: "numero", key: "addizionale_comunale", label: "Addizionale comunale €", default: "" },
+      { tipo: "numero", key: "addizionale_regionale", label: "Addizionale regionale €", default: "" },
+      { tipo: "scelta", key: "deduzione_forfettaria", label: "% Deduzione forfettaria", default: "5", opzioni: [
+        { value: "5", label: "5% (dal 1° gennaio 2013)" }, { value: "15", label: "15% (fino al 31 dicembre 2012)" },
+        { value: "25", label: "25% (Venezia e isole limitrofe)" }, { value: "35", label: "35% (interesse storico/artistico)" },
+      ] },
+    ],
+    endpoint: "/calc/cedolare-secca",
+    buildBody: (f) => ({
+      tipo_contratto: f.tipo_contratto, canone: parseNumeroIt(f.canone), tipo_importo: f.tipo_importo,
+      rivalutazione_istat: !!f.rivalutazione_istat,
+      pct_istat: f.rivalutazione_istat && f.pct_istat ? parseNumeroIt(f.pct_istat) : null,
+      pct_applicazione: parseInt(f.pct_applicazione, 10) || 75,
+      reddito: parseNumeroIt(f.reddito), canone_incluso_nel_reddito: f.canone_incluso === "1",
+      oneri_deducibili: f.oneri_deducibili ? parseNumeroIt(f.oneri_deducibili) : null,
+      detrazioni: f.detrazioni ? parseNumeroIt(f.detrazioni) : null,
+      addizionale_comunale: f.addizionale_comunale ? parseNumeroIt(f.addizionale_comunale) : null,
+      addizionale_regionale: f.addizionale_regionale ? parseNumeroIt(f.addizionale_regionale) : null,
+      deduzione_forfettaria: parseInt(f.deduzione_forfettaria, 10) || 5,
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [
+        ["Tipo di contratto", r.tipo_contratto === "concordato" ? "Canone concordato" : "Canone libero"],
+        ["Importo annuale canone di locazione", formatEuro(r.canone_annuo)],
+        [`Cedolare secca calcolata (${r.cedolare_pct}%)`, formatEuro(r.cedolare)],
+        ["Rivalutazione annuale presunta", r.rivalutazione ? `${r.rivalutazione.pct_applicazione}% di ${fmtPct(r.rivalutazione.pct)}% = ${fmtPct(r.rivalutazione.annuale_pct)}%` : "non prevista"],
+        ["Percentuale deduzione forfettaria", `${r.deduzione_forfettaria_pct}%`],
+      ];
+      const nomi = ["Primo anno", "Secondo anno", "Terzo anno", "Quarto anno"];
+      r.anni.forEach((a: any, i: number) => out.push([
+        nomi[i], `Convenienza fiscale ${formatEuro(a.convenienza_fiscale)} · Rinuncia alla rivalutazione ${formatEuro(a.rinuncia_rivalutazione)} · Complessiva ${formatEuro(a.convenienza_complessiva)}`,
+      ]));
+      out.push(["Totale 4 anni", `Convenienza fiscale ${formatEuro(r.totale.convenienza_fiscale)} · Rinuncia alla rivalutazione ${formatEuro(r.totale.rinuncia_rivalutazione)} · Complessiva ${formatEuro(r.totale.convenienza_complessiva)}`]);
+      out.push(["Esito", r.verdetto]);
+      out.push([r.media_tipo === "risparmio" ? "Risparmio medio per ciascun anno" : "Minor ricavo medio per ciascun anno", formatEuro(r.media_annua)]);
+      out.push(["Imposta da versare con la cedolare secca", `${formatEuro(r.imposta_annua)} / anno`]);
+      return out;
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -3501,6 +3560,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "aumenti-riduzioni-pena", titolo: "Aumenti/Riduzioni Pena", sottotitolo: "Fino a 4 variazioni consecutive della pena base", icona: "repeat" },
   { id: "grado-parentela", titolo: "Grado di Parentela", sottotitolo: "Parentela e affinità, in linea retta e collaterale", icona: "users" },
   { id: "superficie-commerciale", titolo: "Superficie Commerciale", sottotitolo: "Vani e pertinenze, criteri D.P.R. 138/1998", icona: "home" },
+  { id: "cedolare-secca", titolo: "Calcolo Cedolare Secca", sottotitolo: "Convenienza rispetto all'IRPEF, primi 4 anni", icona: "percent" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -3913,7 +3973,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
       { nome: "Calcolo Superficie Commerciale", tipo: "calcolatore", calcId: "superficie-commerciale" },
       { nome: "Imposte Compravendita", tipo: "calcolatore", calcId: "imposte-compravendita-immobiliare" },
-      { nome: "Calcolo Cedolare Secca", tipo: "in_arrivo" },
+      { nome: "Calcolo Cedolare Secca", tipo: "calcolatore", calcId: "cedolare-secca" },
       { nome: "Tassa Registro Locazioni", tipo: "calcolatore", calcId: "tassa-registro-locazione" },
       { nome: "Spese Condominiali", tipo: "in_arrivo" },
     ],
