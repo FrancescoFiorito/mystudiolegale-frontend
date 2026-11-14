@@ -41,7 +41,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -2961,6 +2961,52 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "aumenti-riduzioni-pena": {
+    campi: [
+      { tipo: "titolo", key: "tit_det", label: "Pena detentiva:" },
+      { tipo: "numero", key: "anni", label: "Anni (0-90)", default: "" },
+      { tipo: "numero", key: "mesi", label: "Mesi (0-48)", default: "" },
+      { tipo: "numero", key: "giorni", label: "Giorni (0-90)", default: "" },
+      { tipo: "numero", key: "pena_pecuniaria", label: "Pena pecuniaria € (senza decimali)", default: "" },
+      {
+        tipo: "lista", key: "operazioni", label: "Operazioni (massimo 4, eseguite in sequenza)", etichettaAggiungi: "Aggiungi un'operazione",
+        campiRiga: [
+          { tipo: "scelta", key: "operazione", label: "Operazione", default: "+", opzioni: [
+            { value: "+", label: "Aumenta" }, { value: "-", label: "Riduci" },
+          ] },
+          { tipo: "scelta", key: "frazione", label: "di", default: "1/6", opzioni: [
+            { value: "1/6", label: "1/6" }, { value: "1/3", label: "1/3" }, { value: "1/2", label: "1/2" }, { value: "2/3", label: "2/3" },
+            { value: "", label: "oppure frazione personalizzata:" },
+          ] },
+          { tipo: "numero", key: "numeratore", label: "Numeratore (se personalizzata)" },
+          { tipo: "numero", key: "denominatore", label: "Denominatore (se personalizzata)" },
+        ],
+      },
+    ],
+    endpoint: "/calc/aumenti-riduzioni-pena",
+    validate: (f) => {
+      const ops = f.operazioni || [];
+      if (ops.length > 4) return "Si possono impostare al massimo 4 operazioni.";
+      return null;
+    },
+    buildBody: (f) => ({
+      anni: f.anni ? parseNumeroIt(f.anni) : null, mesi: f.mesi ? parseNumeroIt(f.mesi) : null, giorni: f.giorni ? parseNumeroIt(f.giorni) : null,
+      pena_pecuniaria: f.pena_pecuniaria ? parseNumeroIt(f.pena_pecuniaria) : null,
+      operazioni: (f.operazioni || []).map((o: Record<string, string>) => ({
+        operazione: o.operazione || null,
+        frazione: o.frazione || null,
+        numeratore: !o.frazione && o.numeratore ? parseNumeroIt(o.numeratore) : null,
+        denominatore: !o.frazione && o.denominatore ? parseNumeroIt(o.denominatore) : null,
+      })),
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      const riga = (det: string, pec: string | null) => (pec ? `${det} — ${pec}` : det);
+      r.passi.forEach((p: any) => out.push([p.descrizione, riga(p.detentiva, p.pecuniaria)]));
+      out.push(["Pena finale", riga(r.pena_finale_detentiva, r.pena_finale_pecuniaria)]);
+      return out;
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -3337,6 +3383,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "diritti-copia", titolo: "Diritti di Copia", sottotitolo: "Cancelleria di tribunale e giudice di pace", icona: "copy" },
   { id: "diritti-copia-tributario", titolo: "Copie Processo Tributario", sottotitolo: "Diritti di copia nel processo tributario", icona: "copy" },
   { id: "gratuito-patrocinio", titolo: "Verifica Gratuito Patrocinio", sottotitolo: "Requisito reddituale, familiari e soglia dell'anno", icona: "check-circle" },
+  { id: "aumenti-riduzioni-pena", titolo: "Aumenti/Riduzioni Pena", sottotitolo: "Fino a 4 variazioni consecutive della pena base", icona: "repeat" },
 ];
 
 // Struttura ricalcata su un sito di riferimento esterno: le 9 macro-categorie del
@@ -3727,7 +3774,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
   {
     id: "diritto-penale", titolo: "Diritto Penale", icona: "alert-octagon",
     voci: [
-      { nome: "Aumenti/Riduzioni Pena", tipo: "in_arrivo" },
+      { nome: "Aumenti/Riduzioni Pena", tipo: "calcolatore", calcId: "aumenti-riduzioni-pena" },
       { nome: "Conversione Pena", tipo: "calcolatore", calcId: "conversione-pena" },
       { nome: "Calcolo Fine Pena", tipo: "calcolatore", calcId: "fine-pena" },
       { nome: "Calcolo Prescrizione Reati", tipo: "calcolatore", calcId: "prescrizione-reati" },
