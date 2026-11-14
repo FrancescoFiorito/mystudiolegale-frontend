@@ -40,7 +40,8 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -57,6 +58,7 @@ type CampoGenerico =
   // rivalutazione TFR). Valore in forma "AAAA-MM".
   | (CampoGenericoBase & { tipo: "mese_anno" })
   | (CampoGenericoBase & { tipo: "numero"; default?: string })
+  | (CampoGenericoBase & { tipo: "testo"; default?: string })
   | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
   | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string; cercabile?: boolean })
   // Sola intestazione di sezione (nessun valore nel form): raggruppa più
@@ -214,6 +216,15 @@ const PV_INDETERMINABILI = [
   { value: "901", label: "Indeterminabile - complessità bassa" }, { value: "902", label: "Indeterminabile - complessità media" },
   { value: "903", label: "Indeterminabile - complessità alta" }, { value: "910", label: "Indeterminabile di particolare importanza" },
 ];
+
+const fmtPct = (n: number | string) => String(n).replace(".", ",");
+const TIPI_REGIME_SEMPLIFICATO = [
+  { value: "1", label: "Regime forfettario agevolato 2014" },
+  { value: "2", label: "Regime di vantaggio 2011" },
+  { value: "3", label: "Regime dei minimi 2008" },
+];
+const PERCENTUALI_1_20 = Array.from({ length: 20 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
+const PERCENTUALI_1_25 = Array.from({ length: 25 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }));
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-impugnazione": {
@@ -2602,6 +2613,354 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ["IMU dovuta", formatEuro(r.imu_dovuta)],
     ],
   },
+  "fattura-avvocati": {
+    campi: [
+      { tipo: "numero", key: "onorari", label: "Onorari €", default: "" },
+      { tipo: "numero", key: "spese_esenti", label: "Spese Esenti € (art. 15, DPR 633/72)", default: "" },
+      { tipo: "numero", key: "spese_imponibili", label: "Spese Imponibili €", default: "" },
+      { tipo: "bool", key: "applica_spese_generali", label: "Spese Generali (art. 13 L. 247/2012)", default: true },
+      { tipo: "numero", key: "pct_spese_generali", label: "Spese Generali % (da 0 a 20)", default: "15", mostraSe: (f) => !!f.applica_spese_generali },
+      { tipo: "bool", key: "applica_ritenuta", label: "Ritenuta d'Acconto", default: true },
+      { tipo: "bool", key: "iva_per_cassa", label: "Iva per Cassa (art. 32 bis, D.L. 83/2012)", default: false, mostraSe: (f) => !f.split_payment && !f.regime_semplificato },
+      { tipo: "bool", key: "split_payment", label: "Split Payment (art. 17-ter, DPR 633/72)", default: false, mostraSe: (f) => !f.iva_per_cassa && !f.regime_semplificato },
+      { tipo: "bool", key: "regime_semplificato", label: "Regime Semplificato", default: false, mostraSe: (f) => !f.iva_per_cassa && !f.split_payment },
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo Regime", default: "1", opzioni: TIPI_REGIME_SEMPLIFICATO, mostraSe: (f) => !!f.regime_semplificato },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo (al cliente)", default: false, mostraSe: (f) => !!f.regime_semplificato },
+      {
+        tipo: "lista", key: "acconti", label: "Acconti ricevuti (già fatturati, accessori di legge inclusi; max 16)", etichettaAggiungi: "Aggiungi un acconto",
+        campiRiga: [
+          { tipo: "testo", key: "numero", label: "Numero (facoltativo)" },
+          { tipo: "data", key: "data", label: "Data (facoltativa)", default: "" },
+          { tipo: "numero", key: "importo", label: "Acconto ricevuto €" },
+          { tipo: "numero", key: "spese_esenti", label: "(di cui spese esenti) €" },
+          { tipo: "numero", key: "spese_imponibili", label: "(di cui spese imponibili) €" },
+        ],
+      },
+    ],
+    endpoint: "/calc/fattura-avvocati",
+    validate: (f) => ((f.acconti || []).length > 16 ? "Il calcolatore prevede al massimo 16 acconti." : null),
+    buildBody: (f) => ({
+      onorari: parseNumeroIt(f.onorari), spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+      applica_spese_generali: !!f.applica_spese_generali, pct_spese_generali: f.applica_spese_generali ? parseNumeroIt(f.pct_spese_generali) : 15,
+      applica_ritenuta: !!f.applica_ritenuta,
+      iva_per_cassa: !!f.iva_per_cassa && !f.split_payment && !f.regime_semplificato,
+      split_payment: !!f.split_payment && !f.iva_per_cassa && !f.regime_semplificato,
+      regime_semplificato: !!f.regime_semplificato && !f.iva_per_cassa && !f.split_payment,
+      tipo_regime: parseInt(f.tipo_regime, 10) || 1, addebito_bollo: !!f.regime_semplificato && !!f.addebito_bollo,
+      acconti: (f.acconti || []).map((a: Record<string, string>) => ({
+        numero: a.numero || null, data: a.data || null, importo: parseNumeroIt(a.importo),
+        spese_esenti: parseNumeroIt(a.spese_esenti), spese_imponibili: parseNumeroIt(a.spese_imponibili),
+      })),
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      const acc = r.acconti_onorari != null;
+      const accLabel = r.numero_acconti > 1 ? "acconti" : "acconto";
+      out.push([acc ? `Saldo onorari (${formatEuro(r.onorari)} - ${accLabel} ${formatEuro(r.acconti_onorari)})` : "Onorari", formatEuro(r.onorari_saldo)]);
+      if (r.pct_spese_generali != null) out.push([`Spese generali ex art. 13 (${fmtPct(r.pct_spese_generali)}% su onorari)`, formatEuro(r.spese_generali)]);
+      if (r.spese_imponibili > 0 || r.spese_imponibili_acconti > 0) {
+        out.push([r.spese_imponibili_acconti > 0 ? `Saldo spese imponibili (${formatEuro(r.spese_imponibili + r.spese_imponibili_acconti)} - ${accLabel} ${formatEuro(r.spese_imponibili_acconti)})` : "Spese imponibili", formatEuro(r.spese_imponibili)]);
+      }
+      if (r.bollo > 0) out.push(["Imposta di bollo", formatEuro(r.bollo)]);
+      out.push(["Cassa Avvocati (4%)", formatEuro(r.cassa)]);
+      if (r.regime === 0 || r.regime === 3) out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva != null) out.push(["IVA 22% su Imponibile", formatEuro(r.iva)]);
+      if (r.spese_esenti > 0 || r.spese_esenti_acconti > 0) {
+        out.push([r.spese_esenti_acconti > 0 ? `Saldo spese esenti ex art. 15, DPR 633/72 (${formatEuro(r.spese_esenti + r.spese_esenti_acconti)} - ${accLabel} ${formatEuro(r.spese_esenti_acconti)})` : "Spese esenti ex art. 15, DPR 633/72", formatEuro(r.spese_esenti)]);
+      }
+      out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      if (r.iva_versata_dal_cliente != null) out.push(["Importo IVA versato direttamente dal Cliente all'Erario (scissione dei pagamenti)", formatEuro(r.iva_versata_dal_cliente)]);
+      if (r.ritenuta != null) out.push(["A dedurre ritenuta d'acconto 20% (su onorari e spese)", formatEuro(r.ritenuta)]);
+      if (r.ritenuta != null || r.iva_versata_dal_cliente != null) out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
+      (r.note || []).forEach((n: string) => out.push([n, ""]));
+      return out;
+    },
+  },
+  "fattura-professionisti": {
+    campi: [
+      { tipo: "scelta", key: "modalita", label: "Operazione", default: "calcola", opzioni: [
+        { value: "calcola", label: "Calcola" }, { value: "scorpora", label: "Scorpora & Calcola (l'importo è omnicomprensivo)" },
+      ] },
+      { tipo: "numero", key: "importo", label: "Importo €", default: "" },
+      { tipo: "numero", key: "spese_esenti", label: "Spese Esenti € (art. 15, DPR 633/72)", default: "" },
+      { tipo: "numero", key: "spese_imponibili", label: "Spese Imponibili €", default: "" },
+      { tipo: "bool", key: "applica_iva", label: "IVA", default: true, mostraSe: (f) => !f.regime_semplificato },
+      { tipo: "numero", key: "pct_iva", label: "IVA %", default: "22", mostraSe: (f) => !!f.applica_iva && !f.regime_semplificato },
+      { tipo: "bool", key: "applica_contributo", label: "Contributo Previdenziale", default: false },
+      { tipo: "testo", key: "descrizione_contributo", label: "Descrizione contributo (se contiene 'Inps' la ritenuta si calcola anche sul contributo)", default: "", mostraSe: (f) => !!f.applica_contributo },
+      { tipo: "numero", key: "pct_contributo", label: "Contributo previdenziale % (da 0 a 100)", default: "", mostraSe: (f) => !!f.applica_contributo },
+      { tipo: "bool", key: "applica_spese_forfettarie", label: "Spese Forfettarie", default: false },
+      { tipo: "testo", key: "descrizione_spese_forfettarie", label: "Descrizione voce", default: "", mostraSe: (f) => !!f.applica_spese_forfettarie },
+      { tipo: "numero", key: "pct_spese_forfettarie", label: "Spese forfettarie % sull'importo (da 0 a 100)", default: "", mostraSe: (f) => !!f.applica_spese_forfettarie },
+      { tipo: "bool", key: "applica_ritenuta", label: "Ritenuta d'Acconto", default: false },
+      { tipo: "numero", key: "pct_ritenuta", label: "Ritenuta d'acconto %", default: "20", mostraSe: (f) => !!f.applica_ritenuta },
+      { tipo: "bool", key: "iva_per_cassa", label: "Iva per Cassa (art. 32 bis, D.L. 83/2012)", default: false, mostraSe: (f) => !!f.applica_iva && !f.split_payment && !f.regime_semplificato },
+      { tipo: "bool", key: "split_payment", label: "Split Payment (art. 17-ter, DPR 633/72)", default: false, mostraSe: (f) => !!f.applica_iva && !f.iva_per_cassa && !f.regime_semplificato },
+      { tipo: "bool", key: "regime_semplificato", label: "Regime Semplificato", default: false, mostraSe: (f) => !f.iva_per_cassa && !f.split_payment },
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo Regime", default: "1", opzioni: TIPI_REGIME_SEMPLIFICATO, mostraSe: (f) => !!f.regime_semplificato },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo (al cliente)", default: false, mostraSe: (f) => !!f.regime_semplificato },
+    ],
+    endpoint: "/calc/fattura-professionisti",
+    validate: (f) => {
+      if (f.applica_contributo && !(parseNumeroIt(f.pct_contributo) > 0)) return "Indicare la percentuale del contributo previdenziale (maggiore di 0 e al massimo 100).";
+      if (f.applica_spese_forfettarie && !(parseNumeroIt(f.pct_spese_forfettarie) > 0)) return "Indicare la percentuale delle spese forfettarie (maggiore di 0 e al massimo 100).";
+      return null;
+    },
+    buildBody: (f) => {
+      const regime = !!f.regime_semplificato && !f.iva_per_cassa && !f.split_payment;
+      const iva = !regime && !!f.applica_iva;
+      return {
+        importo: parseNumeroIt(f.importo), spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+        applica_iva: iva, pct_iva: parseNumeroIt(f.pct_iva),
+        applica_contributo: !!f.applica_contributo, descrizione_contributo: f.descrizione_contributo || null, pct_contributo: parseNumeroIt(f.pct_contributo),
+        applica_spese_forfettarie: !!f.applica_spese_forfettarie, descrizione_spese_forfettarie: f.descrizione_spese_forfettarie || null, pct_spese_forfettarie: parseNumeroIt(f.pct_spese_forfettarie),
+        applica_ritenuta: !!f.applica_ritenuta, pct_ritenuta: parseNumeroIt(f.pct_ritenuta),
+        iva_per_cassa: iva && !!f.iva_per_cassa && !f.split_payment, split_payment: iva && !!f.split_payment && !f.iva_per_cassa,
+        regime_semplificato: regime, tipo_regime: parseInt(f.tipo_regime, 10) || 1, addebito_bollo: regime && !!f.addebito_bollo,
+        scorpora: f.modalita === "scorpora",
+      };
+    },
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      if (r.scorporo) {
+        out.push(["Importo omnicomprensivo", formatEuro(r.importo_omnicomprensivo)]);
+        out.push(["Risultato scorporo", formatEuro(r.importo)]);
+      } else {
+        out.push(["Importo", formatEuro(r.importo)]);
+      }
+      if (r.spese_forfettarie != null) out.push([`${r.etichetta_spese_forfettarie} (${fmtPct(r.pct_spese_forfettarie)}%)`, formatEuro(r.spese_forfettarie)]);
+      if (r.spese_imponibili > 0) out.push(["Spese imponibili", formatEuro(r.spese_imponibili)]);
+      if (r.bollo > 0) out.push(["Imposta di bollo", formatEuro(r.bollo)]);
+      if (r.contributo != null) out.push([`${r.etichetta_contributo} (${fmtPct(r.pct_contributo)}%)`, formatEuro(r.contributo)]);
+      if (r.iva != null) out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva != null) out.push([`IVA ${fmtPct(r.pct_iva)}% su Imponibile`, formatEuro(r.iva)]);
+      if (r.spese_esenti > 0) out.push(["Spese esenti ex art. 15, DPR 633/72", formatEuro(r.spese_esenti)]);
+      out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      if (r.iva_versata_dal_cliente != null) out.push(["Importo IVA versato direttamente dal Cliente all'Erario (scissione dei pagamenti)", formatEuro(r.iva_versata_dal_cliente)]);
+      if (r.ritenuta != null) out.push([`A dedurre ritenuta d'acconto ${fmtPct(r.pct_ritenuta)}% su ${formatEuro(r.base_ritenuta)}`, formatEuro(r.ritenuta)]);
+      if (r.ritenuta != null || r.iva_versata_dal_cliente != null || r.scorporo) out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
+      (r.note || []).forEach((n: string) => out.push([n, ""]));
+      return out;
+    },
+  },
+  "fattura-enasarco": {
+    campi: [
+      { tipo: "bool", key: "calcola_da_vendite", label: "Calcola dalle Vendite", default: false },
+      { tipo: "numero", key: "importo", label: "Importo € (provvigioni e/o premi da fatturare)", default: "", mostraSe: (f) => !f.calcola_da_vendite },
+      { tipo: "numero", key: "vendite", label: "Vendite €", default: "", mostraSe: (f) => !!f.calcola_da_vendite },
+      { tipo: "numero", key: "pct_provvigione", label: "Provvigione % sulle vendite", default: "", mostraSe: (f) => !!f.calcola_da_vendite },
+      { tipo: "numero", key: "spese_esenti", label: "Spese Esenti € (art. 15, DPR 633/72)", default: "" },
+      { tipo: "numero", key: "spese_imponibili", label: "Spese Imponibili €", default: "" },
+      { tipo: "bool", key: "applica_iva", label: "IVA", default: true, mostraSe: (f) => !f.regime_semplificato },
+      { tipo: "numero", key: "pct_iva", label: "IVA %", default: "22", mostraSe: (f) => !!f.applica_iva && !f.regime_semplificato },
+      { tipo: "bool", key: "applica_enasarco", label: "Contributo Enasarco (togli la spunta se hai raggiunto il massimale)", default: true },
+      { tipo: "numero", key: "pct_enasarco", label: "Contributo Enasarco %", default: "8,5", mostraSe: (f) => !!f.applica_enasarco },
+      { tipo: "bool", key: "applica_ritenuta", label: "Ritenuta d'Acconto", default: true },
+      { tipo: "numero", key: "pct_ritenuta", label: "Ritenuta d'acconto %", default: "23", mostraSe: (f) => !!f.applica_ritenuta },
+      { tipo: "scelta", key: "categoria", label: "Inquadramento per ritenuta d'acconto", default: "1", opzioni: [
+        { value: "1", label: "Senza collaboratori né dipendenti (50% dell'imponibile)" },
+        { value: "2", label: "Con collaboratori e/o dipendenti (20% dell'imponibile)" },
+        { value: "3", label: "Agente di vendita a domicilio (78% dell'imponibile)" },
+      ] },
+      { tipo: "bool", key: "regime_semplificato", label: "Regime semplificato", default: false },
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo Regime", default: "1", opzioni: TIPI_REGIME_SEMPLIFICATO, mostraSe: (f) => !!f.regime_semplificato },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo (al cliente)", default: false, mostraSe: (f) => !!f.regime_semplificato },
+    ],
+    endpoint: "/calc/fattura-enasarco",
+    buildBody: (f) => ({
+      importo: parseNumeroIt(f.importo), calcola_da_vendite: !!f.calcola_da_vendite, vendite: parseNumeroIt(f.vendite), pct_provvigione: parseNumeroIt(f.pct_provvigione),
+      spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
+      applica_iva: !f.regime_semplificato && !!f.applica_iva, pct_iva: f.applica_iva ? parseNumeroIt(f.pct_iva) : 22,
+      applica_enasarco: !!f.applica_enasarco, pct_enasarco: f.applica_enasarco ? (parseNumeroIt(f.pct_enasarco) || 8.5) : 8.5,
+      applica_ritenuta: !!f.applica_ritenuta, pct_ritenuta: f.applica_ritenuta ? (parseNumeroIt(f.pct_ritenuta) || 23) : 23,
+      categoria: parseInt(f.categoria, 10) || 1, regime_semplificato: !!f.regime_semplificato,
+      tipo_regime: parseInt(f.tipo_regime, 10) || 1, addebito_bollo: !!f.regime_semplificato && !!f.addebito_bollo,
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      if (r.vendite != null) {
+        out.push(["Totale Vendite", formatEuro(r.vendite)]);
+        out.push([`Provvigioni (${fmtPct(r.pct_provvigione)}% sulle vendite)`, formatEuro(r.importo)]);
+      } else {
+        out.push(["Importo Prestazione", formatEuro(r.importo)]);
+      }
+      if (r.spese_imponibili > 0) out.push(["Spese imponibili", formatEuro(r.spese_imponibili)]);
+      if (r.bollo > 0) out.push(["Imposta di bollo", formatEuro(r.bollo)]);
+      out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva != null) {
+        out.push([`IVA ${fmtPct(r.pct_iva)}% su Imponibile`, formatEuro(r.iva)]);
+        out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      }
+      if (r.contributo_enasarco != null) out.push([`Contributo obbligatorio Enasarco (${fmtPct(r.pct_enasarco)}%)`, formatEuro(r.contributo_enasarco)]);
+      if (r.spese_esenti > 0) out.push(["Spese esenti ex art. 15, DPR 633/72", formatEuro(r.spese_esenti)]);
+      if (r.ritenuta != null) out.push([`Ritenuta d'acconto (${fmtPct(r.pct_ritenuta)}% sul ${fmtPct(r.quota_ritenuta_pct)}% dell'imponibile)`, formatEuro(r.ritenuta)]);
+      out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
+      (r.note || []).forEach((n: string) => out.push([n, ""]));
+      return out;
+    },
+  },
+  "ricevuta-occasionale": {
+    campi: [
+      { tipo: "data", key: "data_ricevuta", label: "Data ricevuta (data del pagamento, dal 2025 al 2027)" },
+      {
+        tipo: "lista", key: "compensi", label: "Compensi (max 20)", etichettaAggiungi: "Aggiungi un compenso",
+        campiRiga: [
+          { tipo: "testo", key: "descrizione", label: "Descrizione" },
+          { tipo: "numero", key: "importo", label: "Importo €" },
+        ],
+      },
+      {
+        tipo: "lista", key: "spese", label: "Spese documentate da rimborsare (max 50)", etichettaAggiungi: "Aggiungi una voce di spesa",
+        campiRiga: [
+          { tipo: "testo", key: "descrizione", label: "Descrizione voce di spesa" },
+          { tipo: "numero", key: "importo", label: "Importo €" },
+        ],
+      },
+      { tipo: "bool", key: "applica_spese_forfettarie", label: "Spese forfettarie (costituiscono reddito)", default: false },
+      { tipo: "numero", key: "pct_spese_forfettarie", label: "Spese forfettarie % sul compenso", default: "", mostraSe: (f) => !!f.applica_spese_forfettarie },
+      { tipo: "numero", key: "importo_spese_forfettarie", label: "oppure importo spese forfettarie € (prevale sulla percentuale)", default: "", mostraSe: (f) => !!f.applica_spese_forfettarie },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo (al committente; dovuto se il compenso lordo supera 77,47 €)", default: false },
+      { tipo: "bool", key: "applica_ritenuta", label: "Ritenuta d'acconto (il committente è sostituto d'imposta)", default: false },
+      { tipo: "numero", key: "pct_ritenuta", label: "Ritenuta d'acconto %", default: "20", mostraSe: (f) => !!f.applica_ritenuta },
+      { tipo: "scelta", key: "altri_compensi", label: "Hai già percepito nell'anno altri compensi da lavoro occasionale?", default: "no", opzioni: [{ value: "no", label: "No" }, { value: "si", label: "Sì" }] },
+      { tipo: "numero", key: "totale_altri_compensi", label: "Totale compensi già percepiti nell'anno € (escluso quello della presente ricevuta)", default: "", mostraSe: (f) => f.altri_compensi === "si" },
+      { tipo: "scelta", key: "tipo_lavoratore", label: "Posizione previdenziale", default: "1", opzioni: [
+        { value: "1", label: "Iscritto esclusivamente alla gestione separata" },
+        { value: "2", label: "Pensionato o iscritto ad altre forme previdenziali" },
+      ] },
+      { tipo: "numero", key: "aliquota_inps", label: "Aliquota INPS % (vuoto = predefinita: 35,03 gestione separata, 24 altre forme)", default: "" },
+    ],
+    endpoint: "/calc/ricevuta-prestazione-occasionale",
+    validate: (f) => {
+      if (!(f.compensi || []).length) return "Inserire almeno un compenso.";
+      if ((f.compensi || []).length > 20) return "Il calcolatore prevede al massimo 20 compensi.";
+      if ((f.spese || []).length > 50) return "Il calcolatore prevede al massimo 50 voci di spesa.";
+      if (f.applica_ritenuta && !(parseNumeroIt(f.pct_ritenuta) > 0 && parseNumeroIt(f.pct_ritenuta) < 100)) return "La ritenuta d'acconto deve essere maggiore di 0 e minore di 100.";
+      return null;
+    },
+    buildBody: (f) => ({
+      data_ricevuta: f.data_ricevuta,
+      compensi: (f.compensi || []).map((c: Record<string, string>) => ({ descrizione: c.descrizione || null, importo: c.importo ? parseNumeroIt(c.importo) : null })),
+      spese_documentate: (f.spese || []).map((c: Record<string, string>) => ({ descrizione: c.descrizione || null, importo: c.importo ? parseNumeroIt(c.importo) : null })),
+      applica_spese_forfettarie: !!f.applica_spese_forfettarie,
+      pct_spese_forfettarie: f.pct_spese_forfettarie ? parseNumeroIt(f.pct_spese_forfettarie) : null,
+      importo_spese_forfettarie: f.importo_spese_forfettarie ? parseNumeroIt(f.importo_spese_forfettarie) : null,
+      addebito_bollo: !!f.addebito_bollo,
+      applica_ritenuta: !!f.applica_ritenuta, pct_ritenuta: parseNumeroIt(f.pct_ritenuta) || 20,
+      altri_compensi_percepiti: f.altri_compensi === "si", totale_altri_compensi: f.totale_altri_compensi ? parseNumeroIt(f.totale_altri_compensi) : null,
+      tipo_lavoratore: parseInt(f.tipo_lavoratore, 10) || 1, aliquota_inps: f.aliquota_inps ? parseNumeroIt(f.aliquota_inps) : null,
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      r.compensi.forEach((c: any) => out.push([c.descrizione, formatEuro(c.importo)]));
+      if (r.compensi.length > 1) out.push(["Totale compenso", formatEuro(r.totale_compensi)]);
+      if (r.spese_forfettarie != null) {
+        out.push([r.pct_spese_forfettarie != null ? `Spese forfettarie (${fmtPct(r.pct_spese_forfettarie)}%)` : "Spese forfettarie", formatEuro(r.spese_forfettarie)]);
+        out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      }
+      r.spese_documentate.forEach((s: any) => out.push([`Spese documentate: ${s.descrizione}`, formatEuro(s.importo)]));
+      if (r.spese_documentate.length > 1) out.push(["Totale spese", formatEuro(r.totale_spese)]);
+      if (r.bollo > 0) out.push(["Addebito imposta di bollo", formatEuro(r.bollo)]);
+      if (r.spese_forfettarie != null || r.spese_documentate.length > 0 || r.compensi.length > 1) out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      if (r.ritenuta_acconto != null) out.push([`Ritenuta d'acconto (${fmtPct(r.pct_ritenuta)}% ${r.spese_forfettarie != null ? "sull'imponibile" : "sul compenso"})`, formatEuro(r.ritenuta_acconto)]);
+      if (r.imponibile_inps != null) {
+        out.push(["Imponibile Inps per la parte eccedente € 5000 annuali", formatEuro(r.imponibile_inps)]);
+        out.push(["Aliquota gestione separata Inps", `${fmtPct(r.aliquota_inps)}%`]);
+        out.push([`Ritenuta INPS a carico del prestatore (1/3 di ${formatEuro(r.contributo_inps)})`, formatEuro(r.ritenuta_inps)]);
+      }
+      out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
+      return out;
+    },
+  },
+  "tariffe-mediazione": {
+    campi: [
+      { tipo: "numero", key: "valore_controversia", label: "Valore controversia € (da 41 a 5.000.000, in euro interi)", default: "" },
+      { tipo: "bool", key: "materia_obbligatoria", label: "Materia obbligatoria (riduzione per materie obbligatorie ex art. 5)", default: true },
+      { tipo: "bool", key: "assenza_controparte", label: "Assenza controparte (riduzione a 40 o 50 euro)", default: false },
+      { tipo: "bool", key: "complessita", label: "Complessità (aumento fino al 20%)", default: false },
+      { tipo: "scelta", key: "pct_complessita", label: "Aumento per complessità %", default: "20", opzioni: PERCENTUALI_1_20, mostraSe: (f) => !!f.complessita },
+      { tipo: "bool", key: "proposta_formulata", label: "Proposta formulata (aumento pari al 20%)", default: false, mostraSe: (f) => !f.assenza_controparte },
+      { tipo: "bool", key: "esito_positivo", label: "Esito positivo (aumento fino al 25%)", default: true, mostraSe: (f) => !f.assenza_controparte },
+      { tipo: "scelta", key: "pct_esito_positivo", label: "Aumento per esito positivo %", default: "25", opzioni: PERCENTUALI_1_25, mostraSe: (f) => !f.assenza_controparte && !!f.esito_positivo },
+      { tipo: "bool", key: "applica_iva", label: "IVA", default: true },
+      { tipo: "numero", key: "pct_iva", label: "IVA %", default: "22", mostraSe: (f) => !!f.applica_iva },
+      { tipo: "bool", key: "spese_avvio_imponibili", label: "Spese di avvio imponibili ai fini IVA", default: false, mostraSe: (f) => !!f.applica_iva },
+    ],
+    endpoint: "/calc/tariffe-mediazione",
+    validate: (f) => {
+      const v = parseNumeroIt(f.valore_controversia);
+      if (!(v > 40 && v <= 5000000)) return "Il valore della controversia deve essere superiore a 40 e non superare 5.000.000 di euro.";
+      if (f.applica_iva && !(parseNumeroIt(f.pct_iva) > 0)) return "Indicare la percentuale IVA.";
+      return null;
+    },
+    buildBody: (f) => ({
+      valore_controversia: parseNumeroIt(f.valore_controversia), materia_obbligatoria: !!f.materia_obbligatoria, assenza_controparte: !!f.assenza_controparte,
+      complessita: !!f.complessita, pct_complessita: parseInt(f.pct_complessita, 10) || 1,
+      proposta_formulata: !f.assenza_controparte && !!f.proposta_formulata, esito_positivo: !f.assenza_controparte && !!f.esito_positivo,
+      pct_esito_positivo: parseInt(f.pct_esito_positivo, 10) || 1,
+      applica_iva: !!f.applica_iva, pct_iva: f.applica_iva ? parseNumeroIt(f.pct_iva) : 22, spese_avvio_imponibili: !!f.applica_iva && !!f.spese_avvio_imponibili,
+    }),
+    risultato: (r) => {
+      const coppia = (a: number | null | undefined, b: number | null | undefined) => `${formatEuro(a)} – ${formatEuro(b)}`;
+      const out: [string, string][] = [];
+      const mn = r.minimo, mx = r.massimo;
+      out.push(["Costo totale per ciascuna parte (minimo – massimo)", coppia(mn.totale, mx.totale)]);
+      out.push(["Indennità base", coppia(mn.indennita_base, mx.indennita_base)]);
+      out.push(["Spese fisse di avvio mediazione", coppia(r.spese_avvio, r.spese_avvio)]);
+      if (mn.riduzione != null) out.push([`Riduzione ${r.frazione_riduzione} materia obbligatoria`, coppia(mn.riduzione, mx.riduzione)]);
+      mn.aumenti.forEach((a: any, i: number) => {
+        const nome = a.tipo === "complessita" ? `Aumento ${a.pct}% complessità` : a.tipo === "proposta" ? "Aumento 20% proposta formulata" : `Aumento ${a.pct}% esito positivo`;
+        out.push([nome, coppia(a.importo, mx.aumenti[i].importo)]);
+      });
+      if (mn.imponibile != null) out.push(["Imponibile", coppia(mn.imponibile, mx.imponibile)]);
+      if (mn.iva != null) out.push([`Iva ${fmtPct(r.pct_iva)}%`, coppia(mn.iva, mx.iva)]);
+      if (r.avviso) out.push([r.avviso, ""]);
+      return out;
+    },
+  },
+  "calcolo-preventivo": {
+    campi: [
+      {
+        tipo: "lista", key: "righe", label: "Voci del preventivo", etichettaAggiungi: "Aggiungi una voce",
+        campiRiga: [
+          { tipo: "testo", key: "descrizione", label: "Descrizione" },
+          { tipo: "numero", key: "quantita", label: "Quantità", default: "1" },
+          { tipo: "numero", key: "prezzo", label: "Prezzo unitario €" },
+        ],
+      },
+      { tipo: "bool", key: "applica_iva", label: "IVA", default: false },
+      { tipo: "numero", key: "pct_iva", label: "IVA % (numero intero da 1 a 22)", default: "22", mostraSe: (f) => !!f.applica_iva },
+      { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto (20%)", default: false },
+    ],
+    endpoint: "/calc/calcolo-preventivo",
+    validate: (f) => {
+      if (!(f.righe || []).length) return "Inserire almeno una voce.";
+      if (f.applica_iva) {
+        const p = parseNumeroIt(f.pct_iva);
+        if (!(Number.isInteger(p) && p >= 1 && p <= 22)) return "L'IVA deve essere un numero intero da 1 a 22.";
+      }
+      return null;
+    },
+    buildBody: (f) => ({
+      righe: (f.righe || []).map((r: Record<string, string>) => ({
+        descrizione: r.descrizione || null, quantita: r.quantita ? parseNumeroIt(r.quantita) : null, prezzo: r.prezzo ? parseNumeroIt(r.prezzo) : null,
+      })),
+      applica_iva: !!f.applica_iva, pct_iva: f.applica_iva ? parseNumeroIt(f.pct_iva) : 22, ritenuta: !!f.ritenuta,
+    }),
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      r.righe.forEach((x: any) => out.push([`${x.descrizione} — ${fmtPct(x.quantita)} × ${formatEuro(x.prezzo)}`, formatEuro(x.importo)]));
+      out.push(["TOTALE", formatEuro(r.totale)]);
+      if (r.imponibile != null) {
+        out.push(["Imponibile", formatEuro(r.imponibile)]);
+        if (r.iva != null) out.push([`IVA ${r.pct_iva}% su Imponibile`, formatEuro(r.iva)]);
+        if (r.totale_con_iva != null) out.push(["Totale", formatEuro(r.totale_con_iva)]);
+        if (r.ritenuta != null) out.push([`A dedurre ritenuta d'acconto ${r.pct_ritenuta}%`, formatEuro(r.ritenuta)]);
+        out.push(["Totale documento", formatEuro(r.totale_documento)]);
+      }
+      return out;
+    },
+  },
 };
 
 // Atti: a differenza dei calcolatori sopra, qui non si calcola un numero o
@@ -2872,7 +3231,7 @@ function defaultGenForm(idc: string): Record<string, any> {
     else if (c.tipo === "data_opzionale") f[c.key] = "";
     else if (c.tipo === "mese_anno") f[c.key] = new Date().toISOString().slice(0, 7);
     else if (c.tipo === "lista") f[c.key] = [];
-    else if (c.tipo === "numero") f[c.key] = c.default ?? "";
+    else if (c.tipo === "numero" || c.tipo === "testo") f[c.key] = c.default ?? "";
     else if (c.tipo === "bool") f[c.key] = c.default ?? false;
     else if (c.tipo === "scelta") f[c.key] = c.default ?? (typeof c.opzioni === "function" ? c.opzioni(f) : c.opzioni)[0]?.value;
   });
@@ -2964,6 +3323,12 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "compenso-ore", titolo: "Compenso a Ore", sottotitolo: "Somma di tempi e calcolo del compenso orario", icona: "clock" },
   { id: "ritenuta-acconto", titolo: "Ritenuta d'Acconto", sottotitolo: "Dal lordo al netto e viceversa", icona: "percent" },
   { id: "scorporo-importi", titolo: "Scorporo Importi", sottotitolo: "Fattura inversa da un importo forfettario", icona: "file-text" },
+  { id: "fattura-avvocati", titolo: "Fattura Avvocati", sottotitolo: "Onorari, cassa forense, IVA, ritenuta e acconti", icona: "file-text" },
+  { id: "fattura-professionisti", titolo: "Fattura Professionisti", sottotitolo: "Contributi, IVA e ritenuta, anche da importo omnicomprensivo", icona: "file-text" },
+  { id: "fattura-enasarco", titolo: "Fattura Agente Enasarco", sottotitolo: "Provvigioni, contributo Enasarco e ritenuta d'acconto", icona: "briefcase" },
+  { id: "ricevuta-occasionale", titolo: "Ricevuta Prestazione Occasionale", sottotitolo: "Ritenuta d'acconto e ritenuta INPS sul compenso", icona: "file-text" },
+  { id: "tariffe-mediazione", titolo: "Tariffe Mediazione", sottotitolo: "Costi per parte, minimo e massimo (D.M. 180/2010)", icona: "users" },
+  { id: "calcolo-preventivo", titolo: "Calcolo Preventivo", sottotitolo: "Voci con quantità, IVA e ritenuta d'acconto", icona: "list" },
   { id: "imu", titolo: "Calcolo IMU", sottotitolo: "Imposta municipale propria sugli immobili", icona: "home" },
   { id: "interessi-tasso-fisso", titolo: "Interessi a Tasso Fisso", sottotitolo: "Tasso scelto da te, con capitalizzazione facoltativa", icona: "percent" },
   { id: "tasso-usura", titolo: "Calcolo Tasso di Usura", sottotitolo: "Soglia di usura per tipologia, importo e trimestre", icona: "alert-triangle" },
@@ -3307,7 +3672,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Fattura Elettronica Avvocati", tipo: "in_arrivo" },
       { nome: "Visualizzatore Fatture Elettroniche", tipo: "in_arrivo" },
       { nome: "Scorporo Importi", tipo: "calcolatore", calcId: "scorporo-importi" },
-      { nome: "Fattura Avvocati", tipo: "in_arrivo" },
+      { nome: "Fattura Avvocati", tipo: "calcolatore", calcId: "fattura-avvocati" },
       { nome: "Parametri 2014 Civile", tipo: "calcolatore", calcId: "parametri-forensi" },
       { nome: "Parametri 2014 Penale", tipo: "calcolatore", calcId: "parametri-penali-2014" },
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
@@ -3326,19 +3691,19 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     voci: [
       { nome: "Fattura Elettronica", tipo: "in_arrivo" },
       { nome: "Visualizza Messaggi SDI", tipo: "in_arrivo" },
-      { nome: "Fattura Professionisti", tipo: "in_arrivo" },
+      { nome: "Fattura Professionisti", tipo: "calcolatore", calcId: "fattura-professionisti" },
       { nome: "Calcolo Compenso CTU", tipo: "calcolatore", calcId: "compenso-ctu" },
       { nome: "Compenso Curatore Fallimentare", tipo: "calcolatore", calcId: "compenso-curatore-fallimentare" },
       { nome: "Compenso Delegati Vendite Giudiziarie", tipo: "calcolatore", calcId: "compenso-delegati-vendite" },
       { nome: "Compenso Mediatore Familiare", tipo: "calcolatore", calcId: "compenso-mediatore-familiare" },
-      { nome: "Calcolo Fattura Enasarco", tipo: "in_arrivo" },
-      { nome: "Ricevuta Prestazione Occasionale", tipo: "in_arrivo" },
+      { nome: "Calcolo Fattura Enasarco", tipo: "calcolatore", calcId: "fattura-enasarco" },
+      { nome: "Ricevuta Prestazione Occasionale", tipo: "calcolatore", calcId: "ricevuta-occasionale" },
       { nome: "Calcolo Spese di Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
-      { nome: "Tariffe Mediazione", tipo: "in_arrivo" },
+      { nome: "Tariffe Mediazione", tipo: "calcolatore", calcId: "tariffe-mediazione" },
       { nome: "Calcolo Compenso a Ore", tipo: "calcolatore", calcId: "compenso-ore" },
       { nome: "Calcolo Rimborso Chilometrico ACI", tipo: "in_arrivo" },
       { nome: "Calcolo Ritenuta d'Acconto", tipo: "calcolatore", calcId: "ritenuta-acconto" },
-      { nome: "Calcolo Preventivo", tipo: "in_arrivo" },
+      { nome: "Calcolo Preventivo", tipo: "calcolatore", calcId: "calcolo-preventivo" },
       { nome: "Calcolatrice Online", tipo: "in_arrivo" },
     ],
   },
@@ -5806,6 +6171,14 @@ export default function Calcolatori() {
                     if (c.tipo === "titolo") {
                       return (
                         <Text key={c.key} style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>{c.label}</Text>
+                      );
+                    }
+                    if (c.tipo === "testo") {
+                      return (
+                        <View key={c.key}>
+                          <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                        </View>
                       );
                     }
                     if (c.tipo === "numero") {
