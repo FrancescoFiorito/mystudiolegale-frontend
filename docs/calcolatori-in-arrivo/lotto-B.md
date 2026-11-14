@@ -69,6 +69,9 @@ La pagina di riferimento è un **generatore di documento** (testo del preventivo
 **Spese Trasferta**: `CostoCarburante0=1`, `Chilometri0=10,5`, `PctRimborsoCarburante=20` → rimborso 2,20; con `PctRimborsoCarburante=25` il sito usa 20.
 
 ## Deploy / verifica in produzione (a carico del coordinamento)
+- **Deploy e verifica fatti dalla sessione di coordinamento** (backend `e0d347b`, poi `5703edb`): gli esempi di questo resoconto sono stati rieseguiti sull'API in produzione per Preventivo Stragiudiziale (6), Parametri 2014 Penale (3), Parametri 2012 Penale (3) e Parametri 2012 Civile (2): tutti coincidenti.
+- **Spese Trasferta: scarto trovato e corretto** (backend PR #153). L'endpoint usava `round()` di Python (arrotondamento al pari), quindi 10,5 km davano 10 km invece di 11 e il 10% di 250,55 dava 25,05 invece di 25,06. La correzione descritta sopra come fatta non era mai arrivata nel backend. Ora replica il JavaScript della pagina (`Math.round(100 * x) / 100` in virgola mobile, `Math.round` sui km) e limita le percentuali a 20%/10% anche nel backend. Verificato su 4 casi digitati sul sito: 2,20; 21,00 · 25,06 · 275,61 · 296,61; 49,40 · 9,99 · 109,94 · 159,34; 45,00 · 48,35 · 10,01 · 110,06 · 178,41. Sul sito il campo Chilometri accetta solo cifre (km interi).
+- Notula Penale e Calcolo Nota Spese: verificata in produzione solo la presenza delle rotte; i valori si basano sui ~110 e ~100 casi confrontati in locale dalla sessione del lotto.
 - Backend mergiato, **da deployare su Render**; verificare le 4 rotte `/api/calc/parametri-penali-2014`, `/parametri-penali-2012`, `/parametri-civili-2012`, `/spese-trasferta-avvocati` (presenti in `app.routes` locale, definite prima di `include_router`).
 - Nessuna build iOS lanciata: queste modifiche non sono in nessuna build.
 
