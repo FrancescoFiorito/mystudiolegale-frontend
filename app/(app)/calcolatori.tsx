@@ -40,7 +40,7 @@ type CalcId =
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
-  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004";
+  | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -184,6 +184,21 @@ function opzioniAttivitaNotula(f: Record<string, any>): { value: string; label: 
   const comp = NOTULA_PENALE_2004[f.competenza];
   if (!comp) return [];
   return comp.att.map((a, i) => ({ value: String(i), label: `${a[0]} ${a[1]}${a[2] === 0 ? " (tariffa da specificare)" : ` — ${formatEuro(a[2])} / ${formatEuro(a[3])} / ${formatEuro(a[4])}`}` }));
+}
+
+// Tariffe forensi civili 2004 (diritti, onorari, stragiudiziale) per il calcolatore "Calcolo Nota Spese": solo codici e nomi delle attività, le tariffe le calcola il backend.
+const NS_DIRITTI: Record<string, [string, string][]> = {"1":[["1","Posizione e archivio"],["2","Disamina"],["3.1","Redazione atto di citazione"],["3.2","Redazione ricorso introduttivo"],["3.3","Redazione atto di appello"],["3.4","Redazione comparsa di risposta"],["3.5","Redazione atto di intervento"],["4.1","Rinnovazione della domanda"],["4.2","Riassunzione della domanda"],["5","Chiamata di un terzo in causa"],["6","Autentica di ogni firma"],["7","Esame procura notarile"],["8","Versamento contributo unificato"],["9","Iscrizione della causa a ruolo"],["10","Costituzione in giudizio"],["11","Esame scritti difensivi di controparte"],["12","Esame documentazione prodotta da controparte"],["13.1","Redazione deduzioni di udienza"],["13.2","Redazione memoria"],["13.3","Redazione comparsa conclusionale"],["13.4","Redazione note illustrative"],["14.1","Redazione istanza"],["14.2","Redazione ricorso"],["14.3","Redazione reclamo"],["15.1","Esame dispositivo sentenza"],["15.2","Esame decreto"],["15.3","Esame ordinanza"],["16.1","Esame testo integrale sentenza"],["16.2","Esame testo integrale ordinanza collegiale"],["17","Dichiarazione resa dalla parte"],["18","Formazione del fascicolo"],["19.1","Partecipazione udienza"],["19.2","Intervento alle operazioni del consulente tecnico"],["20.1","Assistenza alla parte comparsa avanti al giudice"],["20.2","Assistenza alla parte comparsa avanti al collegio"],["21","Consultazione con il cliente"],["22","Corrispondenza informativa"],["23.1","Notifica atto"],["23.2","Notifica atto a più persone"],["24","Esame relata di notifica"],["25","Collaborazione prestata per la conciliazione"],["26","Intimazione ai testimoni"],["27","Designazione consulente tecnico di parte"],["28","Assistenza atti di istruzione probatoria"],["29","Richiesta documenti e certificati"],["30","Richiesta alla cancelleria di copia di atti"],["31.1","Deposito atti in cancelleria"],["31.2","Deposito documenti in cancelleria"],["32","Ritiro fascicolo di parte dalla cancelleria"],["33","Registrazione atti e documenti"],["34.1","Iscrizione nel F.A.L. della Provincia"],["34.2","Iscrizione nella Gazzetta Ufficiale"],["34.3","Iscrizione in altre stampe periodiche"],["35","Proposizione querela di falso"],["36.1","Esame prove testimoniali"],["36.2","Esame dell'interrogatorio"],["37.1","Esame relazione del consulente tecnico"],["37.2","Esame documenti contabili"],["38.1","Precisazione delle conclusioni"],["38.2","Precisazione conclusioni al consulente tecnico"],["39","Esame conclusioni di controparte"],["40","Redazione nota spese giudiziale"],["41","Richiesta al Consiglio dell'Ordine"],["42.1","Registrazione della sentenza"],["42.2","Registrazione provvedimento giudiziale"],["43","Deposito cauzionale"],["44","Deposito presso Agenzia delle Entrate"],["45.1","Accesso agli uffici"],["45.2","Ritiro atto"],["77","Diritto di vacazione"],["78.1","Domiciliazione (tribunale, corte di appello)"],["78.2","Domiciliazione (corte cost., cassazione)"],["79.1","Trasferta con indennità minima"],["79.2","Trasferta con indennità intermedia"],["79.3","Trasferta con indennità massima"],["80.1","Diritti di collazione per dattilografia"],["80.2","Diritti di collazione per stampa"]],"2":[["46","Disamina titolo esecutivo"],["47.1","Redazione atto di precetto"],["47.2","Redazione atto di pignoramento presso terzi"],["48.1","Notifica titolo esecutivo"],["48.2","Notifica titolo esecutivo a più persone"],["48.3","Notifica precetto"],["48.4","Notifica precetto a più persone"],["48.5","Notifica atto di pignoramento"],["48.6","Notifica atto di pignoramento a più persone"],["49.1","Redazione atto di pignoramento immobiliare"],["49.2","Redazione atto di pignoramento autoveicolo"],["50","Esame verbale di pignoramento mobiliare"],["51.1","Assistenza esecuzione della consegna"],["51.2","Assistenza esecuzione del rilascio"],["52.1","Intervento nell'esecuzione"],["52.2","Ricorso al giudice dell'esecuzione"],["52.3","Redazione intimazione ad altri creditori"],["52.4","Redazione istanza di fallimento"],["52.5","Redazione istanza di insinuazione al credito"],["53.1","Compilazione nota di iscrizione pubblici registri"],["53.2","Compilazione nota di trascrizione pubblici registri"],["54","Formalità in pubblici registri"],["55.1","Esame certificato ipotecario"],["55.2","Esame certificato catastale"],["56.1","Richiesta di certificato ipotecario"],["56.2","Richiesta di certificato catastale"],["57","Redazione nota di ispezione ipotecaria"],["58","Ispezione catastale"],["59","Richiesta pubblicità di avvisi"],["60","Esame domanda e titoli dei creditori"],["61","Deposito somme"],["62","Domanda di vendita beni pignorati"],["63","Comparizione davanti al giudice dell'esecuzione"],["64","Dichiarazione nella procedura di incanto"],["65","Assistenza all'incanto"],["66","Offerta all'incanto"],["67","Offerta dopo l'incanto"],["68","Per concorrere alla distribuzione del prezzo"],["69","Formazione progetto di distribuzione amichevole"],["70","Esame del progetto di distribuzione"],["71","Discussione progetto di distribuzione"],["72","Approvazione progetto di distribuzione"],["73","Assistenza adunanza creditori"],["74.1","Altre prestazioni nel processo di esecuzione"],["74.2","Altre prestazioni in procedimenti concorsuali"],["77","Diritto di vacazione"],["78.1","Domiciliazione (tribunale, appello)"],["78.2","Domiciliazione (corte cost., cassazione)"],["79.1","Trasferta con indennità minima"],["79.2","Trasferta con indennità intermedia"],["79.3","Trasferta con indennità massima"],["80.1","Diritti di collazione per dattilografia"],["80.2","Diritti di collazione per stampa"]],"3":[["75.1","Procedimento speciale in Camera di Consiglio"],["75.2","Procedimento speciale avanti Giudice Tutelare"],["76","Prestazioni in altri procedimenti speciali"],["77","Diritto di vacazione"],["78.1","Domiciliazione (tribunale, appello)"],["78.2","Domiciliazione (corte cost., cassazione)"],["79.1","Trasferta con indennità minima"],["79.2","Trasferta con indennità intermedia"],["79.3","Trasferta con indennità massima"],["80.1","Diritti di collazione per dattilografia"],["80.2","Diritti di collazione per stampa"]]};
+const NS_ONORARI: Record<string, [string, string][]> = {"1":[["12","Studio della controversia"],["13","Consultazione con il cliente"],["14.1","Ispezione luoghi della controversia"],["14.2","Ricerca dei documenti"],["15.1","Redazione atto introduttivo"],["15.2","Redazione comparsa di risposta"],["16","Assistenza udienza"],["17","Assistenza ai mezzi di prova"],["18","Redazione memoria"],["19.1","Redazione comparsa conclusionale"],["19.2","Redazione memoria di replica"],["20.1","Discussione in pubblica udienza"],["20.2","Discussione in camera di consiglio"],["21","Opera prestata per la conciliazione"]],"2":[["12","Studio della controversia"],["13","Consultazione con il cliente"],["14.1","Ispezione luoghi della controversia"],["14.2","Ricerca dei documenti"],["15.1","Redazione atto introduttivo"],["15.2","Redazione comparsa di risposta"],["16","Assistenza udienza"],["17","Assistenza ai mezzi di prova"],["18","Redazione memoria"],["19.1","Redazione comparsa conclusionale"],["19.2","Redazione memoria di replica"],["20.1","Discussione in pubblica udienza"],["20.2","Discussione in camera di consiglio"],["21","Opera prestata per la conciliazione"]],"4":[["12","Studio della controversia"],["13","Consultazione con il cliente"],["14.1","Ispezione luoghi della controversia"],["14.2","Ricerca dei documenti"],["15.1","Redazione atto introduttivo"],["15.2","Redazione comparsa di risposta"],["16","Assistenza udienza"],["17","Assistenza ai mezzi di prova"],["18","Redazione memoria"],["19.1","Redazione comparsa conclusionale"],["19.2","Redazione memoria di replica"],["20.1","Discussione in pubblica udienza"],["20.2","Discussione in camera di consiglio"],["21","Opera prestata per la conciliazione"]],"5":[["32","Studio della controversia"],["33","Consultazione con il cliente"],["34.1","Ispezione luoghi della controversia"],["34.2","Ricerca documenti"],["35.1","Redazione atto introduttivo"],["35.2","Redazione comparsa di risposta"],["36","Assistenza udienza"],["37","Assitenza ai mezzi di prova"],["38","Redazione memoria"],["39.1","Redazione comparsa conclusionale"],["39.2","Redazione memoria di replica"],["40.1","Discussione in pubblica udienza"],["40.2","Discussione in camera di consiglio"],["41","Opera prestata per la conciliazione"]],"9":[["50.1","Procedimento speciale davanti al Tribunale"],["50.2","Procedimento speciale davanti alla Corte di Appello"],["50.3","Procedimento concorsuale davanti al Tribunale"],["50.4","Procedimento concorsuale davanti alla Corte d'Appello"],["51","Procedimento di ingiunzione"],["52","Redazione del precetto"],["53","Iscrizione di ipoteca giudiziale"],["54","Procedure esecutive immobiliari"],["55.1","Procedure esecutive mobiliari"],["55.2","Procedure per affari tavolari"],["55.3","Procedure per compravendita autoveicoli"],["56.1","Procedure esecutive presso terzi"],["56.2","Procedure per consegna o rilascio"]],"10":[["46","Studio della controversia"],["47","Consultazioni con il cliente"],["48.1","Redazione del ricorso"],["48.2","Redazione del controricorso"],["48.3","Redazione memoria"],["49","Discussione"]],"11":[["1","Per l'intero giudizio"],["2","Studio della controversia"],["3","Consultazione con il cliente"],["4.1","Ispezione luoghi della controversia"],["4.2","Ricerca dei documenti"],["5.1","Redazione atto introduttivo"],["5.2","Redazione comparsa di risposta"],["6","Assistenza udienza"],["7","Assistenza ai mezzi di prova"],["8","Redazione memoria"],["9.1","Redazione comparsa conclusionale"],["9.2","Redazione memoria di replica"],["10.1","Discussione in camera di consiglio"],["10.2","Discussione in pubblica udienza"],["11","Opera prestata per la conciliazione"]],"14":[["32","Studio della controversia"],["33","Consultazione con il cliente"],["34.1","Ispezione luoghi della controversia"],["34.2","Ricerca documenti"],["35.1","Redazione atto introduttivo"],["35.2","Redazione comparsa di risposta"],["36","Assistenza udienza"],["37","Assitenza ai mezzi di prova"],["38","Redazione memoria"],["39.1","Redazione comparsa conclusionale"],["39.2","Redazione memoria di replica"],["40.1","Discussione in pubblica udienza"],["40.2","Discussione in camera di consiglio"],["41","Opera prestata per la conciliazione"]],"15":[["22","Studio della controversia"],["23","Consultazione con il cliente"],["24","Ricerca dei documenti"],["25.1","Redazione ricorso introduttivo"],["25.2","Redazione memoria di costituzione"],["26","Redazione istanza di sospensione"],["27","Redazione motivi aggiuntivi"],["28","Readazione atto di intervento"],["29","Assistenza ai mezzi di prova"],["30","Redazione memoria difensiva"],["31.1","Discussione in pubblica udienza"],["31.2","Discussione in camera di consiglio"]],"16":[["42","Studio della controversia"],["43","Consultazioni con il cliente"],["44.1","Redazione ricorso"],["44.2","Redazione controricorso"],["44.3","Redazione memoria"],["45","Discussione"]],"17":[["46","Studio della controversia"],["47","Consultazioni con il cliente"],["48.1","Redazione del ricorso"],["48.2","Redazione del controricorso"],["48.3","Redazione memoria"],["49","Discussione"]],"18":[["46","Studio della controversia"],["47","Consultazioni con il cliente"],["48.1","Redazione del ricorso"],["48.2","Redazione del controricorso"],["48.3","Redazione memoria"],["49","Discussione"]],"19":[["42","Studio della controversia"],["43","Consultazioni con il cliente"],["44.1","Redazione ricorso"],["44.2","Redazione controricorso"],["44.3","Redazione memoria"],["45","Discussione"]],"20":[["50.1","Procedimento speciale davanti al Tribunale"],["50.2","Procedimento speciale davanti alla Corte di Appello"],["50.3","Procedimento concorsuale davanti al Tribunale"],["50.4","Procedimento concorsuale davanti alla Corte d'Appello"],["51","Procedimento di ingiunzione"],["52","Redazione del precetto"],["53","Iscrizione di ipoteca giudiziale"],["54","Procedure esecutive immobiliari"],["55.1","Procedure esecutive mobiliari"],["55.2","Procedure per affari tavolari"],["55.3","Procedure per compravendita autoveicoli"],["56.1","Procedure esecutive presso terzi"],["56.2","Procedure per consegna o rilascio"]]};
+const NS_STRAG: [string, string][] = [["1.1","Consultazione orale"],["1.2","Parere orale"],["1.3","Parere telefonico o telematico"],["1.4","Parere orale"],["1.5","Parere scritto"],["2.1","Posizione e archivio"],["2.2","Redazione lettera"],["2.3","Redazione telegramma"],["2.4","Comunicazione telefonica o telematica"],["2.5","Esame e studio della pratica"],["2.6","Conferenza di trattazione"],["2.7","Conferenza collegiale di trattazione"],["2.8","Conferenza di trattazione fuori studio"],["2.9","Redazione diffida"],["2.10","Redazione ricorso"],["2.11","Redazione memoria"],["2.12","Redazione esposto"],["2.13","Redazione relazione"],["2.14","Redazione denuncia"],["2.15","Redazione contratto"],["2.16","Redazione statuto"],["2.17","Redazione regolamento"],["2.18","Redazione testamento"],["2.19","Assistenza stipulazione contratto"],["2.20","Assistenza redazione statuto"],["2.21","Assistenza redazione regolamento"],["2.22","Assistenza redazione testamento"],["3.1","Assistenza ad assemblea"],["3.2","Assistenza ad adunanza"],["3.3","Assistenza in consiglio"],["3.4","Assistenza in comitato"],["4.1","Assistenza in procedura concorsuale"],["4.2","Assistenza pratica di successione"],["4.3","Assistenza in pratiche di divisione"],["4.4","Assistenza liquidazione"],["4.5","Assistenza tributaria"],["5.1","Assistenza in arbitrato rituale"],["5.2","Assistenza in arbitrato irrituale"],["6","Gestione amministrativa"],["7.1","Ispezione"],["7.2","Richiesta visura"],["7.3","Ricerca e richiesta documenti"],["8","Arbitro unico"],["9","Collegio arbitrale"],["10","Onorario a tempo"],["11","Indennità di trasferta"]];
+const NS_COMP_DIRITTI = [{ value: "1", label: "Processo di cognizione" }, { value: "2", label: "Processo di esecuzione" }, { value: "3", label: "Procedimenti speciali" }];
+const NS_COMP_ONORARI = [
+  { value: "11", label: "Giudice di Pace" }, { value: "1", label: "Tribunale Monocratico" }, { value: "2", label: "Tribunale Collegiale" }, { value: "4", label: "Commissione Tributaria di 1^ grado" },
+  { value: "15", label: "T.A.R." }, { value: "5", label: "Corte d'Appello" }, { value: "14", label: "Commissione Tributaria Regionale" }, { value: "16", label: "Corte di Cassazione ed equiparati" },
+  { value: "19", label: "Consiglio di Stato" }, { value: "10", label: "Corte Costituzionale" }, { value: "17", label: "Corte Europea per i diritti dell'uomo" }, { value: "18", label: "Corte di Giustizia CEE" },
+  { value: "9", label: "Procedimenti Speciali" }, { value: "20", label: "Procedure Esecutive" },
+];
+function opzioniNotaSpese(righe: [string, string][] | undefined): { value: string; label: string }[] {
+  return (righe || []).map((r, i) => ({ value: String(i), label: `${r[0]} ${r[1]}` }));
 }
 
 const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
@@ -1696,6 +1711,166 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return out;
     },
   },
+  "nota-spese-tariffe-2004": {
+    campi: [
+      { tipo: "scelta", key: "tariffario", label: "Tariffario", default: "civile", opzioni: [
+        { value: "civile", label: "Diritti e Onorari" }, { value: "stragiudiziale", label: "Stragiudiziale" },
+      ] },
+      { tipo: "scelta", key: "valore_tipo", label: "Valore della causa", default: "specificato", opzioni: [
+        { value: "specificato", label: "Specificato" }, { value: "indeterminabile", label: "Indeterminabile" }, { value: "indeterminabile_importanza", label: "Indeterminabile e di particolare importanza" },
+      ] },
+      { tipo: "numero", key: "valore_causa", label: "Valore della causa €", default: "", mostraSe: (f) => f.valore_tipo === "specificato" },
+      { tipo: "scelta", key: "tariffa_predefinita", label: "Tariffa predefinita", default: "media", opzioni: [
+        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
+      ] },
+      { tipo: "scelta", key: "competenza_diritti", label: "Competenza (diritti)", default: "1", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_DIRITTI },
+      {
+        tipo: "lista", key: "diritti", label: "Diritti", etichettaAggiungi: "Aggiungi un diritto", mostraSe: (f) => f.tariffario === "civile",
+        campiRiga: [
+          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_DIRITTI[f.competenza_diritti]) },
+          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
+          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
+            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
+          ] },
+          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
+          { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" },
+          { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" },
+        ],
+      },
+      { tipo: "scelta", key: "competenza_onorari", label: "Competenza (onorari)", default: "11", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_ONORARI },
+      {
+        tipo: "lista", key: "onorari", label: "Onorari", etichettaAggiungi: "Aggiungi un onorario", mostraSe: (f) => f.tariffario === "civile",
+        campiRiga: [
+          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_ONORARI[f.competenza_onorari]) },
+          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
+          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
+            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
+          ] },
+          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
+        ],
+      },
+      {
+        tipo: "lista", key: "stragiudiziale", label: "Attività stragiudiziali", etichettaAggiungi: "Aggiungi un'attività", mostraSe: (f) => f.tariffario === "stragiudiziale",
+        campiRiga: [
+          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: () => opzioniNotaSpese(NS_STRAG) },
+          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
+          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
+            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
+          ] },
+          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
+          { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" },
+          { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" },
+        ],
+      },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
+      { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
+      { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto", default: true },
+      { tipo: "scelta", key: "regime", label: "Regime", default: "0", opzioni: [
+        { value: "0", label: "Ordinario" }, { value: "1", label: "Regime forfettario agevolato 2014" }, { value: "2", label: "Regime di vantaggio 2011" }, { value: "3", label: "Regime dei minimi 2008" },
+      ] },
+      { tipo: "bool", key: "bollo", label: "Bollo (2 € se il totale supera 77,47 €)", default: false, mostraSe: (f) => f.regime !== "0" },
+      {
+        tipo: "lista", key: "anticipi", label: "Anticipi ricevuti", etichettaAggiungi: "Aggiungi un anticipo",
+        campiRiga: [
+          { tipo: "testo", key: "data", label: "Data" },
+          { tipo: "numero", key: "importo", label: "Anticipo €" },
+          { tipo: "numero", key: "spese_esenti", label: "di cui spese esenti €" },
+          { tipo: "numero", key: "spese_imponibili", label: "di cui spese imponibili €" },
+        ],
+      },
+      { tipo: "titolo", key: "tit_rip", label: "Riparametrazione (variazione e totale agiscono solo sugli onorari)" },
+      { tipo: "scelta", key: "rip_tipo", label: "Operazione", default: "", opzioni: [
+        { value: "", label: "Nessuna" }, { value: "tariffa", label: "Ricalcola tutto a una tariffa" }, { value: "variazione", label: "Aumenta o riduci le tariffe di una percentuale" }, { value: "forza_totale", label: "Forza il totale" },
+      ] },
+      { tipo: "scelta", key: "rip_tariffa", label: "Tariffa", default: "media", mostraSe: (f) => f.rip_tipo === "tariffa", opzioni: [
+        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
+      ] },
+      { tipo: "bool", key: "rip_incl", label: "Comprese le tariffe personalizzate", default: false, mostraSe: (f) => f.rip_tipo === "tariffa" },
+      { tipo: "scelta", key: "rip_dir", label: "Variazione", default: "aumenta", mostraSe: (f) => f.rip_tipo === "variazione", opzioni: [{ value: "aumenta", label: "Aumenta" }, { value: "riduci", label: "Riduci" }] },
+      { tipo: "numero", key: "rip_pct", label: "Percentuale", default: "", mostraSe: (f) => f.rip_tipo === "variazione" },
+      { tipo: "numero", key: "rip_totale", label: "Totale € da ottenere", default: "", mostraSe: (f) => f.rip_tipo === "forza_totale" },
+    ],
+    endpoint: "/calc/nota-spese-tariffe-2004",
+    validate: (f) => {
+      const strag = f.tariffario === "stragiudiziale";
+      const righe: Record<string, string>[] = strag ? f.stragiudiziale || [] : [...(f.diritti || []), ...(f.onorari || [])];
+      if (f.valore_tipo === "specificato" && !(parseNumeroIt(f.valore_causa) > 0)) return "Indica il valore della causa.";
+      if (!righe.length) return "Selezionare almeno un'attività.";
+      for (const r of righe) {
+        if (r.indice === "" || r.indice == null) return "Scegli l'attività in ogni riga.";
+        if (!(Math.floor(parseNumeroIt(r.quantita)) >= 1)) return "La quantità deve essere almeno 1.";
+        if (r.tariffa === "manuale" && !(parseNumeroIt(r.valore) > 0)) return "Indica la tariffa specificata.";
+      }
+      if (f.rip_tipo === "variazione" && !(parseNumeroIt(f.rip_pct) > 0)) return "Indica la percentuale di variazione.";
+      if (f.rip_tipo === "forza_totale" && !(parseNumeroIt(f.rip_totale) > 0)) return "Indica il totale da ottenere.";
+      return null;
+    },
+    buildBody: (f) => {
+      const righe = (lista: Record<string, string>[]) => (lista || []).map((r) => {
+        const tar = r.tariffa === "predefinita" ? f.tariffa_predefinita : r.tariffa;
+        return {
+          indice: parseInt(r.indice, 10), quantita: Math.floor(parseNumeroIt(r.quantita)) || 1, tariffa: tar,
+          valore_manuale: tar === "manuale" ? parseNumeroIt(r.valore) : null,
+          spese_esenti: parseNumeroIt(r.spese_esenti), spese_imponibili: parseNumeroIt(r.spese_imponibili),
+        };
+      });
+      const strag = f.tariffario === "stragiudiziale";
+      return {
+        tariffario: f.tariffario, valore_tipo: f.valore_tipo, valore_causa: f.valore_tipo === "specificato" ? parseNumeroIt(f.valore_causa) : 0,
+        competenza_diritti: parseInt(f.competenza_diritti, 10) || 1, competenza_onorari: parseInt(f.competenza_onorari, 10) || 11,
+        diritti: strag ? [] : righe(f.diritti), onorari: strag ? [] : righe(f.onorari), stragiudiziale: strag ? righe(f.stragiudiziale) : [],
+        applica_spese_generali: !!f.spese_generali, spese_generali_pct: parseNumeroIt(f.pct_spese_generali),
+        applica_ritenuta: !!f.ritenuta, regime: parseInt(f.regime, 10) || 0, applica_bollo: f.regime !== "0" && !!f.bollo,
+        anticipi: (f.anticipi || []).map((a: Record<string, string>) => ({
+          data: a.data || null, importo: parseNumeroIt(a.importo), spese_esenti: parseNumeroIt(a.spese_esenti), spese_imponibili: parseNumeroIt(a.spese_imponibili),
+        })),
+        riparametrazione: f.rip_tipo === "tariffa" ? { tipo: "tariffa", tariffa: f.rip_tariffa, includi_personalizzate: !!f.rip_incl }
+          : f.rip_tipo === "variazione" ? { tipo: "variazione", variazione_pct: (f.rip_dir === "riduci" ? -1 : 1) * parseNumeroIt(f.rip_pct) }
+          : f.rip_tipo === "forza_totale" ? { tipo: "forza_totale", totale: parseNumeroIt(f.rip_totale) } : null,
+      };
+    },
+    risultato: (r) => {
+      const out: [string, string][] = [];
+      const titoli: Record<string, string> = { diritti: "Diritti", onorari: "Onorari", stragiudiziale: "Attività stragiudiziali" };
+      let sez = "";
+      for (const d of r.dettaglio) {
+        if (d.sezione !== sez) { sez = d.sezione; out.push([titoli[sez] || sez, ""]); }
+        out.push([`${d.codice} ${d.nome} (${d.quantita} x ${formatEuro(d.valore_unitario)})`, formatEuro(d.importo)]);
+        if (d.spese_esenti) out.push(["   spese esenti", formatEuro(d.spese_esenti)]);
+        if (d.spese_imponibili) out.push(["   spese imponibili", formatEuro(d.spese_imponibili)]);
+      }
+      for (const [k, v] of Object.entries(r.totali_sezione as Record<string, number>)) out.push([`Totale ${titoli[k] || k}`, formatEuro(v)]);
+      const etichettaBase = r.tariffario === "stragiudiziale" ? "Competenze" : "Diritti e Onorari";
+      for (const a of r.avvertenze || []) out.push(["Avvertenza", a]);
+      if (r.anticipi) {
+        out.push(["Totale anticipi", formatEuro(r.anticipi.totale)]);
+        out.push(["di cui anticipati", formatEuro(r.anticipi.onorari_anticipati)]);
+        out.push([`${etichettaBase} al netto degli anticipi`, formatEuro(r.onorari)]);
+      } else out.push([etichettaBase, formatEuro(r.onorari)]);
+      if (r.spese_generali) out.push(["Spese generali", formatEuro(r.spese_generali)]);
+      if (r.spese_imponibili) out.push(["Spese imponibili", formatEuro(r.spese_imponibili)]);
+      if (r.bollo) out.push(["Imposta di bollo", formatEuro(r.bollo)]);
+      if (r.cpa) out.push(["Cassa Avvocati (4%)", formatEuro(r.cpa)]);
+      if (r.regime === 0 || (r.regime === 3 && r.ritenuta_acconto)) out.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (r.iva) out.push(["IVA 22% su imponibile", formatEuro(r.iva)]);
+      if (r.spese_esenti) out.push(["Spese esenti ex art. 15 DPR 633/72", formatEuro(r.spese_esenti)]);
+      out.push([r.ritenuta_acconto ? "Totale" : "Totale documento", formatEuro(r.totale)]);
+      if (r.ritenuta_acconto) {
+        out.push(["A dedurre ritenuta d'acconto 20%", formatEuro(r.ritenuta_acconto)]);
+        out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
+      }
+      const notaIva: Record<number, string> = {
+        1: "Operazione non soggetta a IVA effettuata ai sensi dell'art. 1, commi 54-89, L. 190/2014 (regime forfettario agevolato).",
+        2: "Operazione non soggetta a IVA effettuata ai sensi dell'art. 27, D.L. 98/2011 (regime fiscale di vantaggio per l'imprenditoria giovanile).",
+        3: "Operazione non soggetta a IVA effettuata ai sensi dell'art. 1, commi 96-117, L. 244/2007 (regime fiscale semplificato).",
+      };
+      if (notaIva[r.regime]) out.push(["Nota", notaIva[r.regime]]);
+      if (r.applica_ritenuta && r.regime === 1) out.push(["Nota", "Compenso non soggetto a ritenuta d'acconto ai sensi dell'art. 1, comma 67 L. 190/2014."]);
+      if (r.applica_ritenuta && r.regime === 2) out.push(["Nota", "Compenso non soggetto a ritenuta d'acconto come da provvedimento del Direttore dell'Agenzia delle entrate n. 185820/2011."]);
+      if (r.nota_bollo) out.push(["Nota", "Imposta di bollo assolta sull'originale."]);
+      return out;
+    },
+  },
   "quote-ereditarie": {
     campi: [
       { tipo: "scelta", key: "modalita", label: "Modalità", default: "legittima", opzioni: [
@@ -2664,6 +2839,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "parametri-civili-2012", titolo: "Parametri 2012 Civile", sottotitolo: "Compenso avvocati in ambito civile, DM 140/2012", icona: "bar-chart-2" },
   { id: "spese-trasferta-avvocati", titolo: "Spese Trasferta Avvocati", sottotitolo: "Rimborso chilometrico, albergo, trasporti e vitto", icona: "map-pin" },
   { id: "notula-penale-tariffario-2004", titolo: "Calcolo Notula Penale", sottotitolo: "Tariffario forense 2004: attività, regimi, anticipi", icona: "file-text" },
+  { id: "nota-spese-tariffe-2004", titolo: "Calcolo Nota Spese", sottotitolo: "Diritti, onorari e stragiudiziale, tariffe forensi 2004", icona: "file-text" },
   { id: "parametri-stragiudiziali", titolo: "Parametri Stragiudiziali", sottotitolo: "Assistenza stragiudiziale e mediazione, DM 55/2014", icona: "bar-chart-2" },
   { id: "quote-ereditarie", titolo: "Calcolo Eredità", sottotitolo: "Quote legittime e testamentarie", icona: "home" },
   { id: "usufrutto", titolo: "Calcolo Usufrutto", sottotitolo: "Vitalizio o a termine", icona: "home" },
@@ -3039,7 +3215,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2012 Civile", tipo: "calcolatore", calcId: "parametri-civili-2012" },
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
       { nome: "Tariffe Forensi 2004", tipo: "in_arrivo" },
-      { nome: "Calcolo Nota Spese", tipo: "in_arrivo" },
+      { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "nota-spese-tariffe-2004" },
       { nome: "Modelli di Notula", tipo: "in_arrivo" },
       { nome: "Calcolo Notula Penale", tipo: "calcolatore", calcId: "notula-penale-tariffario-2004" },
     ],
