@@ -131,4 +131,4 @@ Output sito: Al coniuge spetta il **60**% della pensione pari a € **740,74** a
 
 ## Sha mergiati
 - **Backend** (`mystudiolegale-backend`): PR #156 merge `da7d10d` (aumenti/riduzioni pena, grado di parentela, superficie commerciale) e PR #157 merge `0459710` (cedolare secca, pensione di reversibilità, finiture). Deploy su Render **non** lanciato.
-- **Frontend** (`mystudiolegale-frontend`): PR #151 merge `f22ef36` (tre calcolatori) e PR di questo resoconto (cedolare secca, pensione di reversibilità, `lotto-D.md`); lo sha dell'ultimo merge è indicato nel riepilogo in chat.
+- **Frontend** (`mystudiolegale-frontend`): PR #151 merge `f22ef36` (tre calcolatori) e PR #153 merge `b348cd5` (cedolare secca, pensione di reversibilità, questo resoconto). Nessuna build iOS lanciata.
