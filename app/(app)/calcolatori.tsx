@@ -5042,7 +5042,7 @@ export default function Calcolatori() {
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito</Text>
       <View style={{ marginBottom: SPACING.xs }}>
         <SelectInput
-          testID="scad-rito"
+          testID="scad-rito" accessibilityLabel="Rito"
           value={ritoTermini}
           onChange={(v) => {
             const nuovo = v as typeof ritoTermini;
@@ -5063,7 +5063,7 @@ export default function Calcolatori() {
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Voce notevole del c.p.c. (facoltativo)</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
-          testID="voce-cpc"
+          testID="voce-cpc" accessibilityLabel="Voce notevole del c.p.c. (facoltativo)"
           value={cpcValoreSelezionato}
           onChange={selezionaVoceCpc}
           opzioni={cpcOpzioni}
@@ -5072,10 +5072,10 @@ export default function Calcolatori() {
         />
       </View>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data di partenza</Text>
-      <DataInput testID="scad-data" value={dataPartenza} onChange={setDataPartenza} />
+      <DataInput testID="scad-data" accessibilityLabel="Data di partenza" value={dataPartenza} onChange={setDataPartenza} />
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Termine ({unita}){valoreBloccato ? " (fissato dalla voce scelta)" : ""}</Text>
       <TextInput
-        testID="scad-giorni"
+        testID="scad-giorni" accessibilityLabel="Termine"
         value={giorni}
         onChangeText={setGiorni}
         keyboardType="numeric"
@@ -5094,34 +5094,34 @@ export default function Calcolatori() {
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Direzione{direzioneBloccata ? " (fissata dalla voce scelta)" : ""}</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
-          testID="dir"
+          testID="dir" accessibilityLabel="Direzione"
           value={tipoS}
           onChange={(v) => setTipoS(v as typeof tipoS)}
           opzioni={[{ value: "avanti", label: "Avanti" }, { value: "ritroso", label: "Ritroso" }]}
           disabled={direzioneBloccata}
         />
       </View>
-      <Pressable testID="toggle-feriale" onPress={() => setEscludiFer(!escludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.sm }}>
+      <Pressable testID="toggle-feriale" accessibilityRole="checkbox" accessibilityState={{ checked: escludiFer }} onPress={() => setEscludiFer(!escludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.sm }}>
         <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: escludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
           {escludiFer ? <Feather name="check" size={14} color={t.onBrand} /> : null}
         </View>
         <Text style={{ color: t.onSurface }}>Applica sospensione feriale (1-31 agosto)</Text>
       </Pressable>
-      <Pressable testID="toggle-covid" onPress={() => setEscludiCovid(!escludiCovid)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
+      <Pressable testID="toggle-covid" accessibilityRole="checkbox" accessibilityState={{ checked: escludiCovid }} onPress={() => setEscludiCovid(!escludiCovid)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
         <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: escludiCovid ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
           {escludiCovid ? <Feather name="check" size={14} color={t.onBrand} /> : null}
         </View>
         <Text style={{ color: t.onSurface, flex: 1 }}>Applica sospensione straordinaria COVID-19 (9 marzo - 11 maggio 2020)</Text>
       </Pressable>
       {unita === "giorni" ? (
-        <Pressable testID="toggle-libero" onPress={() => setTerminLibero(!terminLibero)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
+        <Pressable testID="toggle-libero" accessibilityRole="checkbox" accessibilityState={{ checked: terminLibero }} onPress={() => setTerminLibero(!terminLibero)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md }}>
           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: terminLibero ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
             {terminLibero ? <Feather name="check" size={14} color={t.onBrand} /> : null}
           </View>
           <Text style={{ color: t.onSurface, flex: 1 }}>Termine libero (art. 155 c.p.c.: né il giorno iniziale né quello finale si computano — solo per i casi previsti dalla legge, es. art. 163-bis)</Text>
         </Pressable>
       ) : null}
-      <Pressable testID="btn-calc-scad" onPress={calcScad} style={[st.submit, { backgroundColor: t.brand }]}>
+      <Pressable testID="btn-calc-scad" accessibilityRole="button" onPress={calcScad} style={[st.submit, { backgroundColor: t.brand }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>Calcola</Text>
       </Pressable>
       {risScad ? (
@@ -5136,7 +5136,7 @@ export default function Calcolatori() {
                 <>
                   <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome scadenza *</Text>
                   <TextInput
-                    testID="scad-titolo"
+                    testID="scad-titolo" accessibilityLabel="Nome scadenza"
                     value={titoloScad}
                     onChangeText={setTitoloScad}
                     placeholder="Es. Deposito ricorso"
@@ -5151,7 +5151,7 @@ export default function Calcolatori() {
                   />
                   <OrarioInput value={oraScad} onChange={setOraScad} />
                   <PromemoriaInput value={promemoria} onChange={setPromemoria} />
-                  <Pressable testID="save-scad" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+                  <Pressable testID="save-scad" accessibilityRole="button" onPress={saveScad} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva come scadenza"}</Text>
                   </Pressable>
                 </>
@@ -5165,7 +5165,7 @@ export default function Calcolatori() {
 
   const sezioneLbl = { color: t.onSurfaceTertiary, fontSize: 12, fontWeight: "700" as const, textTransform: "uppercase" as const, letterSpacing: 0.5, marginTop: SPACING.lg, marginBottom: SPACING.sm };
   const checkbox = (checked: boolean, onToggle: () => void, label: string, testID: string) => (
-    <Pressable testID={testID} onPress={onToggle} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
+    <Pressable testID={testID} accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{ checked }} onPress={onToggle} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
       <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: checked ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
         {checked ? <Feather name="check" size={14} color={t.onBrand} /> : null}
       </View>
@@ -5176,7 +5176,7 @@ export default function Calcolatori() {
     <View key={campo}>
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{label}</Text>
       <TextInput
-        testID={`par-${campo}`}
+        testID={`par-${campo}`} accessibilityLabel={label}
         value={parDati[campo]}
         onChangeText={(v) => setParDati({ ...parDati, [campo]: v })}
         placeholder={placeholder}
@@ -5266,7 +5266,7 @@ export default function Calcolatori() {
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Competenza per giurisdizione o materia</Text>
       <View style={{ marginBottom: SPACING.sm }}>
         <SelectInput
-          testID="par-competenza"
+          testID="par-competenza" accessibilityLabel="Competenza per giurisdizione o materia"
           value={parDati.competenza}
           onChange={(v) => setParDati({ ...parDati, competenza: v })}
           opzioni={COMPETENZE_PARCELLA}
@@ -5277,7 +5277,7 @@ export default function Calcolatori() {
       {campoTesto("sede_ufficio", "Ubicazione ufficio giudiziario")}
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della controversia €</Text>
       <TextInput
-        testID="par-valore-causa"
+        testID="par-valore-causa" accessibilityLabel="Valore della controversia €"
         value={parDati.valore_causa}
         onChangeText={(v) => setParDati({ ...parDati, valore_causa: v })}
         keyboardType="numeric"
@@ -5422,9 +5422,9 @@ export default function Calcolatori() {
       ))}
       {campoTesto("luogo", "Luogo")}
       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Data</Text>
-      <DataInput testID="par-data-preventivo" value={parDati.data_preventivo} onChange={(iso) => setParDati({ ...parDati, data_preventivo: iso })} />
+      <DataInput testID="par-data-preventivo" accessibilityLabel="Data" value={parDati.data_preventivo} onChange={(iso) => setParDati({ ...parDati, data_preventivo: iso })} />
 
-      <Pressable testID="btn-calc-par" onPress={calcPar} style={[st.submit, { backgroundColor: t.brand }]}>
+      <Pressable testID="btn-calc-par" accessibilityRole="button" onPress={calcPar} style={[st.submit, { backgroundColor: t.brand }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>Calcola</Text>
       </Pressable>
       {risPar ? (
@@ -5456,14 +5456,14 @@ export default function Calcolatori() {
             <>
               <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.md }]}>Nome parcella (facoltativo)</Text>
               <TextInput
-                testID="par-titolo"
+                testID="par-titolo" accessibilityLabel="Nome parcella (facoltativo)"
                 value={titoloPar}
                 onChangeText={setTitoloPar}
                 placeholder="Es. Acconto fase istruttoria"
                 placeholderTextColor={t.onSurfaceTertiary}
                 style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
               />
-              <Pressable testID="save-par" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+              <Pressable testID="save-par" accessibilityRole="button" onPress={savePar} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : isEditingPar ? "Salva modifiche" : "Salva parcella"}</Text>
               </Pressable>
             </>
@@ -5585,7 +5585,7 @@ export default function Calcolatori() {
                   <React.Fragment key={c.key}>
                     {c.tipo === "bool" ? (
                       <Pressable
-                        testID={`atto-campo-${c.key}`}
+                        testID={`atto-campo-${c.key}`} accessibilityLabel={c.label}
                         onPress={() => setAttoForm({ ...attoForm, [c.key]: attoForm[c.key] ? "" : "true" })}
                         style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}
                       >
@@ -5600,17 +5600,17 @@ export default function Calcolatori() {
                         {c.opzioni ? (
                           <View style={{ marginBottom: SPACING.sm }}>
                             <SelectInput
-                              testID={`atto-campo-${c.key}`}
+                              testID={`atto-campo-${c.key}`} accessibilityLabel={c.label}
                               value={attoForm[c.key] || ""}
                               onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
                               opzioni={c.opzioni}
                             />
                           </View>
                         ) : c.dataIso ? (
-                          <DataInput testID={`atto-campo-${c.key}`} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
+                          <DataInput testID={`atto-campo-${c.key}`} accessibilityLabel={c.label} value={attoForm[c.key] || ""} onChange={(v) => setAttoForm({ ...attoForm, [c.key]: v })} />
                         ) : (
                           <TextInput
-                            testID={`atto-campo-${c.key}`}
+                            testID={`atto-campo-${c.key}`} accessibilityLabel={c.label}
                             value={attoForm[c.key] || ""}
                             onChangeText={(v) => setAttoForm({ ...attoForm, [c.key]: v })}
                             multiline={c.multiline}
@@ -5808,7 +5808,7 @@ export default function Calcolatori() {
                 onChange={setPraticaId}
                 helperText={praticaId ? "Sarà collegato a quella pratica." : "Non sarà collegato a nessuna pratica."}
               />
-              <Pressable testID="btn-genera-atto" onPress={generaAtto} disabled={attoGenerando} style={[st.submit, { backgroundColor: t.brand, opacity: attoGenerando ? 0.6 : 1 }]}>
+              <Pressable testID="btn-genera-atto" accessibilityRole="button" onPress={generaAtto} disabled={attoGenerando} style={[st.submit, { backgroundColor: t.brand, opacity: attoGenerando ? 0.6 : 1 }]}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{attoGenerando ? "Generazione..." : "Genera documento"}</Text>
               </Pressable>
               {attoGenerato ? (
@@ -5843,7 +5843,7 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tipo di termine</Text>
                   <View style={{ marginBottom: SPACING.sm }}>
                     <SelectInput
-                      testID="mem-tipo"
+                      testID="mem-tipo" accessibilityLabel="Tipo di termine"
                       value={tipoMem}
                       onChange={(v) => setTipoMem(v as typeof tipoMem)}
                       opzioni={[
@@ -5861,7 +5861,7 @@ export default function Calcolatori() {
                     </View>
                     <Text style={{ color: t.onSurface }}>Applica sospensione feriale (1-31 agosto)</Text>
                   </Pressable>
-                  <Pressable testID="btn-calc-mem" onPress={calcolaMemorie} disabled={calcolandoMem} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoMem ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-mem" accessibilityRole="button" onPress={calcolaMemorie} disabled={calcolandoMem} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoMem ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoMem ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risMem ? (
@@ -5897,7 +5897,7 @@ export default function Calcolatori() {
                             onChange={setPraticaId}
                             helperText={praticaId ? "Compariranno anche nella scheda di quella pratica." : "Compariranno solo qui e nel calendario."}
                           />
-                          <Pressable testID="save-mem" onPress={salvaMemorie} disabled={savingMem} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: savingMem ? 0.6 : 1 }}>
+                          <Pressable testID="save-mem" accessibilityRole="button" onPress={salvaMemorie} disabled={savingMem} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: savingMem ? 0.6 : 1 }}>
                             <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingMem ? "Salvataggio..." : risMem.tipo === "275-bis" ? "Salva le 2 scadenze" : "Salva le 3 scadenze"}</Text>
                           </Pressable>
                         </>
@@ -5910,11 +5910,11 @@ export default function Calcolatori() {
               {calcAperto === "interessi-legali" || calcAperto === "interessi-mora" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
-                  <TextInput testID="tassi-capitale" value={tassiCapitale} onChangeText={setTassiCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="tassi-capitale" accessibilityLabel="Capitale €" value={tassiCapitale} onChangeText={setTassiCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
-                  <DataInput testID="tassi-data-inizio" value={tassiDataInizio} onChange={setTassiDataInizio} />
+                  <DataInput testID="tassi-data-inizio" accessibilityLabel="Dal" value={tassiDataInizio} onChange={setTassiDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
-                  <DataInput testID="tassi-data-fine" value={tassiDataFine} onChange={setTassiDataFine} />
+                  <DataInput testID="tassi-data-fine" accessibilityLabel="Al" value={tassiDataFine} onChange={setTassiDataFine} />
                   {calcAperto === "interessi-mora" ? (
                     <>
                       <Pressable
@@ -5932,15 +5932,15 @@ export default function Calcolatori() {
                         <Text style={{ color: t.onSurface, flex: 1, fontSize: 13 }}>Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)</Text>
                       </Pressable>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione aggiuntiva sul tasso % (facoltativa — la maggiorazione statutaria, 7 punti fino al 2012 e 8 dal 2013, si applica già in automatico in base alla data, art. 5 D.Lgs. 231/2002)</Text>
-                      <TextInput testID="tassi-maggiorazione" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="tassi-maggiorazione" accessibilityLabel="Maggiorazione aggiuntiva sul tasso %" value={tassiMaggiorazione} onChangeText={setTassiMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitalizzazione</Text>
-                      <SelectInput testID="tassi-capitalizzazione" value={tassiCapitalizzazione} onChange={setTassiCapitalizzazione} opzioni={CAPITALIZZAZIONI} />
+                      <SelectInput testID="tassi-capitalizzazione" accessibilityLabel="Capitalizzazione" value={tassiCapitalizzazione} onChange={setTassiCapitalizzazione} opzioni={CAPITALIZZAZIONI} />
                     </>
                   )}
-                  <Pressable testID="btn-calc-tassi" onPress={() => calcolaTassi(calcAperto)} disabled={calcolandoTassi} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoTassi ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-tassi" accessibilityRole="button" onPress={() => calcolaTassi(calcAperto)} disabled={calcolandoTassi} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoTassi ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoTassi ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risTassi ? (
@@ -5962,12 +5962,12 @@ export default function Calcolatori() {
               {calcAperto === "contributo-unificato" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Procedimento a contributo fisso</Text>
-                  <SelectInput testID="cu-procedura-fissa" value={cuProceduraFissa} onChange={setCuProceduraFissa} opzioni={PROCEDURE_FISSE_CU} />
+                  <SelectInput testID="cu-procedura-fissa" accessibilityLabel="Procedimento a contributo fisso" value={cuProceduraFissa} onChange={setCuProceduraFissa} opzioni={PROCEDURE_FISSE_CU} />
                   {!cuProceduraFissa ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Processo</Text>
                       <SelectInput
-                        testID="cu-processo"
+                        testID="cu-processo" accessibilityLabel="Processo"
                         value={cuProcesso}
                         onChange={(v) => {
                           setCuProcesso(v);
@@ -5976,18 +5976,18 @@ export default function Calcolatori() {
                         opzioni={PROCESSI_CU}
                       />
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Giudizio</Text>
-                      <SelectInput testID="cu-giudizio" value={cuGiudizio} onChange={setCuGiudizio} opzioni={cuProcesso === "amministrativo" ? GIUDIZI_CU_AMMINISTRATIVO : GIUDIZI_CU} />
+                      <SelectInput testID="cu-giudizio" accessibilityLabel="Giudizio" value={cuGiudizio} onChange={setCuGiudizio} opzioni={cuProcesso === "amministrativo" ? GIUDIZI_CU_AMMINISTRATIVO : GIUDIZI_CU} />
                       {cuProcesso === "amministrativo" ? (
                         <>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rito</Text>
-                          <SelectInput testID="cu-rito-amministrativo" value={cuRitoAmministrativo} onChange={setCuRitoAmministrativo} opzioni={RITI_AMMINISTRATIVI_CU} />
+                          <SelectInput testID="cu-rito-amministrativo" accessibilityLabel="Rito" value={cuRitoAmministrativo} onChange={setCuRitoAmministrativo} opzioni={RITI_AMMINISTRATIVI_CU} />
                         </>
                       ) : null}
                       {cuProcesso !== "amministrativo" || cuRitoAmministrativo === "appalti_pubblici" ? (
                         <>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della causa</Text>
                           <SelectInput
-                            testID="cu-valore-tipo"
+                            testID="cu-valore-tipo" accessibilityLabel="Valore della causa"
                             value={cuValoreTipo}
                             onChange={setCuValoreTipo}
                             opzioni={cuProcesso === "amministrativo" ? VALORE_TIPI_CU_APPALTI : cuProcesso === "tributario" ? VALORE_TIPI_CU_TRIBUTARIO : VALORE_TIPI_CU_CIVILE}
@@ -5998,7 +5998,7 @@ export default function Calcolatori() {
                           {cuProcesso === "civile" && cuValoreTipo === "indeterminabile" ? (
                             <>
                               <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Ufficio giudiziario</Text>
-                              <SelectInput testID="cu-ufficio" value={cuUfficio} onChange={setCuUfficio} opzioni={UFFICI_CU} />
+                              <SelectInput testID="cu-ufficio" accessibilityLabel="Ufficio giudiziario" value={cuUfficio} onChange={setCuUfficio} opzioni={UFFICI_CU} />
                             </>
                           ) : null}
                         </>
@@ -6017,7 +6017,7 @@ export default function Calcolatori() {
                       ) : null}
                     </>
                   ) : null}
-                  <Pressable testID="btn-calc-cu" onPress={calcolaContributoUnificato} disabled={calcolandoCu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCu ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-cu" accessibilityRole="button" onPress={calcolaContributoUnificato} disabled={calcolandoCu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risCu ? (
@@ -6033,19 +6033,19 @@ export default function Calcolatori() {
               {calcAperto === "rivalutazione-istat" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
-                  <TextInput testID="istat-capitale" value={istatCapitale} onChangeText={setIstatCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="istat-capitale" accessibilityLabel="Capitale €" value={istatCapitale} onChangeText={setIstatCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
-                  <DataInput testID="istat-data-inizio" value={istatDataInizio} onChange={setIstatDataInizio} />
+                  <DataInput testID="istat-data-inizio" accessibilityLabel="Dal" value={istatDataInizio} onChange={setIstatDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
-                  <DataInput testID="istat-data-fine" value={istatDataFine} onChange={setIstatDataFine} />
+                  <DataInput testID="istat-data-fine" accessibilityLabel="Al" value={istatDataFine} onChange={setIstatDataFine} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rivaluta al % (100 ordinario, 75 tipico per i canoni di locazione)</Text>
-                  <TextInput testID="istat-rivaluta-al" value={istatRivalutaAlPct} onChangeText={setIstatRivalutaAlPct} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="istat-rivaluta-al" accessibilityLabel="Rivaluta al %" value={istatRivalutaAlPct} onChangeText={setIstatRivalutaAlPct} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità</Text>
-                  <SelectInput testID="istat-modalita" value={istatModalita} onChange={setIstatModalita} opzioni={MODALITA_ISTAT} />
+                  <SelectInput testID="istat-modalita" accessibilityLabel="Modalità" value={istatModalita} onChange={setIstatModalita} opzioni={MODALITA_ISTAT} />
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
                     Indice FOI recuperato automaticamente dal mese di inizio e fine (serie dal gennaio 1947). Nessun anatocismo: interesse sempre semplice.
                   </Text>
-                  <Pressable testID="btn-calc-istat" onPress={calcolaIstat} disabled={calcolandoIstat} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoIstat ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-istat" accessibilityRole="button" onPress={calcolaIstat} disabled={calcolandoIstat} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoIstat ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoIstat ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risIstat ? (
@@ -6081,11 +6081,11 @@ export default function Calcolatori() {
               {calcAperto === "rivalutazione-mensile" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Importo di ogni rata €</Text>
-                  <TextInput testID="rivmens-importo" value={rivMensImporto} onChangeText={setRivMensImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="rivmens-importo" accessibilityLabel="Importo di ogni rata €" value={rivMensImporto} onChangeText={setRivMensImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Scadenza della prima rata non pagata</Text>
-                  <DataInput testID="rivmens-data-inizio" value={rivMensDataInizio} onChange={setRivMensDataInizio} />
+                  <DataInput testID="rivmens-data-inizio" accessibilityLabel="Scadenza della prima rata non pagata" value={rivMensDataInizio} onChange={setRivMensDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fino al (di norma la data del pagamento, o oggi)</Text>
-                  <DataInput testID="rivmens-data-fine" value={rivMensDataFine} onChange={setRivMensDataFine} />
+                  <DataInput testID="rivmens-data-fine" accessibilityLabel="Fino al" value={rivMensDataFine} onChange={setRivMensDataFine} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.sm }]}>Opzioni di calcolo (combinabili liberamente tra loro)</Text>
                   <Pressable testID="rivmens-check-mensile" onPress={() => setRivMensMensilmente(!rivMensMensilmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensMensilmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
@@ -6102,7 +6102,7 @@ export default function Calcolatori() {
                   {rivMensInteressi ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale del tasso legale % (100 = tasso pieno)</Text>
-                      <TextInput testID="rivmens-tasso-interessi" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="rivmens-tasso-interessi" accessibilityLabel="Percentuale del tasso legale %" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
                   <Pressable testID="rivmens-check-annuale" onPress={() => setRivMensAnnualmente(!rivMensAnnualmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
@@ -6114,13 +6114,13 @@ export default function Calcolatori() {
                   {rivMensAnnualmente ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso di rivalutazione annua %</Text>
-                      <TextInput testID="rivmens-tasso-annuale" value={rivMensTassoAnnuale} onChangeText={setRivMensTassoAnnuale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="rivmens-tasso-annuale" accessibilityLabel="Tasso di rivalutazione annua %" value={rivMensTassoAnnuale} onChangeText={setRivMensTassoAnnuale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
                     Una rata al mese dalla data di inizio alla data di fine (incluse entrambe). Le rate si sommano in un unico montante che cresce mese per mese: ogni mese si aggiunge la nuova rata, poi il montante si rivaluta e matura interessi.
                   </Text>
-                  <Pressable testID="btn-calc-rivmens" onPress={calcolaRivalutazioneMensile} disabled={calcolandoRivMens} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoRivMens ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-rivmens" accessibilityRole="button" onPress={calcolaRivalutazioneMensile} disabled={calcolandoRivMens} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoRivMens ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoRivMens ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risRivMens ? (
@@ -6147,21 +6147,21 @@ export default function Calcolatori() {
               {calcAperto === "adeguamento-canone" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Canone attuale €</Text>
-                  <TextInput testID="canone-importo" value={canoneImporto} onChangeText={setCanoneImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="canone-importo" accessibilityLabel="Canone attuale €" value={canoneImporto} onChangeText={setCanoneImporto} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Mese di riferimento per l&apos;indice ISTAT</Text>
-                  <MeseAnnoInput testID="canone-mese-riferimento" value={canoneMeseRiferimento} onChange={setCanoneMeseRiferimento} />
+                  <MeseAnnoInput testID="canone-mese-riferimento" accessibilityLabel="Mese di riferimento per l'indice ISTAT" value={canoneMeseRiferimento} onChange={setCanoneMeseRiferimento} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di adeguamento</Text>
-                  <SelectInput testID="canone-perc" value={canonePercScelta} onChange={setCanonePercScelta} opzioni={PERCENTUALI_CANONE} />
+                  <SelectInput testID="canone-perc" accessibilityLabel="Percentuale di adeguamento" value={canonePercScelta} onChange={setCanonePercScelta} opzioni={PERCENTUALI_CANONE} />
                   {canonePercScelta === "altro" ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale %</Text>
-                      <TextInput testID="canone-perc-altro" value={canonePercAltro} onChangeText={setCanonePercAltro} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="canone-perc-altro" accessibilityLabel="Percentuale %" value={canonePercAltro} onChangeText={setCanonePercAltro} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
                     Variazione dell&apos;indice FOI tra il mese di riferimento e lo stesso mese dell&apos;anno precedente (serie dal gennaio 1947).
                   </Text>
-                  <Pressable testID="btn-calc-canone" onPress={calcolaAdeguamentoCanone} disabled={calcolandoCanone} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCanone ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-canone" accessibilityRole="button" onPress={calcolaAdeguamentoCanone} disabled={calcolandoCanone} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCanone ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCanone ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risCanone ? (
@@ -6183,23 +6183,23 @@ export default function Calcolatori() {
               {calcAperto === "interessi-vari-capitale-rivalutato" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Capitale €</Text>
-                  <TextInput testID="vari-capitale" value={variCapitale} onChangeText={setVariCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="vari-capitale" accessibilityLabel="Capitale €" value={variCapitale} onChangeText={setVariCapitale} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Dal</Text>
-                  <DataInput testID="vari-data-inizio" value={variDataInizio} onChange={setVariDataInizio} />
+                  <DataInput testID="vari-data-inizio" accessibilityLabel="Dal" value={variDataInizio} onChange={setVariDataInizio} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Al</Text>
-                  <DataInput testID="vari-data-fine" value={variDataFine} onChange={setVariDataFine} />
+                  <DataInput testID="vari-data-fine" accessibilityLabel="Al" value={variDataFine} onChange={setVariDataFine} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tipo di interesse</Text>
-                  <SelectInput testID="vari-tipo-interesse" value={variTipoInteresse} onChange={setVariTipoInteresse} opzioni={TIPI_INTERESSE_VARI} />
+                  <SelectInput testID="vari-tipo-interesse" accessibilityLabel="Tipo di interesse" value={variTipoInteresse} onChange={setVariTipoInteresse} opzioni={TIPI_INTERESSE_VARI} />
                   {variTipoInteresse === "tasso_fisso" ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tasso fisso %</Text>
-                      <TextInput testID="vari-tasso-fisso" value={variTassoFisso} onChangeText={setVariTassoFisso} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="vari-tasso-fisso" accessibilityLabel="Tasso fisso %" value={variTassoFisso} onChangeText={setVariTassoFisso} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Maggiorazione punti % (facoltativa — default 8 per gli interessi di mora, 0 per gli altri)</Text>
-                  <TextInput testID="vari-maggiorazione" value={variMaggiorazione} onChangeText={setVariMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="vari-maggiorazione" accessibilityLabel="Maggiorazione punti %" value={variMaggiorazione} onChangeText={setVariMaggiorazione} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Anatocismo</Text>
-                  <SelectInput testID="vari-anatocismo" value={variAnatocismo} onChange={setVariAnatocismo} opzioni={CAPITALIZZAZIONI} />
+                  <SelectInput testID="vari-anatocismo" accessibilityLabel="Anatocismo" value={variAnatocismo} onChange={setVariAnatocismo} opzioni={CAPITALIZZAZIONI} />
                   <Pressable
                     testID="vari-rivaluta"
                     onPress={() => setVariRivaluta(!variRivaluta)}
@@ -6213,9 +6213,9 @@ export default function Calcolatori() {
                   {variRivaluta ? (
                     <>
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Modalità di rivalutazione</Text>
-                      <SelectInput testID="vari-base-rivalutazione" value={variBaseRivalutazione} onChange={setVariBaseRivalutazione} opzioni={BASI_RIVALUTAZIONE_VARI} />
+                      <SelectInput testID="vari-base-rivalutazione" accessibilityLabel="Modalità di rivalutazione" value={variBaseRivalutazione} onChange={setVariBaseRivalutazione} opzioni={BASI_RIVALUTAZIONE_VARI} />
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di applicazione della rivalutazione % (100 = piena, es. 75 per clausole di adeguamento parziale)</Text>
-                      <TextInput testID="vari-rivaluta-al-pct" value={variRivalutaAlPct} onChangeText={setVariRivalutaAlPct} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="vari-rivaluta-al-pct" accessibilityLabel="Percentuale di applicazione della rivalutazione %" value={variRivalutaAlPct} onChangeText={setVariRivalutaAlPct} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                       <Pressable
                         testID="vari-ignora-deflazione"
                         onPress={() => setVariIgnoraDeflazione(!variIgnoraDeflazione)}
@@ -6229,13 +6229,13 @@ export default function Calcolatori() {
                     </>
                   ) : null}
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Giorno iniziale</Text>
-                  <SelectInput testID="vari-giorno-iniziale" value={variGiornoIniziale} onChange={setVariGiornoIniziale} opzioni={GIORNI_INIZIALI_VARI} />
+                  <SelectInput testID="vari-giorno-iniziale" accessibilityLabel="Giorno iniziale" value={variGiornoIniziale} onChange={setVariGiornoIniziale} opzioni={GIORNI_INIZIALI_VARI} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Convenzione di calcolo dei giorni</Text>
-                  <SelectInput testID="vari-convenzione-giorni" value={variConvenzioneGiorni} onChange={setVariConvenzioneGiorni} opzioni={CONVENZIONI_GIORNI_VARI} />
+                  <SelectInput testID="vari-convenzione-giorni" accessibilityLabel="Convenzione di calcolo dei giorni" value={variConvenzioneGiorni} onChange={setVariConvenzioneGiorni} opzioni={CONVENZIONI_GIORNI_VARI} />
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
                     Calcolatore avanzato: l&apos;interazione fra tutti questi parametri in ogni combinazione non è specificata in dettaglio — il risultato può differire in casi particolari.
                   </Text>
-                  <Pressable testID="btn-calc-vari" onPress={calcolaInteressiVari} disabled={calcolandoVari} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoVari ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-vari" accessibilityRole="button" onPress={calcolaInteressiVari} disabled={calcolandoVari} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoVari ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoVari ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risVari ? (
@@ -6261,11 +6261,11 @@ export default function Calcolatori() {
               {calcAperto === "imposta-successione" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore catastale immobile adibito a prima casa €</Text>
-                  <TextInput testID="succ-prima-casa" value={succPrimaCasa} onChangeText={setSuccPrimaCasa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="succ-prima-casa" accessibilityLabel="Valore catastale immobile adibito a prima casa €" value={succPrimaCasa} onChangeText={setSuccPrimaCasa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore catastale altri immobili €</Text>
-                  <TextInput testID="succ-altri-immobili" value={succAltriImmobili} onChangeText={setSuccAltriImmobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="succ-altri-immobili" accessibilityLabel="Valore catastale altri immobili €" value={succAltriImmobili} onChangeText={setSuccAltriImmobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Beni mobili (denaro e strumenti finanziari, esclusi i titoli di Stato) €</Text>
-                  <TextInput testID="succ-beni-mobili" value={succBeniMobili} onChangeText={setSuccBeniMobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="succ-beni-mobili" accessibilityLabel="Beni mobili" value={succBeniMobili} onChangeText={setSuccBeniMobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Grado di parentela/affinità dell&apos;erede rispetto al defunto</Text>
                   {GRADI_SUCCESSIONE.map((g) => (
                     <Pressable key={g.id} testID={`succ-grado-${g.id}`} onPress={() => setSuccGrado(g.id)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
@@ -6281,7 +6281,7 @@ export default function Calcolatori() {
                     </View>
                     <Text style={{ color: t.onSurface, flex: 1 }}>Erede portatore di handicap grave (L. 104/1992)</Text>
                   </Pressable>
-                  <Pressable testID="btn-calc-succ" onPress={calcolaSuccessione} disabled={calcolandoSucc} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoSucc ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-succ" accessibilityRole="button" onPress={calcolaSuccessione} disabled={calcolandoSucc} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoSucc ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoSucc ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risSucc ? (
@@ -6314,9 +6314,9 @@ export default function Calcolatori() {
               {calcAperto === "compenso-ctu" ? (
                 <View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Inizio perizia</Text>
-                  <DataInput testID="ctu-data-inizio" value={ctuDataInizioPerizia} onChange={setCtuDataInizioPerizia} />
+                  <DataInput testID="ctu-data-inizio" accessibilityLabel="Inizio perizia" value={ctuDataInizioPerizia} onChange={setCtuDataInizioPerizia} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fine perizia</Text>
-                  <DataInput testID="ctu-data-fine" value={ctuDataFinePerizia} onChange={setCtuDataFinePerizia} />
+                  <DataInput testID="ctu-data-fine" accessibilityLabel="Fine perizia" value={ctuDataFinePerizia} onChange={setCtuDataFinePerizia} />
                   {risCtu && risCtu.giorni_lavorativi != null ? (
                     <RiepilogoChips color={t.onSurfaceTertiary} fontSize={11} voci={[
                       { label: "Giorni lavorativi", value: String(risCtu.giorni_lavorativi) },
@@ -6324,38 +6324,38 @@ export default function Calcolatori() {
                     ]} />
                   ) : null}
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero vacazioni (14,68€ ciascuna, tariffa piena dal 13/2/2025, Corte Cost. 16/2025)</Text>
-                  <TextInput testID="ctu-numero-vacazioni" value={ctuNumeroVacazioni} onChangeText={setCtuNumeroVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-numero-vacazioni" accessibilityLabel="Numero vacazioni" value={ctuNumeroVacazioni} onChangeText={setCtuNumeroVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico vacazioni % (100 ordinario; fino a 200% se termine ≤5gg, fino a 150% se ≤15gg, art. 4 c. 3 L. 319/1980)</Text>
-                  <TextInput testID="ctu-carico-vacazioni" value={ctuCaricoVacazioni} onChangeText={setCtuCaricoVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-carico-vacazioni" accessibilityLabel="Carico vacazioni %" value={ctuCaricoVacazioni} onChangeText={setCtuCaricoVacazioni} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico urgenza % (0-20)</Text>
-                  <TextInput testID="ctu-carico-urgenza" value={ctuCaricoUrgenza} onChangeText={setCtuCaricoUrgenza} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-carico-urgenza" accessibilityLabel="Carico urgenza %" value={ctuCaricoUrgenza} onChangeText={setCtuCaricoUrgenza} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico complessità % (0-100)</Text>
-                  <TextInput testID="ctu-carico-complessita" value={ctuCaricoComplessita} onChangeText={setCtuCaricoComplessita} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-carico-complessita" accessibilityLabel="Carico complessità %" value={ctuCaricoComplessita} onChangeText={setCtuCaricoComplessita} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Spese documentate €</Text>
-                  <TextInput testID="ctu-spese-documentate" value={ctuSpeseDocumentate} onChangeText={setCtuSpeseDocumentate} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-spese-documentate" accessibilityLabel="Spese documentate €" value={ctuSpeseDocumentate} onChangeText={setCtuSpeseDocumentate} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Rimborso chilometrico € per km</Text>
-                  <TextInput testID="ctu-rimborso-km-unitario" value={ctuRimborsoKmUnitario} onChangeText={setCtuRimborsoKmUnitario} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-rimborso-km-unitario" accessibilityLabel="Rimborso chilometrico € per km" value={ctuRimborsoKmUnitario} onChangeText={setCtuRimborsoKmUnitario} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero km</Text>
-                  <TextInput testID="ctu-numero-km" value={ctuNumeroKm} onChangeText={setCtuNumeroKm} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                  <TextInput testID="ctu-numero-km" accessibilityLabel="Numero km" value={ctuNumeroKm} onChangeText={setCtuNumeroKm} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
 
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.lg, fontWeight: "700" }]}>Onorario tabellare (DM 182/2002)</Text>
-                  <SelectInput testID="ctu-articolo-tabellare" value={ctuArticoloTabellare} onChange={setCtuArticoloTabellare} opzioni={ARTICOLI_DM182_CON_NESSUNO} />
+                  <SelectInput testID="ctu-articolo-tabellare" accessibilityLabel="Onorario tabellare (DM 182/2002)" value={ctuArticoloTabellare} onChange={setCtuArticoloTabellare} opzioni={ARTICOLI_DM182_CON_NESSUNO} />
                   {ctuArticoloTabellare ? (
                     <>
                       {ARTICOLI_DM182.find((a) => a.value === ctuArticoloTabellare)?.richiedeValore ? (
                         <>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore stimato €</Text>
-                          <TextInput testID="ctu-valore-stimato" value={ctuValoreStimato} onChangeText={setCtuValoreStimato} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          <TextInput testID="ctu-valore-stimato" accessibilityLabel="Valore stimato €" value={ctuValoreStimato} onChangeText={setCtuValoreStimato} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                         </>
                       ) : null}
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Tariffa predefinita</Text>
-                      <SelectInput testID="ctu-tariffa-predefinita" value={ctuTariffaPredefinita} onChange={setCtuTariffaPredefinita} opzioni={TARIFFE_PREDEFINITE_CTU} />
+                      <SelectInput testID="ctu-tariffa-predefinita" accessibilityLabel="Tariffa predefinita" value={ctuTariffaPredefinita} onChange={setCtuTariffaPredefinita} opzioni={TARIFFE_PREDEFINITE_CTU} />
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Carico onorari % (1-200)</Text>
-                      <TextInput testID="ctu-carico-onorari" value={ctuCaricoOnorari} onChangeText={setCtuCaricoOnorari} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                      <TextInput testID="ctu-carico-onorari" accessibilityLabel="Carico onorari %" value={ctuCaricoOnorari} onChangeText={setCtuCaricoOnorari} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
 
-                  <Pressable testID="btn-calc-ctu" onPress={calcolaCtu} disabled={calcolandoCtu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCtu ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-ctu" accessibilityRole="button" onPress={calcolaCtu} disabled={calcolandoCtu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCtu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCtu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {risCtu ? (
@@ -6373,7 +6373,7 @@ export default function Calcolatori() {
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome parcella</Text>
                           <TextInput
-                            testID="ctu-titolo"
+                            testID="ctu-titolo" accessibilityLabel="Nome parcella"
                             value={titoloCtu}
                             onChangeText={setTitoloCtu}
                             placeholderTextColor={t.onSurfaceTertiary}
@@ -6385,7 +6385,7 @@ export default function Calcolatori() {
                             onChange={setPraticaId}
                             helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui in Archivio."}
                           />
-                          <Pressable testID="save-ctu" onPress={salvaCtu} disabled={savingCtu} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: savingCtu ? 0.6 : 1 }}>
+                          <Pressable testID="save-ctu" accessibilityRole="button" onPress={salvaCtu} disabled={savingCtu} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: savingCtu ? 0.6 : 1 }}>
                             <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingCtu ? "Salvataggio..." : "Salva come parcella"}</Text>
                           </Pressable>
                         </>
@@ -6404,7 +6404,7 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}{c.tipo === "data_opzionale" ? " (opzionale)" : ""}</Text>
-                          <DataInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
+                          <DataInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
                           {notaData ? (
                             <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: 4, marginBottom: SPACING.sm }}>{notaData}</Text>
                           ) : null}
@@ -6415,7 +6415,7 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                          <MeseAnnoInput testID={`gen-${c.key}`} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
+                          <MeseAnnoInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] || ""} onChange={(v) => setGenForm({ ...genForm, [c.key]: v })} />
                         </View>
                       );
                     }
@@ -6443,7 +6443,7 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                         </View>
                       );
                     }
@@ -6451,13 +6451,13 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                          <TextInput testID={`gen-${c.key}`} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                         </View>
                       );
                     }
                     if (c.tipo === "bool") {
                       return (
-                        <Pressable key={c.key} testID={`gen-${c.key}`} onPress={() => setGenForm({ ...genForm, [c.key]: !genForm[c.key] })} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}>
+                        <Pressable key={c.key} testID={`gen-${c.key}`} accessibilityLabel={c.label} onPress={() => setGenForm({ ...genForm, [c.key]: !genForm[c.key] })} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}>
                           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: genForm[c.key] ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                             {genForm[c.key] ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                           </View>
@@ -6471,7 +6471,7 @@ export default function Calcolatori() {
                         <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
                         <View style={{ marginBottom: SPACING.sm }}>
                           <SelectInput
-                            testID={`gen-${c.key}`}
+                            testID={`gen-${c.key}`} accessibilityLabel={c.label}
                             value={genForm[c.key] || ""}
                             onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
                             opzioni={typeof c.opzioni === "function" ? c.opzioni(genForm) : c.opzioni}
@@ -6484,7 +6484,7 @@ export default function Calcolatori() {
                       </View>
                     );
                   })}
-                  <Pressable testID="btn-calc-gen" onPress={calcolaGenerico} disabled={genCalcolando} style={[st.submit, { backgroundColor: t.brand, opacity: genCalcolando ? 0.6 : 1 }]}>
+                  <Pressable testID="btn-calc-gen" accessibilityRole="button" onPress={calcolaGenerico} disabled={genCalcolando} style={[st.submit, { backgroundColor: t.brand, opacity: genCalcolando ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{genCalcolando ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
                   {genRisultato ? (
@@ -6504,7 +6504,7 @@ export default function Calcolatori() {
                               onChange={setPraticaId}
                               helperText={praticaId ? "Comparirà anche nella scheda di quella pratica." : "Comparirà solo qui e nel calendario."}
                             />
-                            <Pressable testID="save-gen" onPress={salvaGenerico} disabled={genSaving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: genSaving ? 0.6 : 1 }}>
+                            <Pressable testID="save-gen" accessibilityRole="button" onPress={salvaGenerico} disabled={genSaving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center", opacity: genSaving ? 0.6 : 1 }}>
                               <Text style={{ color: t.onBrand, fontWeight: "700" }}>{genSaving ? "Salvataggio..." : "Salva come scadenza"}</Text>
                             </Pressable>
                           </>
