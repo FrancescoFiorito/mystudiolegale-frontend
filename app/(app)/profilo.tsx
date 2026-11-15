@@ -62,7 +62,7 @@ export default function Profilo() {
   }, [showEditProfile, showChangePw, showPiano, navigation]);
 
   const Item = ({ icon, label, onPress, testID, right }: any) => (
-    <Pressable testID={testID} onPress={onPress} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
       <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
         <Feather name={icon} size={16} color={t.brand} />
       </View>
@@ -131,7 +131,7 @@ export default function Profilo() {
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         <Text testID="profilo-nome" style={{ height: 0, width: 0, opacity: 0 }}>{user?.nome ? `${user.nome} ${user.cognome || ""}`.trim() : user?.email}</Text>
 
-        <Pressable testID="profilo-piano" onPress={() => setShowPiano(true)} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
+        <Pressable testID="profilo-piano" accessibilityRole="button" onPress={() => setShowPiano(true)} style={[s.item, { backgroundColor: t.surface }, SHADOW.card]}>
           <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
             <Feather name="award" size={16} color={t.brand} />
           </View>
@@ -152,7 +152,7 @@ export default function Profilo() {
         <Item testID="menu-modifica-profilo" icon="edit-2" label="Modifica profilo" onPress={() => setShowEditProfile(true)} />
         <Item testID="menu-cambia-password" icon="lock" label="Cambia password" onPress={() => setShowChangePw(true)} />
 
-        <Pressable testID="logout-btn" onPress={logout} style={[s.item, { backgroundColor: t.mode === "dark" ? t.surfaceTertiary : "#FEF2F2", marginTop: SPACING.xl }]}>
+        <Pressable testID="logout-btn" accessibilityRole="button" onPress={logout} style={[s.item, { backgroundColor: t.mode === "dark" ? t.surfaceTertiary : "#FEF2F2", marginTop: SPACING.xl }]}>
           <View style={[s.itemIcon, { backgroundColor: t.mode === "dark" ? t.surface : "#FEE2E2" }]}><Feather name="log-out" size={16} color={t.error} /></View>
           <Text style={{ flex: 1, color: t.error, fontSize: 14, fontWeight: "700" }}>Esci</Text>
         </Pressable>
@@ -172,6 +172,7 @@ export default function Profilo() {
                   <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{label}</Text>
                   <TextInput
                     testID={`edit-profile-${k}`}
+                    accessibilityLabel={label}
                     value={(profileForm as any)[k]}
                     onChangeText={(v) => setProfileForm({ ...profileForm, [k]: v })}
                     style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -179,7 +180,7 @@ export default function Profilo() {
                   />
                 </View>
               ))}
-              <Pressable testID="save-profile-btn" onPress={salvaProfilo} disabled={savingProfile} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingProfile ? 0.6 : 1 }}>
+              <Pressable testID="save-profile-btn" accessibilityRole="button" onPress={salvaProfilo} disabled={savingProfile} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingProfile ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingProfile ? "Salvataggio..." : "Salva profilo"}</Text>
               </Pressable>
             </ScrollView>
@@ -195,6 +196,7 @@ export default function Profilo() {
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Password attuale</Text>
               <TextInput
                 testID="change-pw-current"
+                accessibilityLabel="Password attuale"
                 secureTextEntry
                 value={pwForm.current_password}
                 onChangeText={(v) => setPwForm({ ...pwForm, current_password: v })}
@@ -203,6 +205,7 @@ export default function Profilo() {
               <PasswordFieldLabel label="Nuova password" style={[s.lbl, { color: t.onSurfaceSecondary }]} />
               <TextInput
                 testID="change-pw-new"
+                accessibilityLabel="Nuova password"
                 secureTextEntry
                 placeholder="Almeno 8 caratteri, un numero e un simbolo"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -213,12 +216,13 @@ export default function Profilo() {
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Conferma nuova password</Text>
               <TextInput
                 testID="change-pw-new2"
+                accessibilityLabel="Conferma nuova password"
                 secureTextEntry
                 value={pwForm.new_password2}
                 onChangeText={(v) => setPwForm({ ...pwForm, new_password2: v })}
                 style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
               />
-              <Pressable testID="save-password-btn" onPress={salvaNuovaPassword} disabled={savingPw} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingPw ? 0.6 : 1 }}>
+              <Pressable testID="save-password-btn" accessibilityRole="button" onPress={salvaNuovaPassword} disabled={savingPw} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingPw ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingPw ? "Salvataggio..." : "Cambia password"}</Text>
               </Pressable>
             </ScrollView>
@@ -244,6 +248,8 @@ export default function Profilo() {
                 <Pressable
                   key={p.id}
                   testID={`piano-${p.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: attuale }}
                   onPress={() => selezionaPiano(p.id)}
                   disabled={!!cambiandoPiano}
                   style={[

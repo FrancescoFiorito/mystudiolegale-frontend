@@ -42,7 +42,7 @@ export default function AuditLog() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 52 }} contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: 8, alignItems: "center", height: 52 }}>
         {ENTITA.map((e) => (
-          <Pressable key={e} onPress={() => setFiltro(e)} style={{ flexShrink: 0, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: filtro === e ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+          <Pressable key={e} accessibilityRole="radio" accessibilityLabel={e || "Tutto"} accessibilityState={{ checked: filtro === e }} onPress={() => setFiltro(e)} style={{ flexShrink: 0, paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: filtro === e ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
             <Text style={{ color: filtro === e ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, textTransform: "capitalize" }}>{e || "Tutto"}</Text>
           </Pressable>
         ))}

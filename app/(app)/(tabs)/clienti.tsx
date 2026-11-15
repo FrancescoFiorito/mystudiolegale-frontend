@@ -121,7 +121,7 @@ export default function Clienti() {
   const field = (k: string, l: string, opts: any = {}) => (
     <View style={{ marginBottom: SPACING.sm }}>
       <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
-      <TextInput testID={`cliente-${k}`} value={form[k]} onChangeText={(v) => setForm({ ...form, [k]: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} placeholderTextColor={t.onSurfaceTertiary} {...opts} />
+      <TextInput testID={`cliente-${k}`} accessibilityLabel={l} value={form[k]} onChangeText={(v) => setForm({ ...form, [k]: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} placeholderTextColor={t.onSurfaceTertiary} {...opts} />
     </View>
   );
 
@@ -131,7 +131,7 @@ export default function Clienti() {
       <View style={{ backgroundColor: t.surface, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
           <Feather name="search" size={16} color={t.onSurfaceTertiary} />
-          <TextInput testID="clienti-search" value={q} onChangeText={setQ} placeholder="Cerca cliente..." placeholderTextColor={t.onSurfaceTertiary} style={{ flex: 1, color: t.onSurface, fontSize: 14 }} />
+          <TextInput testID="clienti-search" accessibilityLabel="Cerca cliente" value={q} onChangeText={setQ} placeholder="Cerca cliente..." placeholderTextColor={t.onSurfaceTertiary} style={{ flex: 1, color: t.onSurface, fontSize: 14 }} />
         </View>
       </View>
       <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
@@ -145,7 +145,7 @@ export default function Clienti() {
           const initials = inizialiCliente(c);
           return (
             <SwipeToDelete key={c.id} testID={`cliente-${c.id}`} onDelete={() => eliminaCliente(c)}>
-              <Pressable testID={`cliente-${c.id}`} onPress={() => router.push({ pathname: "/(app)/cliente/[id]", params: { id: c.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+              <Pressable testID={`cliente-${c.id}`} accessibilityRole="button" onPress={() => router.push({ pathname: "/(app)/cliente/[id]", params: { id: c.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
                 <View style={{ width: 44, height: 44, borderRadius: RADIUS.pill, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ color: t.brand, fontWeight: "700" }}>{initials}</Text>
                 </View>
@@ -159,7 +159,7 @@ export default function Clienti() {
         })}
       </ScrollView>
 
-      <Pressable testID="new-cliente-fab" onPress={() => setShow(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+      <Pressable testID="new-cliente-fab" accessibilityRole="button" accessibilityLabel="Nuovo cliente" onPress={() => setShow(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
         <Feather name="plus" size={22} color={t.onBrand} />
       </Pressable>
 
@@ -170,7 +170,7 @@ export default function Clienti() {
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
                 {["persona", "azienda"].map((tp) => (
-                  <Pressable key={tp} onPress={() => setForm({ ...form, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: form.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
+                  <Pressable key={tp} accessibilityRole="radio" accessibilityLabel={tp} accessibilityState={{ checked: form.tipo === tp }} onPress={() => setForm({ ...form, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: form.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
                     <Text style={{ color: form.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600" }}>{tp}</Text>
                   </Pressable>
                 ))}
@@ -179,7 +179,7 @@ export default function Clienti() {
               {field("email", "Email", { autoCapitalize: "none", keyboardType: "email-address" })}
               {field("telefono", "Telefono", { keyboardType: "phone-pad" })}
               {field("pec", "PEC", { autoCapitalize: "none" })}
-              <Pressable testID="submit-cliente" onPress={create} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+              <Pressable testID="submit-cliente" accessibilityRole="button" onPress={create} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva cliente"}</Text>
               </Pressable>
             </ScrollView>

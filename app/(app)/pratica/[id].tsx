@@ -248,10 +248,10 @@ export default function PraticaDetail() {
         backTestID="back-btn"
         right={
           <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-            <Pressable testID="edit-pratica" onPress={() => { setEditForm({ oggetto: pratica.oggetto || "", controparte: pratica.controparte || "", tribunale: pratica.tribunale || "", valore_causa: String(pratica.valore_causa || ""), cliente_id: pratica.cliente_id || null }); setShowEdit(true); }} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+            <Pressable testID="edit-pratica" accessibilityRole="button" accessibilityLabel="Modifica pratica" onPress={() => { setEditForm({ oggetto: pratica.oggetto || "", controparte: pratica.controparte || "", tribunale: pratica.tribunale || "", valore_causa: String(pratica.valore_causa || ""), cliente_id: pratica.cliente_id || null }); setShowEdit(true); }} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
               <Feather name="edit-2" size={17} color={t.onSurfaceSecondary} />
             </Pressable>
-            <Pressable testID="delete-pratica" onPress={deletePratica} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+            <Pressable testID="delete-pratica" accessibilityRole="button" accessibilityLabel="Elimina pratica" onPress={deletePratica} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
               <Feather name="trash-2" size={18} color={t.error} />
             </Pressable>
           </View>
@@ -262,7 +262,7 @@ export default function PraticaDetail() {
           <View style={[s.infoCard, { backgroundColor: t.surface }, SHADOW.card]}>
             <Text style={[s.title, { color: t.onSurface }]}>{pratica.oggetto}</Text>
             <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm, flexWrap: "wrap" }}>
-              <Pressable testID="cambia-stato-btn" onPress={cambiaStato} style={[s.tag, { backgroundColor: statoColor(pratica.stato) + "22", flexDirection: "row", alignItems: "center", gap: 4 }]}>
+              <Pressable testID="cambia-stato-btn" accessibilityRole="button" accessibilityLabel="Cambia stato" onPress={cambiaStato} style={[s.tag, { backgroundColor: statoColor(pratica.stato) + "22", flexDirection: "row", alignItems: "center", gap: 4 }]}>
                 <Text style={{ color: statoColor(pratica.stato), fontSize: 11, fontWeight: "700" }}>{pratica.stato}</Text>
                 <Feather name="chevron-down" size={11} color={statoColor(pratica.stato)} />
               </Pressable>
@@ -280,7 +280,7 @@ export default function PraticaDetail() {
         <View style={{ backgroundColor: t.surfaceSecondary, paddingBottom: SPACING.sm }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: 8, height: 48, alignItems: "center" }}>
             {TABS.map((tb) => (
-              <Pressable key={tb} testID={`tab-${tb}`} onPress={() => setTab(tb)} style={{ flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: tab === tb ? t.brand : t.surface, alignItems: "center", justifyContent: "center" }}>
+              <Pressable key={tb} testID={`tab-${tb}`} accessibilityRole="tab" accessibilityState={{ selected: tab === tb }} onPress={() => setTab(tb)} style={{ flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: tab === tb ? t.brand : t.surface, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ color: tab === tb ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "600" }}>{tb}</Text>
               </Pressable>
             ))}
@@ -290,7 +290,7 @@ export default function PraticaDetail() {
         <View style={{ padding: SPACING.lg }}>
           {tab === "Note" && (
             <>
-              <Pressable testID="add-nota-inline" onPress={openAdd} style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.brandSecondary, marginBottom: SPACING.md }}>
+              <Pressable testID="add-nota-inline" accessibilityRole="button" onPress={openAdd} style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.brandSecondary, marginBottom: SPACING.md }}>
                 <Feather name="plus-circle" size={16} color={t.brand} />
                 <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>Aggiungi nota</Text>
               </Pressable>
@@ -299,7 +299,7 @@ export default function PraticaDetail() {
                 <View key={n.id} style={[s.card, { backgroundColor: t.surface }, SHADOW.card]}>
                 <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
                   {n.titolo ? <Text style={{ flex: 1, color: t.onSurface, fontWeight: "700", marginBottom: 4 }}>{n.titolo}</Text> : <View style={{ flex: 1 }} />}
-                  <Pressable testID={`modifica-nota-${n.id}`} onPress={() => apriModificaNota(n)} hitSlop={8} style={{ padding: 2 }}>
+                  <Pressable testID={`modifica-nota-${n.id}`} accessibilityRole="button" accessibilityLabel="Modifica nota" onPress={() => apriModificaNota(n)} hitSlop={8} style={{ padding: 2 }}>
                     <Feather name="edit-2" size={15} color={t.onSurfaceTertiary} />
                   </Pressable>
                 </View>
@@ -310,7 +310,7 @@ export default function PraticaDetail() {
                       Da fare ({n.checklist.filter((c: any) => c.fatto).length}/{n.checklist.length})
                     </Text>
                     {n.checklist.map((c: any, i: number) => (
-                      <Pressable key={i} onPress={() => toggleChecklistItem(n, i)} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
+                      <Pressable key={i} accessibilityRole="checkbox" accessibilityState={{ checked: c.fatto }} onPress={() => toggleChecklistItem(n, i)} hitSlop={4} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
                         <Feather name={c.fatto ? "check-square" : "square"} size={20} color={c.fatto ? t.success : t.onSurfaceTertiary} />
                         <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
                       </Pressable>
@@ -331,11 +331,11 @@ export default function PraticaDetail() {
                   <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{sc.data} · {formatOra(sc.ora)} · {sc.categoria}</Text>
                 </View>
                 {!sc.completata ? (
-                  <Pressable onPress={() => api.patch(`/scadenze/${sc.id}/complete`).then(load)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Segna come completata" onPress={() => api.patch(`/scadenze/${sc.id}/complete`).then(load)} style={{ padding: SPACING.md, justifyContent: "center" }}>
                     <Feather name="check" size={18} color={t.success} />
                   </Pressable>
                 ) : null}
-                <Pressable onPress={() => eliminaScadenza(sc)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Elimina scadenza" onPress={() => eliminaScadenza(sc)} style={{ padding: SPACING.md, justifyContent: "center" }}>
                   <Feather name="trash-2" size={18} color={t.error} />
                 </Pressable>
               </View>
@@ -354,17 +354,17 @@ export default function PraticaDetail() {
                 {p.titolo ? <Text style={{ color: t.onSurface, fontSize: 13, fontWeight: "600", marginTop: 2 }} numberOfLines={1}>{p.titolo}</Text> : null}
                 <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.sm }}>
                   {p.emessa ? (
-                    <Pressable testID={`pdf-parcella-${p.id}`} onPress={() => apriPdfParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                    <Pressable testID={`pdf-parcella-${p.id}`} accessibilityRole="button" accessibilityLabel="Scarica PDF della parcella" onPress={() => apriPdfParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
                       <Feather name="download" size={14} color={t.onBrand} />
                       <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
                     </Pressable>
                   ) : (
-                    <Pressable testID={`emetti-parcella-${p.id}`} onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                    <Pressable testID={`emetti-parcella-${p.id}`} accessibilityRole="button" onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
                       <Feather name="check-circle" size={14} color={t.onBrand} />
                       <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
                     </Pressable>
                   )}
-                  <Pressable testID={`modifica-parcella-${p.id}`} onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+                  <Pressable testID={`modifica-parcella-${p.id}`} accessibilityRole="button" onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
                     <Feather name="edit-2" size={14} color={t.onSurface} />
                     <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 12 }}>Modifica</Text>
                   </Pressable>
@@ -376,13 +376,13 @@ export default function PraticaDetail() {
             <>
               {atti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun atto generato</Text> :
                 atti.map((a) => (
-                  <Pressable key={a.id} onPress={() => apriAtto(a)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
+                  <Pressable key={a.id} accessibilityRole="button" onPress={() => apriAtto(a)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
                     <View style={[s.docIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={16} color={t.brand} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>
                       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>Bozza · {a.created_at?.slice(0, 10)}</Text>
                     </View>
-                    <Pressable onPress={() => eliminaAtto(a)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Elimina atto" onPress={() => eliminaAtto(a)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
                   </Pressable>
                 ))}
             </>
@@ -391,10 +391,10 @@ export default function PraticaDetail() {
             <>
               {documenti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun documento nel fascicolo</Text> :
                 documenti.map((d) => (
-                  <Pressable key={d.id} onPress={() => apriDocumento(d)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
+                  <Pressable key={d.id} accessibilityRole="button" onPress={() => apriDocumento(d)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
                     <View style={[s.docIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={16} color={t.brand} /></View>
                     <Text style={{ flex: 1, color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{d.nome}</Text>
-                    <Pressable onPress={() => eliminaDocumento(d)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
+                    <Pressable accessibilityRole="button" accessibilityLabel="Elimina documento" onPress={() => eliminaDocumento(d)} hitSlop={8}><Feather name="trash-2" size={16} color={t.error} /></Pressable>
                   </Pressable>
                 ))}
             </>
@@ -403,11 +403,11 @@ export default function PraticaDetail() {
       </ScrollView>
 
       {tab === "Documenti" ? (
-        <Pressable testID="pratica-doc-upload" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
+        <Pressable testID="pratica-doc-upload" accessibilityRole="button" accessibilityLabel="Carica documento" onPress={caricaDocumento} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }]}>
           {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
         </Pressable>
       ) : tab === "Scadenze" || tab === "Parcelle" || tab === "Atti" ? (
-        <Pressable testID="fab-add" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { praticaId: id, _t: String(Date.now()) } })} style={[s.fab, { backgroundColor: t.brand }]}>
+        <Pressable testID="fab-add" accessibilityRole="button" accessibilityLabel="Apri i calcolatori per questa pratica" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { praticaId: id, _t: String(Date.now()) } })} style={[s.fab, { backgroundColor: t.brand }]}>
           <Feather name="plus" size={24} color={t.onBrand} />
         </Pressable>
       ) : null}
@@ -422,6 +422,7 @@ export default function PraticaDetail() {
                   <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{k}</Text>
                   <TextInput
                     testID={`edit-pratica-${k}`}
+                    accessibilityLabel={k}
                     value={editForm[k]}
                     onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
                     style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -431,20 +432,20 @@ export default function PraticaDetail() {
               ))}
               <View style={{ marginBottom: SPACING.md }}>
                 <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Valore causa €</Text>
-                <TextInput testID="edit-pratica-valore" value={editForm.valore_causa} onChangeText={(v) => setEditForm({ ...editForm, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                <TextInput testID="edit-pratica-valore" accessibilityLabel="Valore causa €" value={editForm.valore_causa} onChangeText={(v) => setEditForm({ ...editForm, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
               </View>
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Cliente</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.lg }} contentContainerStyle={{ gap: 8 }}>
-                <Pressable onPress={() => setEditForm({ ...editForm, cliente_id: null })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: editForm.cliente_id ? t.surfaceSecondary : t.brand, borderWidth: 1, borderColor: t.border }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Nessun cliente" onPress={() => setEditForm({ ...editForm, cliente_id: null })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: editForm.cliente_id ? t.surfaceSecondary : t.brand, borderWidth: 1, borderColor: t.border }}>
                   <Text style={{ color: editForm.cliente_id ? t.onSurfaceSecondary : t.onBrand, fontSize: 12 }}>Nessuno</Text>
                 </Pressable>
                 {clienti.map((c) => (
-                  <Pressable key={c.id} onPress={() => setEditForm({ ...editForm, cliente_id: c.id })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: editForm.cliente_id === c.id ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+                  <Pressable key={c.id} accessibilityRole="radio" accessibilityLabel={c.ragione_sociale || `${c.nome} ${c.cognome || ""}`} accessibilityState={{ checked: editForm.cliente_id === c.id }} onPress={() => setEditForm({ ...editForm, cliente_id: c.id })} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: RADIUS.pill, backgroundColor: editForm.cliente_id === c.id ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
                     <Text style={{ color: editForm.cliente_id === c.id ? t.onBrand : t.onSurfaceSecondary, fontSize: 12 }}>{c.ragione_sociale || `${c.nome} ${c.cognome || ""}`}</Text>
                   </Pressable>
                 ))}
               </ScrollView>
-              <Pressable testID="save-edit-pratica" onPress={salvaModifiche} disabled={savingEdit} style={{ backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingEdit ? 0.6 : 1 }}>
+              <Pressable testID="save-edit-pratica" accessibilityRole="button" onPress={salvaModifiche} disabled={savingEdit} style={{ backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingEdit ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingEdit ? "Salvataggio..." : "Salva modifiche"}</Text>
               </Pressable>
             </ScrollView>
@@ -458,27 +459,27 @@ export default function PraticaDetail() {
             <Header variant="hero" title={editingNota ? "Modifica nota" : "Aggiungi nota"} onBack={() => setShowAdd(false)} />
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <Text style={s.lbl}>Titolo</Text>
-              <TextInput testID="add-titolo" value={addForm.titolo || ""} onChangeText={(v) => setAddForm({ ...addForm, titolo: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+              <TextInput testID="add-titolo" accessibilityLabel="Titolo" value={addForm.titolo || ""} onChangeText={(v) => setAddForm({ ...addForm, titolo: v })} style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
               <Text style={s.lbl}>Contenuto</Text>
-              <TextInput testID="add-contenuto" multiline value={addForm.contenuto || ""} onChangeText={(v) => setAddForm({ ...addForm, contenuto: v })} style={[s.input, { minHeight: 100, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
+              <TextInput testID="add-contenuto" accessibilityLabel="Contenuto" multiline value={addForm.contenuto || ""} onChangeText={(v) => setAddForm({ ...addForm, contenuto: v })} style={[s.input, { minHeight: 100, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border, textAlignVertical: "top" }]} />
               <Text style={[s.lbl, { marginTop: SPACING.md }]}>Checklist</Text>
               {checklist.map((c, i) => (
-                <Pressable key={i} onPress={() => setChecklist(checklist.map((it, idx) => idx === i ? { ...it, fatto: !it.fatto } : it))} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
+                <Pressable key={i} accessibilityRole="checkbox" accessibilityState={{ checked: c.fatto }} onPress={() => setChecklist(checklist.map((it, idx) => idx === i ? { ...it, fatto: !it.fatto } : it))} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 }}>
                   <Feather name={c.fatto ? "check-square" : "square"} size={18} color={c.fatto ? t.success : t.onSurfaceTertiary} />
                   <Text style={{ flex: 1, color: t.onSurface, fontSize: 13, textDecorationLine: c.fatto ? "line-through" : "none", opacity: c.fatto ? 0.6 : 1 }}>{c.testo}</Text>
-                  <Pressable onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))} hitSlop={8} style={{ padding: 4 }}><Feather name="x" size={14} color={t.error} /></Pressable>
+                  <Pressable accessibilityRole="button" accessibilityLabel="Rimuovi voce checklist" onPress={() => setChecklist(checklist.filter((_, idx) => idx !== i))} hitSlop={8} style={{ padding: 4 }}><Feather name="x" size={14} color={t.error} /></Pressable>
                 </Pressable>
               ))}
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <TextInput testID="add-checklist-item" value={nuovaVoce} onChangeText={setNuovaVoce} placeholder="Nuova voce checklist" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
-                <Pressable onPress={aggiungiVoceChecklist} style={{ paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, alignItems: "center", justifyContent: "center" }}>
+                <TextInput testID="add-checklist-item" accessibilityLabel="Nuova voce checklist" value={nuovaVoce} onChangeText={setNuovaVoce} placeholder="Nuova voce checklist" placeholderTextColor={t.onSurfaceTertiary} style={[s.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                <Pressable accessibilityRole="button" accessibilityLabel="Aggiungi voce checklist" onPress={aggiungiVoceChecklist} style={{ paddingHorizontal: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, alignItems: "center", justifyContent: "center" }}>
                   <Feather name="plus" size={18} color={t.onBrandSecondary} />
                 </Pressable>
               </View>
               <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.sm }}>
                 Per allegare un file a questa pratica usa la tab "Documenti".
               </Text>
-              <Pressable testID="submit-add" onPress={submitAdd} disabled={savingAdd} style={{ marginTop: SPACING.xl, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingAdd ? 0.6 : 1 }}>
+              <Pressable testID="submit-add" accessibilityRole="button" onPress={submitAdd} disabled={savingAdd} style={{ marginTop: SPACING.xl, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingAdd ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{savingAdd ? "Salvataggio..." : "Salva"}</Text>
               </Pressable>
             </ScrollView>
