@@ -18,6 +18,7 @@ import MeseAnnoInput from "@/src/components/MeseAnnoInput";
 import ListaInput, { CampoRigaLista } from "@/src/components/ListaInput";
 import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
@@ -4315,6 +4316,50 @@ function RiepilogoChips({ voci, color, fontSize = 12 }: { voci: { label: string;
   );
 }
 
+// --- Esportazione PDF/Word: "Dati inseriti" ---------------------------------
+// Costruiscono le coppie etichetta -> valore degli input compilati, come
+// li vede l'utente a schermo, per la prima sezione del file esportato.
+type OpzioneEsp = { value: string; label: string };
+const etichettaOpz = (opz: OpzioneEsp[], v: string) => opz.find((o) => o.value === v)?.label ?? v;
+const siNo = (b: boolean) => (b ? "Sì" : "No");
+const meseAnnoIt = (v: string) => (/^\d{4}-\d{2}$/.test(v) ? `${v.slice(5, 7)}/${v.slice(0, 4)}` : v);
+const pieno = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== "";
+
+function datiInseritiGenerici(campi: CampoGenerico[], form: Record<string, any>): [string, string][] {
+  const out: [string, string][] = [];
+  for (const c of campi) {
+    if (c.tipo === "titolo") continue;
+    if (c.mostraSe && !c.mostraSe(form)) continue;
+    const v = form[c.key];
+    if (c.tipo === "lista") {
+      (Array.isArray(v) ? v : []).forEach((riga: Record<string, string>, i: number) => {
+        const parti: string[] = [];
+        for (const cr of c.campiRiga) {
+          if (cr.mostraSe && !cr.mostraSe(riga)) continue;
+          const rv = riga[cr.key];
+          if (!pieno(rv)) continue;
+          const val = cr.tipo === "data" ? isoToDataIt(rv) : cr.tipo === "scelta" ? etichettaOpz(typeof cr.opzioni === "function" ? cr.opzioni(form) : cr.opzioni, rv) : rv;
+          parti.push(`${cr.label}: ${val}`);
+        }
+        if (parti.length) out.push([`${c.label} ${i + 1}`, parti.join("; ")]);
+      });
+      continue;
+    }
+    if (c.tipo === "bool") { out.push([c.label, siNo(!!v)]); continue; }
+    if (!pieno(v)) continue;
+    const sv = String(v);
+    if (c.tipo === "data" || c.tipo === "data_opzionale") out.push([c.label, isoToDataIt(sv)]);
+    else if (c.tipo === "mese_anno") out.push([c.label, meseAnnoIt(sv)]);
+    else if (c.tipo === "scelta") out.push([c.label, etichettaOpz(typeof c.opzioni === "function" ? c.opzioni(form) : c.opzioni, sv)]);
+    else out.push([c.label, sv]);
+  }
+  return out;
+}
+
+// Righe "dettaglio" dei calcolatori di interessi (periodo -> importo).
+const righeDettaglio = (dett: any[] | undefined, tasso: (d: any) => string, importo: (d: any) => number): [string, string][] =>
+  (dett || []).map((d: any) => [`${isoToDataIt(d.dal)} → ${isoToDataIt(d.al)} (${tasso(d)})`, formatEuro(importo(d))]);
+
 export default function Calcolatori() {
   const { t } = useTheme();
   const { user } = useAuth();
@@ -4520,6 +4565,16 @@ export default function Calcolatori() {
   const [genDocCopiato, setGenDocCopiato] = React.useState(false);
   // Copia del form al momento del calcolo: il documento usa gli stessi dati dei numeri mostrati, anche se il form viene poi modificato.
   const [genFormCalcolato, setGenFormCalcolato] = React.useState<Record<string, any>>({});
+  // Esportazione: "Dati inseriti" fotografati quando compare un nuovo risultato,
+  // cosi' restano coerenti con i numeri anche se l'utente modifica i campi dopo.
+  const snapEsp = React.useRef<Record<string, { ris: any; dati: [string, string][] }>>({});
+  const datiSnap = (chiave: string, ris: any, costruisci: () => [string, string][]) => {
+    const cur = snapEsp.current[chiave];
+    if (cur && cur.ris === ris) return cur.dati;
+    const dati = costruisci().filter(([, v]) => pieno(v));
+    snapEsp.current[chiave] = { ris, dati };
+    return dati;
+  };
   // Atti (bozze di documenti)
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
@@ -5256,6 +5311,25 @@ export default function Calcolatori() {
                   </Pressable>
                 </>
               ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvata</Text>}
+              <EsportaDocumento
+                testIDPrefix="scad"
+                titolo="Scadenze Processuali"
+                datiInseriti={datiSnap("scadenze", risScad, () => [
+                  ["Rito", etichettaOpz([{ value: "nuovo", label: "Nuovo rito (post riforma)" }, { value: "vecchio", label: "Vecchio rito (ante riforma)" }], ritoTermini)],
+                  ["Voce notevole del c.p.c.", voceCpcSelezionata ? `${voceCpcSelezionata.articolo} — ${voceCpcSelezionata.descrizione}` : ""],
+                  ["Data di partenza", isoToDataIt(dataPartenza)],
+                  [`Termine (${unita})`, giorni],
+                  ["Direzione", tipoS === "avanti" ? "Avanti" : "Ritroso"],
+                  ["Sospensione feriale (1-31 agosto)", siNo(escludiFer)],
+                  ["Sospensione straordinaria COVID-19", siNo(escludiCovid)],
+                  ...(unita === "giorni" ? [["Termine libero", siNo(terminLibero)] as [string, string]] : []),
+                ])}
+                risultato={[
+                  ["Data calcolata", isoToDataIt(risScad.data_calcolata)],
+                  ...(risScad.giorni_sospensione_applicati ? [["Giorni di sospensione feriale", String(risScad.giorni_sospensione_applicati)] as [string, string]] : []),
+                  ...(risScad.prorogato_a_prossimo_feriale ? [["Prorogato al prossimo giorno feriale", "Sì"] as [string, string]] : []),
+                ]}
+              />
             </>
           )}
         </View>
@@ -6002,6 +6076,33 @@ export default function Calcolatori() {
                           </Pressable>
                         </>
                       ) : <Text style={{ color: t.success, marginTop: 8 }}>✓ Salvate</Text>}
+                      <EsportaDocumento
+                        testIDPrefix="mem"
+                        titolo="Termini memorie e conclusionali"
+                        datiInseriti={datiSnap("memorie", risMem, () => [
+                          ["Tipo di termine", etichettaOpz([
+                            { value: "171-ter", label: "Memorie integrative (art. 171-ter)" },
+                            { value: "189", label: "Conclusionali, trattazione scritta (art. 189)" },
+                            { value: "275-bis", label: "Conclusionali, discussione orale (art. 275-bis)" },
+                          ], tipoMem)],
+                          [tipoMem === "171-ter" ? "Data udienza di trattazione" : "Data udienza collegiale di discussione", isoToDataIt(memUdienza)],
+                          ["Sospensione feriale (1-31 agosto)", siNo(memEscludiFer)],
+                        ])}
+                        risultato={
+                          risMem.tipo === "189" ? [
+                            ["Note precisazione conclusioni (-60 gg)", isoToDataIt(risMem.prima_memoria)],
+                            ["Comparse conclusionali (-30 gg)", isoToDataIt(risMem.seconda_memoria)],
+                            ["Memorie di replica (-15 gg)", isoToDataIt(risMem.terza_memoria)],
+                          ] : risMem.tipo === "275-bis" ? [
+                            ["Note precisazione conclusioni (-30 gg)", isoToDataIt(risMem.prima_memoria)],
+                            ["Note conclusive (-15 gg)", isoToDataIt(risMem.seconda_memoria)],
+                          ] : [
+                            ["1ª memoria (-40 gg)", isoToDataIt(risMem.prima_memoria)],
+                            ["2ª memoria (-20 gg)", isoToDataIt(risMem.seconda_memoria)],
+                            ["3ª memoria (-10 gg)", isoToDataIt(risMem.terza_memoria)],
+                          ]
+                        }
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6054,6 +6155,23 @@ export default function Calcolatori() {
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.interesse)}</Text>
                         </View>
                       ))}
+                      <EsportaDocumento
+                        testIDPrefix="tassi"
+                        titolo={calcAperto === "interessi-mora" ? "Interessi di mora" : "Interessi legali"}
+                        datiInseriti={datiSnap("tassi", risTassi, () => [
+                          ["Capitale €", tassiCapitale],
+                          ["Dal", isoToDataIt(tassiDataInizio)],
+                          ["Al", isoToDataIt(tassiDataFine)],
+                          ...(calcAperto === "interessi-mora"
+                            ? [["Cessione di prodotti agricoli e agroalimentari (+4 punti)", siNo(tassiProdottiAgricoli)] as [string, string], ["Maggiorazione aggiuntiva sul tasso %", tassiMaggiorazione] as [string, string]]
+                            : [["Capitalizzazione", etichettaOpz(CAPITALIZZAZIONI, tassiCapitalizzazione)] as [string, string]]),
+                        ])}
+                        risultato={[
+                          ["Interessi maturati", formatEuro(risTassi.interessi)],
+                          ["Totale (capitale + interessi)", formatEuro(risTassi.totale)],
+                          ...righeDettaglio(risTassi.dettaglio, (d) => `${d.tasso_pct ?? d.tasso_applicato_pct}%`, (d) => d.interesse),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6125,6 +6243,27 @@ export default function Calcolatori() {
                       <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>CONTRIBUTO UNIFICATO</Text>
                       <Text testID="cu-result" style={{ color: t.onBrandSecondary, fontSize: 26, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{formatEuro(risCu.contributo_unificato)}</Text>
                       {risCu.descrizione ? <Text style={{ color: t.onBrandSecondary, marginTop: 4, fontSize: 12 }}>{risCu.descrizione}</Text> : null}
+                      <EsportaDocumento
+                        testIDPrefix="cu"
+                        titolo="Contributo unificato"
+                        datiInseriti={datiSnap("cu", risCu, () => cuProceduraFissa ? [
+                          ["Procedimento a contributo fisso", etichettaOpz(PROCEDURE_FISSE_CU, cuProceduraFissa)],
+                        ] : [
+                          ["Processo", etichettaOpz(PROCESSI_CU, cuProcesso)],
+                          ["Giudizio", etichettaOpz(cuProcesso === "amministrativo" ? GIUDIZI_CU_AMMINISTRATIVO : GIUDIZI_CU, cuGiudizio)],
+                          ...(cuProcesso === "amministrativo" ? [["Rito", etichettaOpz(RITI_AMMINISTRATIVI_CU, cuRitoAmministrativo)] as [string, string]] : []),
+                          ...(cuProcesso !== "amministrativo" || cuRitoAmministrativo === "appalti_pubblici" ? [
+                            ["Valore della causa", etichettaOpz(cuProcesso === "amministrativo" ? VALORE_TIPI_CU_APPALTI : cuProcesso === "tributario" ? VALORE_TIPI_CU_TRIBUTARIO : VALORE_TIPI_CU_CIVILE, cuValoreTipo)] as [string, string],
+                            ...(cuValoreTipo === "determinato" ? [["Importo della causa €", cuValoreCausa] as [string, string]] : []),
+                            ...(cuProcesso === "civile" && cuValoreTipo === "indeterminabile" ? [["Ufficio giudiziario", etichettaOpz(UFFICI_CU, cuUfficio)] as [string, string]] : []),
+                          ] : []),
+                          ...(cuProcesso === "civile" ? [["Riduzione del 50%", siNo(cuRiduzione50)] as [string, string]] : []),
+                        ])}
+                        risultato={[
+                          ["Contributo unificato", formatEuro(risCu.contributo_unificato)],
+                          ...(risCu.descrizione ? [["Descrizione", String(risCu.descrizione)] as [string, string]] : []),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6173,6 +6312,27 @@ export default function Calcolatori() {
                           ))}
                         </>
                       )}
+                      <EsportaDocumento
+                        testIDPrefix="istat"
+                        titolo="Rivalutazione ISTAT"
+                        datiInseriti={datiSnap("istat", risIstat, () => [
+                          ["Capitale €", istatCapitale],
+                          ["Dal", isoToDataIt(istatDataInizio)],
+                          ["Al", isoToDataIt(istatDataFine)],
+                          ["Rivaluta al %", istatRivalutaAlPct],
+                          ["Modalità", etichettaOpz(MODALITA_ISTAT, istatModalita)],
+                        ])}
+                        risultato={istatModalita === "sola_rivalutazione" ? [
+                          ["Capitale rivalutato", formatEuro(risIstat.capitale_rivalutato)],
+                          ["Rivalutazione", formatEuro(risIstat.rivalutazione)],
+                        ] : [
+                          ["Totale", formatEuro(risIstat.totale)],
+                          ["Capitale", formatEuro(risIstat.capitale)],
+                          ...(risIstat.rivalutazione != null ? [["Rivalutazione", formatEuro(risIstat.rivalutazione)] as [string, string]] : []),
+                          ["Interessi", formatEuro(risIstat.interessi)],
+                          ...righeDettaglio(risIstat.dettaglio, (d) => `${d.tasso_pct}%`, (d) => d.interesse),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6239,6 +6399,28 @@ export default function Calcolatori() {
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.totale)}</Text>
                         </View>
                       ))}
+                      <EsportaDocumento
+                        testIDPrefix="rivmens"
+                        titolo="Rivalutazione Mensile"
+                        datiInseriti={datiSnap("rivmens", risRivMens, () => [
+                          ["Importo di ogni rata €", rivMensImporto],
+                          ["Scadenza della prima rata non pagata", isoToDataIt(rivMensDataInizio)],
+                          ["Fino al", isoToDataIt(rivMensDataFine)],
+                          ["Rivaluta mensilmente (ISTAT)", siNo(rivMensMensilmente)],
+                          ["Calcola gli interessi legali", siNo(rivMensInteressi)],
+                          ...(rivMensInteressi ? [["Percentuale del tasso legale %", rivMensTassoInteressi] as [string, string]] : []),
+                          ["Rivaluta annualmente a un tasso indicato", siNo(rivMensAnnualmente)],
+                          ...(rivMensAnnualmente ? [["Tasso di rivalutazione annua %", rivMensTassoAnnuale] as [string, string]] : []),
+                        ])}
+                        risultato={[
+                          [`Totale (${risRivMens.numero_rate} ${risRivMens.numero_rate === 1 ? "rata" : "rate"})`, formatEuro(risRivMens.totale)],
+                          ["Capitale", formatEuro(risRivMens.capitale_totale)],
+                          ["Rivalutazione", formatEuro(risRivMens.rivalutazione_totale)],
+                          ["Montante rivalutato", formatEuro(risRivMens.capitale_rivalutato)],
+                          ["Interessi", formatEuro(risRivMens.interessi_totale)],
+                          ...righeDettaglio(risRivMens.dettaglio, (d) => `${d.giorni}gg`, (d) => d.totale),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6275,6 +6457,21 @@ export default function Calcolatori() {
                       <Text style={{ color: t.onBrandSecondary, marginTop: 2, fontSize: 11 }}>
                         Indice FOI: {risCanone.indice_precedente} → {risCanone.indice_corrente}
                       </Text>
+                      <EsportaDocumento
+                        testIDPrefix="canone"
+                        titolo="Adeguamento Canone"
+                        datiInseriti={datiSnap("canone", risCanone, () => [
+                          ["Canone attuale €", canoneImporto],
+                          ["Mese di riferimento per l'indice ISTAT", meseAnnoIt(canoneMeseRiferimento)],
+                          ["Percentuale di adeguamento", canonePercScelta === "altro" ? `${canonePercAltro}%` : etichettaOpz(PERCENTUALI_CANONE, canonePercScelta)],
+                        ])}
+                        risultato={[
+                          ["Nuovo canone", formatEuro(risCanone.nuovo_canone)],
+                          ["Adeguamento", formatEuro(risCanone.adeguamento)],
+                          ["Variazione ISTAT", `${risCanone.variazione_istat_pct}%`],
+                          ["Indice FOI", `${risCanone.indice_precedente} → ${risCanone.indice_corrente}`],
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6353,6 +6550,34 @@ export default function Calcolatori() {
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontVariant: ["tabular-nums"] }}>{formatEuro(d.montante)}</Text>
                         </View>
                       ))}
+                      <EsportaDocumento
+                        testIDPrefix="vari"
+                        titolo="Interessi Vari sul Capitale Rivalutato"
+                        datiInseriti={datiSnap("vari", risVari, () => [
+                          ["Capitale €", variCapitale],
+                          ["Dal", isoToDataIt(variDataInizio)],
+                          ["Al", isoToDataIt(variDataFine)],
+                          ["Tipo di interesse", etichettaOpz(TIPI_INTERESSE_VARI, variTipoInteresse)],
+                          ...(variTipoInteresse === "tasso_fisso" ? [["Tasso fisso %", variTassoFisso] as [string, string]] : []),
+                          ["Maggiorazione punti %", variMaggiorazione],
+                          ["Anatocismo", etichettaOpz(CAPITALIZZAZIONI, variAnatocismo)],
+                          ["Rivaluta il capitale secondo l'indice FOI", siNo(variRivaluta)],
+                          ...(variRivaluta ? [
+                            ["Modalità di rivalutazione", etichettaOpz(BASI_RIVALUTAZIONE_VARI, variBaseRivalutazione)] as [string, string],
+                            ["Percentuale di applicazione della rivalutazione %", variRivalutaAlPct] as [string, string],
+                            ["Ignora la deflazione", siNo(variIgnoraDeflazione)] as [string, string],
+                          ] : []),
+                          ["Giorno iniziale", etichettaOpz(GIORNI_INIZIALI_VARI, variGiornoIniziale)],
+                          ["Convenzione di calcolo dei giorni", etichettaOpz(CONVENZIONI_GIORNI_VARI, variConvenzioneGiorni)],
+                        ])}
+                        risultato={[
+                          ["Totale", formatEuro(risVari.totale)],
+                          ["Capitale", formatEuro(risVari.capitale)],
+                          ["Interessi", formatEuro(risVari.interessi)],
+                          ...(risVari.rivalutazione != null ? [["Rivalutazione", formatEuro(risVari.rivalutazione)] as [string, string]] : []),
+                          ...righeDettaglio(risVari.dettaglio, (d) => `${d.tasso_pct}%`, (d) => d.montante),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6406,6 +6631,23 @@ export default function Calcolatori() {
                           </View>
                         ) : null}
                       </View>
+                      <EsportaDocumento
+                        testIDPrefix="succ"
+                        titolo="Imposta di successione"
+                        datiInseriti={datiSnap("succ", risSucc, () => [
+                          ["Valore catastale immobile adibito a prima casa €", succPrimaCasa],
+                          ["Valore catastale altri immobili €", succAltriImmobili],
+                          ["Beni mobili €", succBeniMobili],
+                          ["Grado di parentela/affinità dell'erede", GRADI_SUCCESSIONE.find((g) => g.id === succGrado)?.label ?? succGrado],
+                          ...(succDisabile ? [["Erede con disabilità grave", "Sì"] as [string, string]] : []),
+                        ])}
+                        risultato={[
+                          ["Imposte totali dovute", formatEuro(risSucc.imposte_totali)],
+                          [`Imposta di successione (franchigia ${formatEuro(risSucc.franchigia)}, ${risSucc.aliquota_pct}% su ${formatEuro(risSucc.imponibile)})`, formatEuro(risSucc.imposta_successione)],
+                          ...(risSucc.imposta_ipotecaria_prima_casa > 0 || risSucc.imposta_catastale_prima_casa > 0 ? [["Ipotecaria + catastale prima casa", formatEuro(risSucc.imposta_ipotecaria_prima_casa + risSucc.imposta_catastale_prima_casa)] as [string, string]] : []),
+                          ...(risSucc.imposta_ipotecaria_altri_immobili > 0 || risSucc.imposta_catastale_altri_immobili > 0 ? [["Ipotecaria + catastale altri immobili", formatEuro(risSucc.imposta_ipotecaria_altri_immobili + risSucc.imposta_catastale_altri_immobili)] as [string, string]] : []),
+                        ]}
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -6469,6 +6711,35 @@ export default function Calcolatori() {
                         ...(risCtu.rimborso_km > 0 ? [{ label: "Rimborso km", value: formatEuro(risCtu.rimborso_km) }] : []),
                         ...(risCtu.onorario_tabellare > 0 ? [{ label: "Onorario tabellare", value: formatEuro(risCtu.onorario_tabellare) }] : []),
                       ]} />
+                      <EsportaDocumento
+                        testIDPrefix="ctu"
+                        titolo="Compenso CTU"
+                        datiInseriti={datiSnap("ctu", risCtu, () => [
+                          ["Inizio perizia", isoToDataIt(ctuDataInizioPerizia)],
+                          ["Fine perizia", isoToDataIt(ctuDataFinePerizia)],
+                          ["Numero vacazioni", ctuNumeroVacazioni],
+                          ["Carico vacazioni %", ctuCaricoVacazioni],
+                          ["Carico urgenza %", ctuCaricoUrgenza],
+                          ["Carico complessità %", ctuCaricoComplessita],
+                          ["Spese documentate €", ctuSpeseDocumentate],
+                          ["Rimborso chilometrico € per km", ctuRimborsoKmUnitario],
+                          ["Numero km", ctuNumeroKm],
+                          ["Onorario tabellare (DM 182/2002)", ctuArticoloTabellare ? etichettaOpz(ARTICOLI_DM182_CON_NESSUNO, ctuArticoloTabellare) : ""],
+                          ...(ctuArticoloTabellare ? [
+                            ["Valore stimato €", ctuValoreStimato] as [string, string],
+                            ["Tariffa predefinita", etichettaOpz(TARIFFE_PREDEFINITE_CTU, ctuTariffaPredefinita)] as [string, string],
+                            ["Carico onorari %", ctuCaricoOnorari] as [string, string],
+                          ] : []),
+                        ])}
+                        risultato={[
+                          ["Compenso totale", formatEuro(risCtu.totale)],
+                          ["Onorario vacazioni", formatEuro(risCtu.onorario_vacazioni)],
+                          ...(risCtu.maggiorazione_urgenza > 0 ? [["Urgenza", formatEuro(risCtu.maggiorazione_urgenza)] as [string, string]] : []),
+                          ...(risCtu.maggiorazione_complessita > 0 ? [["Complessità", formatEuro(risCtu.maggiorazione_complessita)] as [string, string]] : []),
+                          ...(risCtu.rimborso_km > 0 ? [["Rimborso km", formatEuro(risCtu.rimborso_km)] as [string, string]] : []),
+                          ...(risCtu.onorario_tabellare > 0 ? [["Onorario tabellare", formatEuro(risCtu.onorario_tabellare)] as [string, string]] : []),
+                        ]}
+                      />
                       {!risCtu.salvata ? (
                         <>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 11, fontWeight: "700", marginTop: SPACING.md, marginBottom: SPACING.xs }}>Nome parcella</Text>
@@ -6595,6 +6866,19 @@ export default function Calcolatori() {
                           <Text testID={i === 0 ? "gen-result" : undefined} style={{ color: t.onBrandSecondary, fontSize: 13, fontWeight: "800" }}>{v}</Text>
                         </View>
                       ))}
+                      {(() => {
+                        const cfgEsp = CONFIG_GENERICI[calcAperto];
+                        const docEsp = cfgEsp.documento ? cfgEsp.documento(genFormCalcolato, genRisultato) : null;
+                        return (
+                          <EsportaDocumento
+                            testIDPrefix="gen"
+                            titolo={CALCOLATORI.find((c) => c.id === calcAperto)?.titolo || "Calcolo"}
+                            datiInseriti={datiInseritiGenerici(cfgEsp.campi, genFormCalcolato)}
+                            risultato={cfgEsp.risultato(genRisultato)}
+                            testoDocumento={docEsp && "testo" in docEsp ? docEsp.testo : null}
+                          />
+                        );
+                      })()}
                       {CONFIG_GENERICI[calcAperto].documento ? (() => {
                         const doc = CONFIG_GENERICI[calcAperto].documento!(genFormCalcolato, genRisultato);
                         return (

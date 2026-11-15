@@ -27,6 +27,7 @@ export default function AppLayout() {
       <Stack.Screen name="notifiche" />
       <Stack.Screen name="team" />
       <Stack.Screen name="audit" />
+      <Stack.Screen name="intestazione" />
       <Stack.Screen name="pratica/[id]" />
       <Stack.Screen name="cliente/[id]" />
     </Stack>
