@@ -5210,19 +5210,19 @@ export default function Calcolatori() {
         <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TextInput
-              testID={`par-parte-nominativo-${i}`}
+              testID={`par-parte-nominativo-${i}`} accessibilityLabel={`Nome parte assistita ${i + 1}`}
               value={parte.nominativo}
               onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, nominativo: v } : x))}
               placeholder="Nome e cognome / Ragione sociale"
               placeholderTextColor={t.onSurfaceTertiary}
               style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
             />
-            <Pressable testID={`par-parte-rimuovi-${i}`} onPress={() => setPartiAssistite(partiAssistite.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+            <Pressable testID={`par-parte-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi parte assistita ${i + 1}`} onPress={() => setPartiAssistite(partiAssistite.filter((_, j) => j !== i))} style={{ padding: 8 }}>
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
           </View>
           <Pressable
-            testID={`par-parte-persona-giuridica-${i}`}
+            testID={`par-parte-persona-giuridica-${i}`} accessibilityRole="checkbox" accessibilityState={{ checked: parte.persona_giuridica }} accessibilityLabel={`Persona giuridica, parte assistita ${i + 1}`}
             onPress={() => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, persona_giuridica: !x.persona_giuridica } : x))}
             style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
           >
@@ -5233,7 +5233,7 @@ export default function Calcolatori() {
           </Pressable>
           {parte.persona_giuridica ? (
             <TextInput
-              testID={`par-parte-rappresentante-${i}`}
+              testID={`par-parte-rappresentante-${i}`} accessibilityLabel={`Rappresentante legale, parte assistita ${i + 1}`}
               value={parte.rappresentante_legale}
               onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, rappresentante_legale: v } : x))}
               placeholder="Rappresentante legale"
@@ -5242,7 +5242,7 @@ export default function Calcolatori() {
             />
           ) : null}
           <TextInput
-            testID={`par-parte-cf-piva-${i}`}
+            testID={`par-parte-cf-piva-${i}`} accessibilityLabel={`CF o P.IVA, parte assistita ${i + 1}`}
             value={parte.cf_piva}
             onChangeText={(v) => setPartiAssistite(partiAssistite.map((x, j) => j === i ? { ...x, cf_piva: v } : x))}
             placeholder="CF / P.IVA"
@@ -5252,7 +5252,7 @@ export default function Calcolatori() {
         </View>
       ))}
       <Pressable
-        testID="par-parte-aggiungi"
+        testID="par-parte-aggiungi" accessibilityRole="button"
         onPress={() => setPartiAssistite([...partiAssistite, { nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }])}
         style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
       >
@@ -5291,7 +5291,7 @@ export default function Calcolatori() {
         Le 4 fasi standard del preventivo: un importo (dai parametri forensi, per la competenza e il valore della controversia scelti sopra) con un aggiustamento percentuale discrezionale per fase.
       </Text>
       <Pressable
-        testID="par-suggerisci-parametri-forensi"
+        testID="par-suggerisci-parametri-forensi" accessibilityRole="button"
         onPress={suggerisciDaParametriForensi}
         disabled={suggerendoPar}
         style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brandSecondary, opacity: suggerendoPar ? 0.6 : 1, marginBottom: SPACING.sm }}
@@ -5315,11 +5315,11 @@ export default function Calcolatori() {
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
               <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: 0 }]}>Importo €</Text>
-              <TextInput testID={`par-${kImporto}`} value={par[kImporto]} onChangeText={(v) => setPar({ ...par, [kImporto]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+              <TextInput testID={`par-${kImporto}`} accessibilityLabel={`${label}, importo €`} value={par[kImporto]} onChangeText={(v) => setPar({ ...par, [kImporto]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: 0 }]}>Aggiustamento %</Text>
-              <TextInput testID={`par-${kPct}`} value={par[kPct]} onChangeText={(v) => setPar({ ...par, [kPct]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+              <TextInput testID={`par-${kPct}`} accessibilityLabel={`${label}, aggiustamento %`} value={par[kPct]} onChangeText={(v) => setPar({ ...par, [kPct]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
             </View>
           </View>
         </View>
@@ -5332,7 +5332,7 @@ export default function Calcolatori() {
       {vociCustom.map((v, i) => (
         <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, flexDirection: "row", alignItems: "center", gap: 8 }}>
           <TextInput
-            testID={`par-voce-custom-descrizione-${i}`}
+            testID={`par-voce-custom-descrizione-${i}`} accessibilityLabel={`Descrizione voce personalizzata ${i + 1}`}
             value={v.descrizione}
             onChangeText={(val) => setVociCustom(vociCustom.map((x, j) => j === i ? { ...x, descrizione: val } : x))}
             placeholder="Descrizione"
@@ -5340,7 +5340,7 @@ export default function Calcolatori() {
             style={[st.input, { flex: 2, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
           />
           <TextInput
-            testID={`par-voce-custom-importo-${i}`}
+            testID={`par-voce-custom-importo-${i}`} accessibilityLabel={`Importo voce personalizzata ${i + 1} €`}
             value={v.importo}
             onChangeText={(val) => setVociCustom(vociCustom.map((x, j) => j === i ? { ...x, importo: val } : x))}
             keyboardType="numeric"
@@ -5348,13 +5348,13 @@ export default function Calcolatori() {
             placeholderTextColor={t.onSurfaceTertiary}
             style={[st.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
           />
-          <Pressable testID={`par-voce-custom-rimuovi-${i}`} onPress={() => setVociCustom(vociCustom.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+          <Pressable testID={`par-voce-custom-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi voce personalizzata ${i + 1}`} onPress={() => setVociCustom(vociCustom.filter((_, j) => j !== i))} style={{ padding: 8 }}>
             <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
           </Pressable>
         </View>
       ))}
       <Pressable
-        testID="par-voce-custom-aggiungi"
+        testID="par-voce-custom-aggiungi" accessibilityRole="button"
         onPress={() => setVociCustom([...vociCustom, { descrizione: "", importo: "" }])}
         style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
       >
@@ -5367,20 +5367,20 @@ export default function Calcolatori() {
         <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <TextInput
-              testID={`par-spesa-descrizione-${i}`}
+              testID={`par-spesa-descrizione-${i}`} accessibilityLabel={`Descrizione spesa ${i + 1}`}
               value={v.descrizione}
               onChangeText={(val) => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, descrizione: val } : x))}
               placeholder="Voce di spesa"
               placeholderTextColor={t.onSurfaceTertiary}
               style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
             />
-            <Pressable testID={`par-spesa-rimuovi-${i}`} onPress={() => setVociSpese(vociSpese.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+            <Pressable testID={`par-spesa-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi spesa ${i + 1}`} onPress={() => setVociSpese(vociSpese.filter((_, j) => j !== i))} style={{ padding: 8 }}>
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}>
             <TextInput
-              testID={`par-spesa-importo-${i}`}
+              testID={`par-spesa-importo-${i}`} accessibilityLabel={`Importo spesa ${i + 1} €`}
               value={v.importo}
               onChangeText={(val) => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, importo: val } : x))}
               keyboardType="numeric"
@@ -5389,7 +5389,7 @@ export default function Calcolatori() {
               style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
             />
             <Pressable
-              testID={`par-spesa-esente-${i}`}
+              testID={`par-spesa-esente-${i}`} accessibilityRole="checkbox" accessibilityState={{ checked: v.esente }} accessibilityLabel={`Spesa ${i + 1} esente`}
               onPress={() => setVociSpese(vociSpese.map((x, j) => j === i ? { ...x, esente: !x.esente } : x))}
               style={[st.pill, { backgroundColor: v.esente ? t.brand : t.surface, borderColor: t.border }]}
             >
@@ -5399,7 +5399,7 @@ export default function Calcolatori() {
         </View>
       ))}
       <Pressable
-        testID="par-spesa-aggiungi"
+        testID="par-spesa-aggiungi" accessibilityRole="button"
         onPress={() => setVociSpese([...vociSpese, { descrizione: "", importo: "", esente: true }])}
         style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}
       >
@@ -5417,7 +5417,7 @@ export default function Calcolatori() {
       ].map(([k, l]) => (
         <View key={k as string}>
           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
-          <TextInput testID={`par-${k}`} value={par[k as string]} onChangeText={(v) => setPar({ ...par, [k as string]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+          <TextInput testID={`par-${k}`} accessibilityLabel={l} value={par[k as string]} onChangeText={(v) => setPar({ ...par, [k as string]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
         </View>
       ))}
       {campoTesto("luogo", "Luogo")}
@@ -5509,7 +5509,7 @@ export default function Calcolatori() {
           return (
             <Pressable
               key={cat.id}
-              testID={`categoria-${cat.id}`}
+              testID={`categoria-${cat.id}`} accessibilityRole="button"
               onPress={() => setCategoriaCalc(cat.id)}
               style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
             >
@@ -5550,7 +5550,7 @@ export default function Calcolatori() {
               return (
                 <Pressable
                   key={i}
-                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`}
+                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`} accessibilityRole="button"
                   onPress={() => (v.tipo === "atto" ? apriAtto(v.attoId) : apriCalcolatore(v.calcId))}
                   style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
                 >
@@ -5625,7 +5625,7 @@ export default function Calcolatori() {
                         {attoCrediti.map((v, i) => (
                           <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.sm, flexDirection: "row", alignItems: "center", gap: 8 }}>
                             <TextInput
-                              testID={`atto-credito-descrizione-${i}`}
+                              testID={`atto-credito-descrizione-${i}`} accessibilityLabel={`Descrizione credito ${i + 1}`}
                               value={v.descrizione}
                               onChangeText={(val) => setAttoCrediti(attoCrediti.map((x, j) => (j === i ? { ...x, descrizione: val } : x)))}
                               placeholder="Descrizione"
@@ -5633,7 +5633,7 @@ export default function Calcolatori() {
                               style={[st.input, { flex: 2, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
                             />
                             <TextInput
-                              testID={`atto-credito-importo-${i}`}
+                              testID={`atto-credito-importo-${i}`} accessibilityLabel={`Importo credito ${i + 1} €`}
                               value={v.importo}
                               onChangeText={(val) => setAttoCrediti(attoCrediti.map((x, j) => (j === i ? { ...x, importo: val } : x)))}
                               keyboardType="numeric"
@@ -5641,13 +5641,13 @@ export default function Calcolatori() {
                               placeholderTextColor={t.onSurfaceTertiary}
                               style={[st.input, { flex: 1, backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
                             />
-                            <Pressable testID={`atto-credito-rimuovi-${i}`} onPress={() => setAttoCrediti(attoCrediti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                            <Pressable testID={`atto-credito-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi credito ${i + 1}`} onPress={() => setAttoCrediti(attoCrediti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
                               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
                             </Pressable>
                           </View>
                         ))}
                         <Pressable
-                          testID="atto-credito-aggiungi"
+                          testID="atto-credito-aggiungi" accessibilityRole="button"
                           onPress={() => setAttoCrediti([...attoCrediti, { descrizione: "", importo: "" }])}
                           style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                         >
@@ -5663,19 +5663,19 @@ export default function Calcolatori() {
                           <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                               <TextInput
-                                testID={`procura-parte-nome-${i}`}
+                                testID={`procura-parte-nome-${i}`} accessibilityLabel={`Nome parte assistita procura ${i + 1}`}
                                 value={p.nome}
                                 onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, nome: val } : x)))}
                                 placeholder="Nome / Ragione sociale"
                                 placeholderTextColor={t.onSurfaceTertiary}
                                 style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
                               />
-                              <Pressable testID={`procura-parte-rimuovi-${i}`} onPress={() => setProcuraParti(procuraParti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                              <Pressable testID={`procura-parte-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi parte assistita procura ${i + 1}`} onPress={() => setProcuraParti(procuraParti.filter((_, j) => j !== i))} style={{ padding: 8 }}>
                                 <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
                               </Pressable>
                             </View>
                             <Pressable
-                              testID={`procura-parte-persona-giuridica-${i}`}
+                              testID={`procura-parte-persona-giuridica-${i}`} accessibilityRole="checkbox" accessibilityState={{ checked: p.persona_giuridica }} accessibilityLabel={`Persona giuridica, parte assistita procura ${i + 1}`}
                               onPress={() => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, persona_giuridica: !x.persona_giuridica } : x)))}
                               style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
                             >
@@ -5686,7 +5686,7 @@ export default function Calcolatori() {
                             </Pressable>
                             {p.persona_giuridica ? (
                               <TextInput
-                                testID={`procura-parte-legale-rappresentante-${i}`}
+                                testID={`procura-parte-legale-rappresentante-${i}`} accessibilityLabel={`Legale rappresentante, parte assistita procura ${i + 1}`}
                                 value={p.legale_rappresentante}
                                 onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, legale_rappresentante: val } : x)))}
                                 placeholder="Legale rappresentante"
@@ -5695,7 +5695,7 @@ export default function Calcolatori() {
                               />
                             ) : null}
                             <TextInput
-                              testID={`procura-parte-cf-piva-${i}`}
+                              testID={`procura-parte-cf-piva-${i}`} accessibilityLabel={`CF o P.IVA, parte assistita procura ${i + 1}`}
                               value={p.cf_piva}
                               onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, cf_piva: val } : x)))}
                               placeholder="C.F. / P.IVA"
@@ -5703,7 +5703,7 @@ export default function Calcolatori() {
                               style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
                             />
                             <TextInput
-                              testID={`procura-parte-indirizzo-${i}`}
+                              testID={`procura-parte-indirizzo-${i}`} accessibilityLabel={`Indirizzo, parte assistita procura ${i + 1}`}
                               value={p.indirizzo}
                               onChangeText={(val) => setProcuraParti(procuraParti.map((x, j) => (j === i ? { ...x, indirizzo: val } : x)))}
                               placeholder="Indirizzo / sede"
@@ -5713,7 +5713,7 @@ export default function Calcolatori() {
                           </View>
                         ))}
                         <Pressable
-                          testID="procura-parte-aggiungi"
+                          testID="procura-parte-aggiungi" accessibilityRole="button"
                           onPress={() => setProcuraParti([...procuraParti, { nome: "", persona_giuridica: false, legale_rappresentante: "", cf_piva: "", indirizzo: "" }])}
                           style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                         >
@@ -5729,14 +5729,14 @@ export default function Calcolatori() {
                           <View key={i} style={{ marginTop: i === 0 ? 0 : SPACING.md, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                               <TextInput
-                                testID={`procura-avvocato-nome-${i}`}
+                                testID={`procura-avvocato-nome-${i}`} accessibilityLabel={`Nome avvocato ${i + 1}`}
                                 value={a.nome}
                                 onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, nome: val } : x)))}
                                 placeholder="Nome e cognome"
                                 placeholderTextColor={t.onSurfaceTertiary}
                                 style={[st.input, { flex: 1, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
                               />
-                              <Pressable testID={`procura-avvocato-rimuovi-${i}`} onPress={() => setProcuraAvvocati(procuraAvvocati.filter((_, j) => j !== i))} style={{ padding: 8 }}>
+                              <Pressable testID={`procura-avvocato-rimuovi-${i}`} accessibilityRole="button" accessibilityLabel={`Rimuovi avvocato ${i + 1}`} onPress={() => setProcuraAvvocati(procuraAvvocati.filter((_, j) => j !== i))} style={{ padding: 8 }}>
                                 <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
                               </Pressable>
                             </View>
@@ -5750,7 +5750,7 @@ export default function Calcolatori() {
                               />
                             </View>
                             <TextInput
-                              testID={`procura-avvocato-cf-${i}`}
+                              testID={`procura-avvocato-cf-${i}`} accessibilityLabel={`Codice fiscale avvocato ${i + 1}`}
                               value={a.cf}
                               onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, cf: val } : x)))}
                               placeholder="Codice fiscale"
@@ -5758,7 +5758,7 @@ export default function Calcolatori() {
                               style={[st.input, { marginTop: SPACING.sm, backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]}
                             />
                             <Pressable
-                              testID={`procura-avvocato-eletto-domicilio-${i}`}
+                              testID={`procura-avvocato-eletto-domicilio-${i}`} accessibilityRole="checkbox" accessibilityState={{ checked: a.eletto_domicilio }} accessibilityLabel={`Eletto domicilio presso questo avvocato, avvocato ${i + 1}`}
                               onPress={() => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, eletto_domicilio: !x.eletto_domicilio } : x)))}
                               style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
                             >
@@ -5769,7 +5769,7 @@ export default function Calcolatori() {
                             </Pressable>
                             {a.eletto_domicilio ? (
                               <TextInput
-                                testID={`procura-avvocato-indirizzo-studio-${i}`}
+                                testID={`procura-avvocato-indirizzo-studio-${i}`} accessibilityLabel={`Indirizzo dello studio, avvocato ${i + 1}`}
                                 value={a.indirizzo_studio}
                                 onChangeText={(val) => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, indirizzo_studio: val } : x)))}
                                 placeholder="Indirizzo dello studio"
@@ -5778,7 +5778,7 @@ export default function Calcolatori() {
                               />
                             ) : null}
                             <Pressable
-                              testID={`procura-avvocato-autentica-firme-${i}`}
+                              testID={`procura-avvocato-autentica-firme-${i}`} accessibilityRole="checkbox" accessibilityState={{ checked: a.autentica_firme }} accessibilityLabel={`Autentica le firme degli assistiti, avvocato ${i + 1}`}
                               onPress={() => setProcuraAvvocati(procuraAvvocati.map((x, j) => (j === i ? { ...x, autentica_firme: !x.autentica_firme } : x)))}
                               style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm }}
                             >
@@ -5790,7 +5790,7 @@ export default function Calcolatori() {
                           </View>
                         ))}
                         <Pressable
-                          testID="procura-avvocato-aggiungi"
+                          testID="procura-avvocato-aggiungi" accessibilityRole="button"
                           onPress={() => setProcuraAvvocati([...procuraAvvocati, { nome: "", cf: "", ordine: "", eletto_domicilio: false, indirizzo_studio: "", autentica_firme: false }])}
                           style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                         >
@@ -5816,7 +5816,7 @@ export default function Calcolatori() {
                   <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>BOZZA GENERATA</Text>
                   <Text style={{ color: t.onBrandSecondary, marginTop: 4 }}>{attoGenerato.titolo}</Text>
                   <Pressable
-                    testID="apri-atto-docx"
+                    testID="apri-atto-docx" accessibilityRole="button"
                     onPress={() => scegliAperturaDocumento(`/atti/${attoGenerato.id}/docx`, `/atti/${attoGenerato.id}/docx/view-link`, `${attoGenerato.tipo}.docx`)}
                     style={{ marginTop: SPACING.md, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md }}
                   >
@@ -5854,8 +5854,8 @@ export default function Calcolatori() {
                     />
                   </View>
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{tipoMem === "171-ter" ? "Data udienza di trattazione" : "Data udienza collegiale di discussione"}</Text>
-                  <DataInput testID="mem-udienza" value={memUdienza} onChange={setMemUdienza} />
-                  <Pressable testID="mem-toggle-feriale" onPress={() => setMemEscludiFer(!memEscludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.md }}>
+                  <DataInput testID="mem-udienza" accessibilityLabel={tipoMem === "171-ter" ? "Data udienza di trattazione" : "Data udienza collegiale di discussione"} value={memUdienza} onChange={setMemUdienza} />
+                  <Pressable testID="mem-toggle-feriale" accessibilityRole="checkbox" accessibilityState={{ checked: memEscludiFer }} accessibilityLabel="Applica sospensione feriale (1-31 agosto)" onPress={() => setMemEscludiFer(!memEscludiFer)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.md, marginTop: SPACING.md }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: memEscludiFer ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {memEscludiFer ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                     </View>
@@ -5918,7 +5918,7 @@ export default function Calcolatori() {
                   {calcAperto === "interessi-mora" ? (
                     <>
                       <Pressable
-                        testID="tassi-prodotti-agricoli"
+                        testID="tassi-prodotti-agricoli" accessibilityRole="checkbox" accessibilityState={{ checked: tassiProdottiAgricoli }} accessibilityLabel="Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)"
                         onPress={() => {
                           const nuovo = !tassiProdottiAgricoli;
                           setTassiProdottiAgricoli(nuovo);
@@ -5993,7 +5993,7 @@ export default function Calcolatori() {
                             opzioni={cuProcesso === "amministrativo" ? VALORE_TIPI_CU_APPALTI : cuProcesso === "tributario" ? VALORE_TIPI_CU_TRIBUTARIO : VALORE_TIPI_CU_CIVILE}
                           />
                           {cuValoreTipo === "determinato" ? (
-                            <TextInput testID="cu-valore-causa" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                            <TextInput testID="cu-valore-causa" accessibilityLabel="Valore della causa" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                           ) : null}
                           {cuProcesso === "civile" && cuValoreTipo === "indeterminabile" ? (
                             <>
@@ -6005,7 +6005,7 @@ export default function Calcolatori() {
                       ) : null}
                       {cuProcesso === "civile" ? (
                         <Pressable
-                          testID="cu-riduzione-50"
+                          testID="cu-riduzione-50" accessibilityRole="checkbox" accessibilityState={{ checked: cuRiduzione50 }} accessibilityLabel="Riduzione del 50% (ingiunzione, sfratto, cautelari/possessori, ATP, lavoro/pubblico impiego)"
                           onPress={() => setCuRiduzione50(!cuRiduzione50)}
                           style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                         >
@@ -6087,13 +6087,13 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Fino al (di norma la data del pagamento, o oggi)</Text>
                   <DataInput testID="rivmens-data-fine" accessibilityLabel="Fino al" value={rivMensDataFine} onChange={setRivMensDataFine} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary, marginTop: SPACING.sm }]}>Opzioni di calcolo (combinabili liberamente tra loro)</Text>
-                  <Pressable testID="rivmens-check-mensile" onPress={() => setRivMensMensilmente(!rivMensMensilmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
+                  <Pressable testID="rivmens-check-mensile" accessibilityRole="checkbox" accessibilityState={{ checked: rivMensMensilmente }} accessibilityLabel="Rivaluta mensilmente gli importi dovuti e non riscossi (ISTAT)" onPress={() => setRivMensMensilmente(!rivMensMensilmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensMensilmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {rivMensMensilmente ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                     </View>
                     <Text style={{ color: t.onSurface, flex: 1 }}>Rivaluta mensilmente gli importi dovuti e non riscossi (ISTAT)</Text>
                   </Pressable>
-                  <Pressable testID="rivmens-check-interessi" onPress={() => setRivMensInteressi(!rivMensInteressi)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
+                  <Pressable testID="rivmens-check-interessi" accessibilityRole="checkbox" accessibilityState={{ checked: rivMensInteressi }} accessibilityLabel="Calcola gli interessi legali" onPress={() => setRivMensInteressi(!rivMensInteressi)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensInteressi ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {rivMensInteressi ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                     </View>
@@ -6105,7 +6105,7 @@ export default function Calcolatori() {
                       <TextInput testID="rivmens-tasso-interessi" accessibilityLabel="Percentuale del tasso legale %" value={rivMensTassoInteressi} onChangeText={setRivMensTassoInteressi} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                     </>
                   ) : null}
-                  <Pressable testID="rivmens-check-annuale" onPress={() => setRivMensAnnualmente(!rivMensAnnualmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
+                  <Pressable testID="rivmens-check-annuale" accessibilityRole="checkbox" accessibilityState={{ checked: rivMensAnnualmente }} accessibilityLabel="Rivaluta annualmente l'importo dovuto, a un tasso indicato da te" onPress={() => setRivMensAnnualmente(!rivMensAnnualmente)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: SPACING.sm }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: rivMensAnnualmente ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {rivMensAnnualmente ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                     </View>
@@ -6201,7 +6201,7 @@ export default function Calcolatori() {
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Anatocismo</Text>
                   <SelectInput testID="vari-anatocismo" accessibilityLabel="Anatocismo" value={variAnatocismo} onChange={setVariAnatocismo} opzioni={CAPITALIZZAZIONI} />
                   <Pressable
-                    testID="vari-rivaluta"
+                    testID="vari-rivaluta" accessibilityRole="checkbox" accessibilityState={{ checked: variRivaluta }} accessibilityLabel="Rivaluta il capitale secondo l'indice FOI"
                     onPress={() => setVariRivaluta(!variRivaluta)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                   >
@@ -6217,7 +6217,7 @@ export default function Calcolatori() {
                       <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale di applicazione della rivalutazione % (100 = piena, es. 75 per clausole di adeguamento parziale)</Text>
                       <TextInput testID="vari-rivaluta-al-pct" accessibilityLabel="Percentuale di applicazione della rivalutazione %" value={variRivalutaAlPct} onChangeText={setVariRivalutaAlPct} keyboardType="numeric" placeholder="100" placeholderTextColor={t.onSurfaceTertiary} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                       <Pressable
-                        testID="vari-ignora-deflazione"
+                        testID="vari-ignora-deflazione" accessibilityRole="checkbox" accessibilityState={{ checked: variIgnoraDeflazione }} accessibilityLabel="Ignora la deflazione (se l'indice cala, non applica una rivalutazione negativa)"
                         onPress={() => setVariIgnoraDeflazione(!variIgnoraDeflazione)}
                         style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.sm, marginBottom: SPACING.sm }}
                       >
@@ -6268,14 +6268,14 @@ export default function Calcolatori() {
                   <TextInput testID="succ-beni-mobili" accessibilityLabel="Beni mobili" value={succBeniMobili} onChangeText={setSuccBeniMobili} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                   <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Grado di parentela/affinità dell&apos;erede rispetto al defunto</Text>
                   {GRADI_SUCCESSIONE.map((g) => (
-                    <Pressable key={g.id} testID={`succ-grado-${g.id}`} onPress={() => setSuccGrado(g.id)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
+                    <Pressable key={g.id} testID={`succ-grado-${g.id}`} accessibilityRole="radio" accessibilityState={{ selected: succGrado === g.id }} accessibilityLabel={g.label} onPress={() => setSuccGrado(g.id)} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 }}>
                       <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: t.brand, alignItems: "center", justifyContent: "center" }}>
                         {succGrado === g.id ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.brand }} /> : null}
                       </View>
                       <Text style={{ color: t.onSurface, fontSize: 13, flex: 1 }}>{g.label}</Text>
                     </Pressable>
                   ))}
-                  <Pressable testID="succ-toggle-disabile" onPress={() => setSuccDisabile(!succDisabile)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md }}>
+                  <Pressable testID="succ-toggle-disabile" accessibilityRole="checkbox" accessibilityState={{ checked: succDisabile }} accessibilityLabel="Erede portatore di handicap grave (L. 104/1992)" onPress={() => setSuccDisabile(!succDisabile)} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md }}>
                     <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: succDisabile ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                       {succDisabile ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                     </View>

@@ -12,14 +12,15 @@ Questo documento riepiloga le proprietà di accessibilità aggiunte all'app per 
 | #157 | Accesso, registrazione, reset, verifica email, barra schede | `d14145e` |
 | #158 | Schermate principali (dashboard, clienti, archivio, calendario, profilo, pratica, cliente, impostazioni, team, audit, notifiche) | `d334e7c` |
 | #159 | Motore dei calcolatori e componenti di campo | `fcb2cdb` |
+| #161 | Calcolatori: etichette dei 51 elementi residui e di `mem-udienza` | vedi nota in "Scelte da confermare" |
 
 ## Proprietà aggiunte per file
 
-Conteggio delle proprietà di accessibilità presenti nelle righe aggiunte rispetto a `ec25de6`. Totale: 394.
+Conteggio delle proprietà di accessibilità presenti nelle righe aggiunte rispetto a `ec25de6`. Totale: 482 (era 394; +88 da `app/(app)/calcolatori.tsx` con la PR #161).
 
 | Proprietà | File |
 |---|---|
-| 102 | `app/(app)/calcolatori.tsx` |
+| 190 | `app/(app)/calcolatori.tsx` |
 | 49 | `app/(app)/pratica/[id].tsx` |
 | 32 | `app/(app)/(tabs)/archivio.tsx` |
 | 23 | `app/(app)/calendario.tsx` |
@@ -62,70 +63,82 @@ Prop facoltativa aggiunta, da passare all'elemento interno (pulsante o campo):
 Non è cambiata la firma di `Header`, `ListaInput`, `OrarioInput`, `PraticaPicker`, `PromemoriaInput`, `PasswordHint`, `SwipeToDelete`: hanno ricevuto etichette fisse o derivate dai propri dati.
 `SwipeBackScreen` è solo un contenitore e non ha elementi interattivi: non è stato modificato.
 
+## Elementi di `calcolatori.tsx` etichettati nella PR #161
+
+Su 277 tag interattivi o immagini in `app/` e `src/`, **277 su 277 hanno almeno una proprietà di accessibilità**. I 51 elementi che nella versione precedente di questo documento risultavano senza etichetta sono ora tutti in `app/(app)/calcolatori.tsx`. In più è stato etichettato `mem-udienza`, che è un `DataInput` (componente, fuori dal conteggio dei 277).
+
+Legenda: **button** = `accessibilityRole="button"`, senza etichetta propria (VoiceOver legge il testo visibile del pulsante); **campo** = `TextInput` o `DataInput` con `accessibilityLabel`; **checkbox** = `accessibilityRole="checkbox"` con `accessibilityState={{ checked }}`; **radio** = `accessibilityRole="radio"` con `accessibilityState={{ selected }}`. Le righe con `${i}` o `${i + 1}` sono liste dinamiche: l'etichetta include il numero di riga.
+
+| testID o contesto | ruolo | etichetta usata |
+|---|---|---|
+| `par-parte-nominativo-${i}` | campo | `Nome parte assistita ${i + 1}` |
+| `par-parte-rimuovi-${i}` | button | `Rimuovi parte assistita ${i + 1}` |
+| `par-parte-persona-giuridica-${i}` | checkbox | `Persona giuridica, parte assistita ${i + 1}` |
+| `par-parte-rappresentante-${i}` | campo | `Rappresentante legale, parte assistita ${i + 1}` |
+| `par-parte-cf-piva-${i}` | campo | `CF o P.IVA, parte assistita ${i + 1}` |
+| `par-parte-aggiungi` | button | testo visibile "Aggiungi un'altra parte assistita" |
+| `par-suggerisci-parametri-forensi` | button | testo visibile "Calcola importi dai parametri forensi" |
+| `par-${kImporto}` (4 fasi) | campo | `${fase}, importo €` (es. "Fase di studio, importo €") |
+| `par-${kPct}` (4 fasi) | campo | `${fase}, aggiustamento %` (es. "Fase di studio, aggiustamento %") |
+| `par-voce-custom-descrizione-${i}` | campo | `Descrizione voce personalizzata ${i + 1}` |
+| `par-voce-custom-importo-${i}` | campo | `Importo voce personalizzata ${i + 1} €` |
+| `par-voce-custom-rimuovi-${i}` | button | `Rimuovi voce personalizzata ${i + 1}` |
+| `par-voce-custom-aggiungi` | button | testo visibile "Aggiungi voce personalizzata" |
+| `par-spesa-descrizione-${i}` | campo | `Descrizione spesa ${i + 1}` |
+| `par-spesa-rimuovi-${i}` | button | `Rimuovi spesa ${i + 1}` |
+| `par-spesa-importo-${i}` | campo | `Importo spesa ${i + 1} €` |
+| `par-spesa-esente-${i}` | checkbox | `Spesa ${i + 1} esente` |
+| `par-spesa-aggiungi` | button | testo visibile "Aggiungi voce di spesa" |
+| `par-${k}` (spese generali, CPA, IVA, ritenuta) | campo | `l`, cioè il testo della riga (es. "Spese generali %") |
+| `categoria-${cat.id}` | button | testo visibile (titolo della categoria) |
+| `atto-${v.attoId}` / `calc-${v.calcId}` | button | testo visibile (nome della voce) |
+| `atto-credito-descrizione-${i}` | campo | `Descrizione credito ${i + 1}` |
+| `atto-credito-importo-${i}` | campo | `Importo credito ${i + 1} €` |
+| `atto-credito-rimuovi-${i}` | button | `Rimuovi credito ${i + 1}` |
+| `atto-credito-aggiungi` | button | testo visibile "Aggiungi un altro credito" |
+| `procura-parte-nome-${i}` | campo | `Nome parte assistita procura ${i + 1}` |
+| `procura-parte-rimuovi-${i}` | button | `Rimuovi parte assistita procura ${i + 1}` |
+| `procura-parte-persona-giuridica-${i}` | checkbox | `Persona giuridica, parte assistita procura ${i + 1}` |
+| `procura-parte-legale-rappresentante-${i}` | campo | `Legale rappresentante, parte assistita procura ${i + 1}` |
+| `procura-parte-cf-piva-${i}` | campo | `CF o P.IVA, parte assistita procura ${i + 1}` |
+| `procura-parte-indirizzo-${i}` | campo | `Indirizzo, parte assistita procura ${i + 1}` |
+| `procura-parte-aggiungi` | button | testo visibile "Aggiungi un'altra parte assistita" |
+| `procura-avvocato-nome-${i}` | campo | `Nome avvocato ${i + 1}` |
+| `procura-avvocato-rimuovi-${i}` | button | `Rimuovi avvocato ${i + 1}` |
+| `procura-avvocato-cf-${i}` | campo | `Codice fiscale avvocato ${i + 1}` |
+| `procura-avvocato-eletto-domicilio-${i}` | checkbox | `Eletto domicilio presso questo avvocato, avvocato ${i + 1}` |
+| `procura-avvocato-indirizzo-studio-${i}` | campo | `Indirizzo dello studio, avvocato ${i + 1}` |
+| `procura-avvocato-autentica-firme-${i}` | checkbox | `Autentica le firme degli assistiti, avvocato ${i + 1}` |
+| `procura-avvocato-aggiungi` | button | testo visibile "Aggiungi un altro avvocato" |
+| `apri-atto-docx` | button | testo visibile "Apri documento" |
+| `mem-udienza` (fuori dai 51) | campo | dinamica: "Data udienza di trattazione" (art. 171-ter) oppure "Data udienza collegiale di discussione" (art. 189 e 275-bis) |
+| `mem-toggle-feriale` | checkbox | "Applica sospensione feriale (1-31 agosto)" |
+| `tassi-prodotti-agricoli` | checkbox | "Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)" |
+| `cu-valore-causa` | campo | "Valore della causa" |
+| `cu-riduzione-50` | checkbox | "Riduzione del 50% (ingiunzione, sfratto, cautelari/possessori, ATP, lavoro/pubblico impiego)" |
+| `rivmens-check-mensile` | checkbox | "Rivaluta mensilmente gli importi dovuti e non riscossi (ISTAT)" |
+| `rivmens-check-interessi` | checkbox | "Calcola gli interessi legali" |
+| `rivmens-check-annuale` | checkbox | "Rivaluta annualmente l'importo dovuto, a un tasso indicato da te" |
+| `vari-rivaluta` | checkbox | "Rivaluta il capitale secondo l'indice FOI" |
+| `vari-ignora-deflazione` | checkbox | "Ignora la deflazione (se l'indice cala, non applica una rivalutazione negativa)" |
+| `succ-grado-${g.id}` | radio | testo del grado di parentela (`g.label`) |
+| `succ-toggle-disabile` | checkbox | "Erede portatore di handicap grave (L. 104/1992)" |
+
+## Scelte da confermare
+
+Scelte fatte in autonomia, da rivedere con VoiceOver o con l'autore del calcolatore:
+
+- **`cu-valore-causa`**: l'etichetta è "Valore della causa", come richiesto. Il selettore sopra (`cu-valore-tipo`) ha la stessa etichetta, e il campo è l'importo: un utente VoiceOver potrebbe non distinguerli. Proposta: "Importo della causa €".
+- **`mem-udienza`**: la richiesta indicava "Data dell'udienza", ma dal codice il testo visibile cambia con il tipo di termine. È stata usata l'etichetta dinamica corrispondente, non un testo fisso.
+- **`par-spesa-esente-${i}`**: è un pulsante a pillola con testo "Esente" / "Non esente", che funziona da interruttore: trattato come casella con etichetta "Spesa N esente". Il testo visibile cambia a ogni stato, quindi l'etichetta non lo ripete.
+- **Pulsanti con testo visibile**: hanno solo il ruolo, come richiesto; VoiceOver legge il testo del figlio.
+- **Liste dinamiche**: le etichette includono il numero di riga (`${i + 1}`). Per le parti della procura è stato aggiunto "procura" per distinguerle dalle parti della parcella.
+- **Proprietà fuori dai 51**: `mem-udienza` è un componente `DataInput`, non conteggiato nei 277; è stato etichettato perché era nell'elenco della richiesta.
+- **Sha del merge**: lo sha del commit di merge non può comparire nel file della stessa PR. Viene riportato nel resoconto della PR, e la tabella sopra mantiene il riferimento "vedi nota".
+
 ## Elementi che non sono stati etichettati
 
-Su 277 tag interattivi o immagini in `app/` e `src/`, 226 hanno almeno una proprietà di accessibilità. Gli altri 51 sono tutti in `app/(app)/calcolatori.tsx`:
-
-- **Campi dinamici di liste** (parti assistite, procura, voci personalizzate, spese, crediti): l'etichetta visibile è un testo generato nel ciclo e non è sempre disponibile in forma leggibile. Servirebbe passare l'etichetta della riga come parametro.
-- **Pulsanti "rimuovi" dinamici** (cestino delle righe): stessa situazione, servono etichette per riga.
-- **Interruttori non ancora etichettati** (`mem-toggle-feriale`, `rivmens-check-mensile`, `rivmens-check-interessi`, `rivmens-check-annuale`, `succ-toggle-disabile`, e i pulsanti di grado successorio `succ-grado-*`): qui l'etichetta è chiara e l'intervento è semplice (ruolo `checkbox` con `checked`), ma non è stato fatto in questa tornata.
-- **Campi senza etichetta visibile** (`cu-valore-causa`, `mem-udienza`): richiedono una scelta sul testo da usare.
-
-Elenco esatto (riga di `app/(app)/calcolatori.tsx` al momento del merge `fcb2cdb`):
-
-| Riga | Tipo | Inizio del tag |
-|---|---|---|
-| 5212 | campo | `<TextInput` |
-| 5220 | pulsante | `<Pressable testID={`par-parte-rimuovi-${i}`} onPress={() => setPartiAs` |
-| 5224 | pulsante | `<Pressable` |
-| 5235 | campo | `<TextInput` |
-| 5244 | campo | `<TextInput` |
-| 5254 | pulsante | `<Pressable` |
-| 5293 | pulsante | `<Pressable` |
-| 5318 | campo | `<TextInput testID={`par-${kImporto}`} value={par[kImporto]} onChangeTe` |
-| 5322 | campo | `<TextInput testID={`par-${kPct}`} value={par[kPct]} onChangeText={(v) ` |
-| 5334 | campo | `<TextInput` |
-| 5342 | campo | `<TextInput` |
-| 5351 | pulsante | `<Pressable testID={`par-voce-custom-rimuovi-${i}`} onPress={() => setV` |
-| 5356 | pulsante | `<Pressable` |
-| 5369 | campo | `<TextInput` |
-| 5377 | pulsante | `<Pressable testID={`par-spesa-rimuovi-${i}`} onPress={() => setVociSpe` |
-| 5382 | campo | `<TextInput` |
-| 5391 | pulsante | `<Pressable` |
-| 5401 | pulsante | `<Pressable` |
-| 5420 | campo | `<TextInput testID={`par-${k}`} value={par[k as string]} onChangeText={` |
-| 5510 | pulsante | `<Pressable` |
-| 5551 | pulsante | `<Pressable` |
-| 5627 | campo | `<TextInput` |
-| 5635 | campo | `<TextInput` |
-| 5644 | pulsante | `<Pressable testID={`atto-credito-rimuovi-${i}`} onPress={() => setAtto` |
-| 5649 | pulsante | `<Pressable` |
-| 5665 | campo | `<TextInput` |
-| 5673 | pulsante | `<Pressable testID={`procura-parte-rimuovi-${i}`} onPress={() => setPro` |
-| 5677 | pulsante | `<Pressable` |
-| 5688 | campo | `<TextInput` |
-| 5697 | campo | `<TextInput` |
-| 5705 | campo | `<TextInput` |
-| 5715 | pulsante | `<Pressable` |
-| 5731 | campo | `<TextInput` |
-| 5739 | pulsante | `<Pressable testID={`procura-avvocato-rimuovi-${i}`} onPress={() => set` |
-| 5752 | campo | `<TextInput` |
-| 5760 | pulsante | `<Pressable` |
-| 5771 | campo | `<TextInput` |
-| 5780 | pulsante | `<Pressable` |
-| 5792 | pulsante | `<Pressable` |
-| 5818 | pulsante | `<Pressable` |
-| 5858 | pulsante | `<Pressable testID="mem-toggle-feriale" onPress={() => setMemEscludiFer` |
-| 5920 | pulsante | `<Pressable` |
-| 5996 | campo | `<TextInput testID="cu-valore-causa" value={cuValoreCausa} onChangeText` |
-| 6007 | pulsante | `<Pressable` |
-| 6090 | pulsante | `<Pressable testID="rivmens-check-mensile" onPress={() => setRivMensMen` |
-| 6096 | pulsante | `<Pressable testID="rivmens-check-interessi" onPress={() => setRivMensI` |
-| 6108 | pulsante | `<Pressable testID="rivmens-check-annuale" onPress={() => setRivMensAnn` |
-| 6203 | pulsante | `<Pressable` |
-| 6219 | pulsante | `<Pressable` |
-| 6271 | pulsante | `<Pressable key={g.id} testID={`succ-grado-${g.id}`} onPress={() => set` |
-| 6278 | pulsante | `<Pressable testID="succ-toggle-disabile" onPress={() => setSuccDisabil` |
+Nessuno: i 277 tag interattivi o immagini in `app/` e `src/` hanno almeno una proprietà di accessibilità.
 
 ## Da controllare a mano con VoiceOver su iPhone
 
@@ -135,5 +148,5 @@ Elenco esatto (riga di `app/(app)/calcolatori.tsx` al momento del merge `fcb2cdb
 - Selettori (`SelectInput`, `DataInput`, `MeseAnnoInput`): apertura, scelta voce, chiusura con "Fatto"; le ruote mese/anno sono raggiungibili.
 - Pulsanti a sola icona: indietro, chiudi, elimina, aggiungi.
 - Schermate con overlay (`SwipeBackScreen`): il focus resta dentro l'overlay mentre è aperto.
-- Calcolatori: il motore generico (etichette dei campi, checkbox, pulsanti di calcolo e salvataggio); i campi dinamici elencati sopra.
+- Calcolatori: le etichette dinamiche con numero di riga e le caselle di `calcolatori.tsx` (tabella sopra), in particolare il ruolo `radio` dei gradi di successione.
 - Icone decorative: non devono essere annunciate (il logo di caricamento è già `accessible={false}`; le altre icone Feather accanto a un testo visibile non hanno proprietà dedicate e vengono ignorate da VoiceOver quando il pulsante ha già un'etichetta).
