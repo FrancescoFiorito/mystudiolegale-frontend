@@ -46,7 +46,7 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
               {selezionata?.oggetto || "Pratica"}
             </Text>
           </View>
-          <Pressable testID="pratica-picker-deseleziona" onPress={() => { onChange(null); setQ(""); setAperto(false); }} style={{ padding: 8 }}>
+          <Pressable testID="pratica-picker-deseleziona" accessibilityRole="button" accessibilityLabel="Rimuovi collegamento alla pratica" onPress={() => { onChange(null); setQ(""); setAperto(false); }} style={{ padding: 8 }}>
             <Feather name="x" size={16} color={t.onSurfaceTertiary} />
           </Pressable>
         </View>
@@ -56,6 +56,7 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
             <Feather name="search" size={15} color={t.onSurfaceTertiary} />
             <TextInput
               testID="pratica-picker-search"
+              accessibilityLabel="Collega a una pratica (facoltativo)"
               value={q}
               onChangeText={setQ}
               onFocus={() => setAperto(true)}
@@ -73,6 +74,8 @@ export default function PraticaPicker({ pratiche, praticaId, onChange, helperTex
                   <Pressable
                     key={p.id}
                     testID={`pratica-picker-opzione-${p.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={p.oggetto}
                     onPress={() => { onChange(p.id); setQ(""); setAperto(false); }}
                     style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}
                   >

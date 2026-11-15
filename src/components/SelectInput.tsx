@@ -12,7 +12,7 @@ import { SPACING, RADIUS } from "@/src/theme";
 type Opzione = { value: string; label: string };
 
 export default function SelectInput({
-  value, onChange, opzioni, placeholder = "Seleziona", testID, disabled = false, cercabile = false,
+  value, onChange, opzioni, placeholder = "Seleziona", testID, disabled = false, cercabile = false, accessibilityLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -25,6 +25,7 @@ export default function SelectInput({
   // filtrato man mano che si scrive (stesso comportamento del selettore di
   // voci notevoli del c.p.c. in Scadenze Processuali).
   cercabile?: boolean;
+  accessibilityLabel?: string;
 }) {
   const { t } = useTheme();
   const [aperto, setAperto] = React.useState(false);
@@ -38,6 +39,10 @@ export default function SelectInput({
     <View>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? placeholder}
+        accessibilityState={{ expanded: aperto, disabled }}
+        accessibilityValue={{ text: selezionata?.label }}
         onPress={() => { if (disabled) return; setQuery(""); setAperto(!aperto); }}
         style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -57,6 +62,7 @@ export default function SelectInput({
               <Feather name="search" size={14} color={t.onSurfaceTertiary} />
               <TextInput
                 testID={testID ? `${testID}-cerca` : undefined}
+                accessibilityLabel="Cerca tra le voci"
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Cerca..."
@@ -74,6 +80,8 @@ export default function SelectInput({
                 <Pressable
                   key={o.value}
                   testID={testID ? `${testID}-opzione-${o.value}` : undefined}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: o.value === value }}
                   onPress={() => { onChange(o.value); setAperto(false); }}
                   style={{ paddingVertical: 10, paddingHorizontal: SPACING.md, backgroundColor: o.value === value ? t.brandSecondary : "transparent" }}
                 >

@@ -25,12 +25,13 @@ function dateToIso(d: Date): string {
 // mese?) o in un formato diverso da quello richiesto. value/onChange usano
 // sempre l'ISO yyyy-mm-dd, lo stesso formato atteso dal backend.
 export default function DataInput({
-  value, onChange, testID, placeholder = "Seleziona data",
+  value, onChange, testID, placeholder = "Seleziona data", accessibilityLabel,
 }: {
   value: string;
   onChange: (iso: string) => void;
   testID?: string;
   placeholder?: string;
+  accessibilityLabel?: string;
 }) {
   const { t } = useTheme();
   const [aperto, setAperto] = React.useState(false);
@@ -61,6 +62,9 @@ export default function DataInput({
     <View>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? placeholder}
+        accessibilityValue={{ text: value ? isoToDataIt(value) : undefined }}
         onPress={() => { ultimoSelezionato.current = null; setAperto(true); }}
         style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -85,7 +89,7 @@ export default function DataInput({
             <DateTimePicker value={isoToDate(value)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={onPick} locale="it-IT" themeVariant={(t.mode as string) === "dark" ? "dark" : "light"} />
           </View>
           {Platform.OS === "ios" ? (
-            <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={chiudi} style={{ paddingVertical: 6, paddingHorizontal: SPACING.md }}>
+            <Pressable testID={testID ? `${testID}-fatto` : undefined} accessibilityRole="button" onPress={chiudi} style={{ paddingVertical: 6, paddingHorizontal: SPACING.md }}>
               <Text style={{ color: t.brand, fontWeight: "700" }}>Fatto</Text>
             </Pressable>
           ) : null}

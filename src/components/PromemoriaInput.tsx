@@ -22,6 +22,7 @@ export default function PromemoriaInput({ value, onChange }: { value: number[]; 
       <Text style={lbl}>Promemoria (giorni prima)</Text>
       <TextInput
         testID="promemoria-1"
+        accessibilityLabel="Promemoria (giorni prima)"
         value={String(primo)}
         onChangeText={(v) => setPrimo(Math.max(0, parseInt(v, 10) || 0))}
         keyboardType="number-pad"
@@ -31,12 +32,13 @@ export default function PromemoriaInput({ value, onChange }: { value: number[]; 
         <>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: SPACING.md }}>
             <Text style={[lbl, { marginTop: 0 }]}>Secondo promemoria (giorni prima)</Text>
-            <Pressable testID="promemoria-rimuovi-secondo" onPress={rimuoviSecondo} hitSlop={8}>
+            <Pressable testID="promemoria-rimuovi-secondo" accessibilityRole="button" accessibilityLabel="Rimuovi secondo promemoria" onPress={rimuoviSecondo} hitSlop={8}>
               <Feather name="x" size={14} color={t.error} />
             </Pressable>
           </View>
           <TextInput
             testID="promemoria-2"
+            accessibilityLabel="Secondo promemoria (giorni prima)"
             value={String(secondo)}
             onChangeText={(v) => setSecondo(Math.max(0, parseInt(v, 10) || 0))}
             keyboardType="number-pad"
@@ -44,7 +46,7 @@ export default function PromemoriaInput({ value, onChange }: { value: number[]; 
           />
         </>
       ) : (
-        <Pressable testID="promemoria-aggiungi-secondo" onPress={aggiungiSecondo} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
+        <Pressable testID="promemoria-aggiungi-secondo" accessibilityRole="button" onPress={aggiungiSecondo} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
           <Feather name="plus-circle" size={14} color={t.brand} />
           <Text style={{ color: t.brand, fontSize: 12, fontWeight: "600" }}>Aggiungi un secondo promemoria</Text>
         </Pressable>

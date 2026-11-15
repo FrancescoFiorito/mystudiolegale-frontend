@@ -30,6 +30,7 @@ export default function SwipeToDelete({ onDelete, children, testID }: Props) {
       <Animated.View style={[s.actionWrap, { transform: [{ translateX }] }]}>
         <RectButton
           testID={testID ? `${testID}-swipe-delete` : undefined}
+          accessibilityRole="button"
           onPress={() => {
             ref.current?.close();
             onDelete();
