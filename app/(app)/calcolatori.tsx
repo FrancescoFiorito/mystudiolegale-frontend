@@ -1,8 +1,9 @@
 
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, Keyboard } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, Keyboard, Share } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -20,6 +21,10 @@ import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
+import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
+import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
+import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
+import { codiceFiscaleValido, partitaIvaValida } from "@/src/documenti/formati";
 
 type CalcId =
   | "scadenze" | "parcelle"
@@ -58,7 +63,7 @@ type CampoGenerico =
   // rivalutazione TFR). Valore in forma "AAAA-MM".
   | (CampoGenericoBase & { tipo: "mese_anno" })
   | (CampoGenericoBase & { tipo: "numero"; default?: string })
-  | (CampoGenericoBase & { tipo: "testo"; default?: string })
+  | (CampoGenericoBase & { tipo: "testo"; default?: string; multiline?: boolean })
   | (CampoGenericoBase & { tipo: "bool"; default?: boolean })
   | (CampoGenericoBase & { tipo: "scelta"; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string; cercabile?: boolean })
   // Sola intestazione di sezione (nessun valore nel form): raggruppa più
@@ -78,6 +83,10 @@ type ConfigGenerico = {
   validate?: (form: Record<string, any>) => string | null;
   risultato: (r: any) => [string, string][];
   scadenze?: (r: any) => { titolo: string; data: string }[];
+  // Documento di testo (preventivo, ricevuta) generato nell'app dai dati del form
+  // e dai numeri del calcolo, da mostrare sotto il risultato con Copia / Condividi.
+  // Se mancano dati obbligatori restituisce un avviso al posto del testo.
+  documento?: (form: Record<string, any>, r: any) => { testo: string } | { avviso: string };
 };
 
 // "Competenza per giurisdizione o materia" del calcolatore di riferimento (Preventivo avvocato
@@ -1919,6 +1928,24 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "preventivo-stragiudiziale": {
     campi: [
+      { tipo: "titolo", key: "pd_tit_avv", label: "Avvocato" },
+      { tipo: "testo", key: "avv_nome", label: "Nome e Cognome" },
+      { tipo: "testo", key: "avv_indirizzo", label: "Indirizzo studio" },
+      { tipo: "testo", key: "avv_cf", label: "Codice fiscale" },
+      { tipo: "scelta", key: "avv_ordine", label: "Ordine avvocati", default: "", cercabile: true, opzioni: [{ value: "", label: "Nessuno" }, ...ORDINI_AVVOCATI.map((o) => ({ value: o, label: o }))] },
+      { tipo: "testo", key: "avv_polizza", label: "Assicurazione" },
+      {
+        tipo: "lista", key: "parti", label: "Parti assistite", etichettaAggiungi: "Nuova parte assistita",
+        campiRiga: [
+          { tipo: "testo", key: "nome", label: "Nomin. / Rag. Soc" },
+          { tipo: "scelta", key: "pg", label: "Pers. giuridica", default: "no", opzioni: [{ value: "no", label: "No" }, { value: "si", label: "Sì" }] },
+          { tipo: "testo", key: "rap", label: "Rappres. Legale", mostraSe: (riga) => riga.pg === "si" },
+          { tipo: "testo", key: "cf", label: "CF / P.IVA" },
+        ],
+      },
+      { tipo: "titolo", key: "pd_tit_att", label: "Dati dell'attività" },
+      { tipo: "testo", key: "descrizione", label: "Breve descrizione" },
+      { tipo: "testo", key: "controparte", label: "Controparte" },
       { tipo: "scelta", key: "competenza", label: "Tipo attività", default: "assistenza", opzioni: [
         { value: "assistenza", label: "Assistenza stragiudiziale" }, { value: "mediazione", label: "Mediazione e Negoziazione assistita" },
       ] },
@@ -1933,6 +1960,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "pv_f0_on", label: "Includi la fase", default: true, mostraSe: (f) => true },
       { tipo: "numero", key: "pv_f0_pct", label: "Variazione % sul valore medio (da -100 a 100)", default: "0", mostraSe: (f) => true && !!f.pv_f0_on },
       { tipo: "numero", key: "pv_f0_imp", label: "Compenso personalizzato € (facoltativo, sostituisce il calcolato)", default: "", mostraSe: (f) => true && !!f.pv_f0_on },
+      { tipo: "testo", key: "pv_f0_descr", label: "Descrizione della fase (facoltativa)", default: "", mostraSe: (f) => f.competenza === "assistenza" && !!f.pv_f0_on },
       { tipo: "titolo", key: "pv_tit1", label: "Fase 2: Fase di negoziazione", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
       { tipo: "bool", key: "pv_f1_on", label: "Includi la fase", default: true, mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") },
       { tipo: "numero", key: "pv_f1_pct", label: "Variazione % sul valore medio (da -100 a 100)", default: "0", mostraSe: (f) => (f.competenza === "mediazione" && f.tipo_compenso === "tabellare") && !!f.pv_f1_on },
@@ -1961,6 +1989,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.accessori && !!f.spese_generali },
       { tipo: "bool", key: "cassa", label: "Cassa Avvocati (4%)", default: true, mostraSe: (f) => !!f.accessori },
       { tipo: "bool", key: "iva", label: "IVA 22%", default: true, mostraSe: (f) => !!f.accessori },
+      { tipo: "testo", key: "luogo", label: "Luogo" },
+      { tipo: "data", key: "data_preventivo", label: "Data" },
     ],
     endpoint: "/calc/preventivo-stragiudiziale",
     validate: (f) => {
@@ -2001,6 +2031,43 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       if (r.totale_accessori) out.push(["Totale accessori", formatEuro(r.totale_accessori)]);
       out.push(["TOTALE PREVENTIVO", formatEuro(r.totale)]);
       return out;
+    },
+    // Testo del preventivo, generato qui dai dati del form e dai numeri del calcolo (i campi
+    // anagrafici e del documento non vengono inviati al backend).
+    documento: (f, r) => {
+      const parti: Record<string, string>[] = f.parti || [];
+      const mancanti: string[] = [];
+      if (!String(f.avv_nome || "").trim()) mancanti.push("Nome e Cognome dell'avvocato");
+      if (!String(f.avv_indirizzo || "").trim()) mancanti.push("Indirizzo studio");
+      if (String(f.avv_cf || "").trim() && !codiceFiscaleValido(f.avv_cf.trim())) mancanti.push("Codice fiscale dell'avvocato (non corretto)");
+      if (!String(f.avv_polizza || "").trim()) mancanti.push("Assicurazione");
+      if (!parti.length) mancanti.push("almeno una parte assistita");
+      parti.forEach((p, i) => {
+        const cf = String(p.cf || "").trim().toUpperCase();
+        if (!String(p.nome || "").trim()) mancanti.push(`Nomin. / Rag. Soc della parte ${i + 1}`);
+        if (!(codiceFiscaleValido(cf) || partitaIvaValida(cf))) mancanti.push(`CF / P.IVA della parte ${i + 1} (mancante o non corretto)`);
+      });
+      if (!String(f.descrizione || "").trim()) mancanti.push("Breve descrizione");
+      if (!String(f.controparte || "").trim()) mancanti.push("Controparte");
+      if (!String(f.luogo || "").trim()) mancanti.push("Luogo");
+      if (!f.data_preventivo) mancanti.push("Data");
+      if (mancanti.length) return { avviso: `Per generare il documento compila: ${mancanti.join("; ")}.` };
+      const mediazione = f.competenza === "mediazione";
+      const percentuale = f.competenza === "assistenza" && f.tipo_compenso === "percentuale";
+      const elenco = [...(mediazione ? PV_SCAGLIONI_MEDIAZIONE : PV_SCAGLIONI_ASSISTENZA), ...PV_INDETERMINABILI];
+      const etichetta = elenco.find((o) => o.value === f.scaglione)?.label || "";
+      return {
+        testo: generaPreventivoStragiudiziale({
+          avvocato: f.avv_nome, indirizzo: f.avv_indirizzo, cf_avvocato: f.avv_cf || "", ordine: f.avv_ordine || "", polizza: f.avv_polizza,
+          parti: parti.map((p) => ({ nome: p.nome, cf: p.cf, personaGiuridica: p.pg === "si", rappresentante: p.rap || "" })),
+          descrizione: f.descrizione, controparte: f.controparte, luogo: f.luogo, data: f.data_preventivo,
+          mediazione, percentuale,
+          valoreAffare: percentuale ? formatEuro(parseNumeroIt(f.valore_causa)) : etichetta.charAt(0).toLowerCase() + etichetta.slice(1),
+          descrizioniFasi: [mediazione ? "" : f.pv_f0_descr].map((x) => String(x || "")),
+          pctSpeseGenerali: parseNumeroIt(f.pct_spese_generali),
+          accessori: { speseGenerali: !!f.accessori && !!f.spese_generali, cassa: !!f.accessori && !!f.cassa, iva: !!f.accessori && !!f.iva },
+        }, r),
+      };
     },
   },
   "quote-ereditarie": {
@@ -2822,7 +2889,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "ricevuta-occasionale": {
     campi: [
+      { tipo: "titolo", key: "rd_tit_anag", label: "Dati anagrafici e fiscali" },
+      { tipo: "testo", key: "prestatore", label: "I miei dati anagrafici", multiline: true },
+      { tipo: "testo", key: "cf_prestatore", label: "Codice fiscale" },
+      { tipo: "testo", key: "committente", label: "Dati anagrafici del committente", multiline: true },
+      { tipo: "testo", key: "cf_committente", label: "Cod. Fis. / P.IVA" },
+      { tipo: "titolo", key: "rd_tit_doc", label: "Dati documento" },
       { tipo: "data", key: "data_ricevuta", label: "Data ricevuta (data del pagamento, dal 2025 al 2027)" },
+      { tipo: "testo", key: "numero_ricevuta", label: "Numero ricevuta" },
+      { tipo: "testo", key: "oggetto", label: "Oggetto" },
+      { tipo: "testo", key: "luogo", label: "Luogo" },
       {
         tipo: "lista", key: "compensi", label: "Compensi (max 20)", etichettaAggiungi: "Aggiungi un compenso",
         campiRiga: [
@@ -2830,6 +2906,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
           { tipo: "numero", key: "importo", label: "Importo €" },
         ],
       },
+      { tipo: "testo", key: "pagamento", label: "Pagamento" },
+      { tipo: "testo", key: "iban", label: "IBAN" },
       {
         tipo: "lista", key: "spese", label: "Spese documentate da rimborsare (max 50)", etichettaAggiungi: "Aggiungi una voce di spesa",
         campiRiga: [
@@ -2891,6 +2969,24 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       }
       out.push(["Netto a pagare", formatEuro(r.netto_a_pagare)]);
       return out;
+    },
+    // Testo della ricevuta, generato qui dai dati del form e dai numeri del calcolo (i dati
+    // anagrafici e del documento non vengono inviati al backend).
+    documento: (f, r) => {
+      const mancanti: string[] = [];
+      if (!String(f.prestatore || "").trim()) mancanti.push("I miei dati anagrafici");
+      if (!codiceFiscaleValido(String(f.cf_prestatore || "").trim().toUpperCase())) mancanti.push("Codice fiscale (mancante o non corretto)");
+      if (!String(f.committente || "").trim()) mancanti.push("Dati anagrafici del committente");
+      const cc = String(f.cf_committente || "").trim().toUpperCase();
+      if (!(codiceFiscaleValido(cc) || partitaIvaValida(cc))) mancanti.push("Cod. Fis. / P.IVA (mancante o non corretto)");
+      if (mancanti.length) return { avviso: `Per generare il documento compila: ${mancanti.join("; ")}.` };
+      return {
+        testo: generaRicevutaOccasionale({
+          prestatore: f.prestatore, cf_prestatore: f.cf_prestatore, committente: f.committente, cf_committente: f.cf_committente,
+          data_ricevuta: f.data_ricevuta, numero: f.numero_ricevuta, oggetto: f.oggetto, luogo: f.luogo, pagamento: f.pagamento, iban: f.iban,
+          altri_compensi_percepiti: f.altri_compensi === "si", totale_altri_compensi: f.totale_altri_compensi ? parseNumeroIt(f.totale_altri_compensi) : null,
+        }, r),
+      };
     },
   },
   "tariffe-mediazione": {
@@ -4421,6 +4517,9 @@ export default function Calcolatori() {
   const [genCalcolando, setGenCalcolando] = React.useState(false);
   const [genSaving, setGenSaving] = React.useState(false);
   const [genSalvata, setGenSalvata] = React.useState(false);
+  const [genDocCopiato, setGenDocCopiato] = React.useState(false);
+  // Copia del form al momento del calcolo: il documento usa gli stessi dati dei numeri mostrati, anche se il form viene poi modificato.
+  const [genFormCalcolato, setGenFormCalcolato] = React.useState<Record<string, any>>({});
   // Atti (bozze di documenti)
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
@@ -4929,6 +5028,7 @@ export default function Calcolatori() {
         : Object.fromEntries(cfg.campi.map((c) => [c.key, c.tipo === "numero" ? parseNumeroIt(genForm[c.key]) : genForm[c.key]]));
       const r = await api.post(typeof cfg.endpoint === "function" ? cfg.endpoint(genForm) : cfg.endpoint, body);
       setGenRisultato(r);
+      setGenFormCalcolato(genForm);
       setGenSalvata(false);
     } catch (e: any) {
       Alert.alert("Errore", e.message || "Impossibile calcolare. Riprova.");
@@ -6443,7 +6543,7 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                          <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} multiline={c.multiline} numberOfLines={c.multiline ? 4 : undefined} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }, c.multiline ? { minHeight: 90, textAlignVertical: "top" } : null]} />
                         </View>
                       );
                     }
@@ -6495,6 +6595,39 @@ export default function Calcolatori() {
                           <Text testID={i === 0 ? "gen-result" : undefined} style={{ color: t.onBrandSecondary, fontSize: 13, fontWeight: "800" }}>{v}</Text>
                         </View>
                       ))}
+                      {CONFIG_GENERICI[calcAperto].documento ? (() => {
+                        const doc = CONFIG_GENERICI[calcAperto].documento!(genFormCalcolato, genRisultato);
+                        return (
+                          <View style={{ marginTop: SPACING.md }}>
+                            <Text style={[st.lbl, { color: t.onBrandSecondary }]}>Documento</Text>
+                            {"testo" in doc ? (
+                              <>
+                                <View style={{ padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border }}>
+                                  <Text testID="gen-doc-testo" accessibilityLabel="Testo del documento" selectable style={{ color: t.onSurface, fontSize: 12, lineHeight: 18 }}>{doc.testo}</Text>
+                                </View>
+                                <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.sm }}>
+                                  <Pressable
+                                    testID="gen-doc-copia" accessibilityRole="button" accessibilityLabel="Copia il testo del documento"
+                                    onPress={async () => { await Clipboard.setStringAsync(doc.testo); setGenDocCopiato(true); setTimeout(() => setGenDocCopiato(false), 2000); }}
+                                    style={{ flex: 1, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center" }}
+                                  >
+                                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>{genDocCopiato ? "Copiato ✓" : "Copia"}</Text>
+                                  </Pressable>
+                                  <Pressable
+                                    testID="gen-doc-condividi" accessibilityRole="button" accessibilityLabel="Condividi il testo del documento"
+                                    onPress={() => { Share.share({ message: doc.testo }).catch(() => {}); }}
+                                    style={{ flex: 1, backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md, alignItems: "center" }}
+                                  >
+                                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>Condividi</Text>
+                                  </Pressable>
+                                </View>
+                              </>
+                            ) : (
+                              <Text testID="gen-doc-avviso" accessibilityRole="alert" style={{ color: t.onBrandSecondary, fontSize: 12 }}>{doc.avviso}</Text>
+                            )}
+                          </View>
+                        );
+                      })() : null}
                       {CONFIG_GENERICI[calcAperto].scadenze ? (
                         !genSalvata ? (
                           <>
