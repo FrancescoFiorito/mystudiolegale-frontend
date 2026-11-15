@@ -163,6 +163,7 @@ export default function Impostazioni() {
         {canManageTeam ? (
           <Item testID="menu-team" icon="user-plus" label="Team & Ruoli" onPress={() => router.push("/(app)/team")} navigates />
         ) : null}
+        <Item testID="menu-intestazione" icon="file-text" label="Intestazione documenti" onPress={() => router.push("/(app)/intestazione")} navigates />
         {canViewAudit ? <Item testID="menu-audit" icon="activity" label="Registro attività" onPress={() => router.push("/(app)/audit")} navigates /> : null}
 
         <Text style={[s.section, { color: t.onSurfaceSecondary }]}>CALENDARIO</Text>

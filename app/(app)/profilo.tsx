@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert, Platform, TextInput, KeyboardAvoidingView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useRouter, useNavigation } from "expo-router";
+import { useRouter, useNavigation, useLocalSearchParams } from "expo-router";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -34,6 +34,8 @@ export default function Profilo() {
   const { user, logout, refresh } = useAuth();
   const router = useRouter();
   const navigation = useNavigation();
+  // `?piano=1` (da "Intestazione documenti" e dai pulsanti di esportazione) apre subito la schermata dei piani.
+  const params = useLocalSearchParams<{ piano?: string }>();
 
   const [showEditProfile, setShowEditProfile] = React.useState(false);
   const [profileForm, setProfileForm] = React.useState({
@@ -49,7 +51,7 @@ export default function Profilo() {
   const [pwForm, setPwForm] = React.useState({ current_password: "", new_password: "", new_password2: "" });
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [savingPw, setSavingPw] = React.useState(false);
-  const [showPiano, setShowPiano] = React.useState(false);
+  const [showPiano, setShowPiano] = React.useState(params.piano === "1");
   const [cambiandoPiano, setCambiandoPiano] = React.useState<string | null>(null);
 
   // Con lo Stack nativo, tenere attivo lo swipe-indietro della schermata
