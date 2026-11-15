@@ -12,7 +12,7 @@ Questo documento riepiloga le proprietà di accessibilità aggiunte all'app per 
 | #157 | Accesso, registrazione, reset, verifica email, barra schede | `d14145e` |
 | #158 | Schermate principali (dashboard, clienti, archivio, calendario, profilo, pratica, cliente, impostazioni, team, audit, notifiche) | `d334e7c` |
 | #159 | Motore dei calcolatori e componenti di campo | `fcb2cdb` |
-| #161 | Calcolatori: etichette dei 51 elementi residui e di `mem-udienza` | vedi nota in "Scelte da confermare" |
+| #161 | Calcolatori: etichette dei 51 elementi residui e di `mem-udienza` | `df636c0` |
 
 ## Proprietà aggiunte per file
 
@@ -114,7 +114,7 @@ Legenda: **button** = `accessibilityRole="button"`, senza etichetta propria (Voi
 | `mem-udienza` (fuori dai 51) | campo | dinamica: "Data udienza di trattazione" (art. 171-ter) oppure "Data udienza collegiale di discussione" (art. 189 e 275-bis) |
 | `mem-toggle-feriale` | checkbox | "Applica sospensione feriale (1-31 agosto)" |
 | `tassi-prodotti-agricoli` | checkbox | "Cessione di prodotti agricoli e agroalimentari: +4 punti percentuali (art. 4 c. 2 D.Lgs. 198/2021)" |
-| `cu-valore-causa` | campo | "Valore della causa" |
+| `cu-valore-causa` | campo | "Importo della causa €" (confermata dall'utente) |
 | `cu-riduzione-50` | checkbox | "Riduzione del 50% (ingiunzione, sfratto, cautelari/possessori, ATP, lavoro/pubblico impiego)" |
 | `rivmens-check-mensile` | checkbox | "Rivaluta mensilmente gli importi dovuti e non riscossi (ISTAT)" |
 | `rivmens-check-interessi` | checkbox | "Calcola gli interessi legali" |
@@ -128,13 +128,12 @@ Legenda: **button** = `accessibilityRole="button"`, senza etichetta propria (Voi
 
 Scelte fatte in autonomia, da rivedere con VoiceOver o con l'autore del calcolatore:
 
-- **`cu-valore-causa`**: l'etichetta è "Valore della causa", come richiesto. Il selettore sopra (`cu-valore-tipo`) ha la stessa etichetta, e il campo è l'importo: un utente VoiceOver potrebbe non distinguerli. Proposta: "Importo della causa €".
-- **`mem-udienza`**: la richiesta indicava "Data dell'udienza", ma dal codice il testo visibile cambia con il tipo di termine. È stata usata l'etichetta dinamica corrispondente, non un testo fisso.
+- **`cu-valore-causa`**: confermata dall'utente l'etichetta "Importo della causa €", per distinguerla dal selettore `cu-valore-tipo`.
+- **`mem-udienza`**: confermata dall'utente l'etichetta dinamica, uguale al testo visibile che cambia con il tipo di termine.
 - **`par-spesa-esente-${i}`**: è un pulsante a pillola con testo "Esente" / "Non esente", che funziona da interruttore: trattato come casella con etichetta "Spesa N esente". Il testo visibile cambia a ogni stato, quindi l'etichetta non lo ripete.
 - **Pulsanti con testo visibile**: hanno solo il ruolo, come richiesto; VoiceOver legge il testo del figlio.
 - **Liste dinamiche**: le etichette includono il numero di riga (`${i + 1}`). Per le parti della procura è stato aggiunto "procura" per distinguerle dalle parti della parcella.
 - **Proprietà fuori dai 51**: `mem-udienza` è un componente `DataInput`, non conteggiato nei 277; è stato etichettato perché era nell'elenco della richiesta.
-- **Sha del merge**: lo sha del commit di merge non può comparire nel file della stessa PR. Viene riportato nel resoconto della PR, e la tabella sopra mantiene il riferimento "vedi nota".
 
 ## Elementi che non sono stati etichettati
 
