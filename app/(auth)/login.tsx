@@ -32,7 +32,7 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={s.hero}>
-            <Image source={t.mode === "dark" ? require("@/assets/images/icon-dark.png") : require("@/assets/images/icon.png")} style={s.logoBox} testID="app-logo" resizeMode="contain" />
+            <Image source={t.mode === "dark" ? require("@/assets/images/icon-dark.png") : require("@/assets/images/icon.png")} style={s.logoBox} testID="app-logo" accessible={false} resizeMode="contain" />
             <Text style={[s.title, { color: t.onBrand }]}>MyStudioLegale</Text>
             <Text style={[s.subtitle, { color: t.onBrand, opacity: 0.8 }]}>Il gestionale per avvocati</Text>
           </View>
@@ -44,6 +44,7 @@ export default function Login() {
               <Feather name="mail" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="login-email-input"
+                accessibilityLabel="Email"
                 style={[s.input, { color: t.onSurface }]}
                 placeholder="mario.rossi@studio.it"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -58,6 +59,7 @@ export default function Login() {
               <Feather name="lock" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="login-password-input"
+                accessibilityLabel="Password"
                 style={[s.input, { color: t.onSurface }]}
                 placeholder="••••••••"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -65,7 +67,7 @@ export default function Login() {
                 value={pw}
                 onChangeText={setPw}
               />
-              <Pressable onPress={() => setShowPw(!showPw)} hitSlop={8}>
+              <Pressable onPress={() => setShowPw(!showPw)} accessibilityRole="button" accessibilityLabel={showPw ? "Nascondi password" : "Mostra password"} hitSlop={8}>
                 <Feather name={showPw ? "eye-off" : "eye"} size={17} color={t.onSurfaceTertiary} />
               </Pressable>
             </View>
@@ -74,6 +76,8 @@ export default function Login() {
 
             <Pressable
               testID="login-submit-button"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: loading }}
               onPress={submit}
               disabled={loading}
               style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1 }]}
@@ -82,10 +86,10 @@ export default function Login() {
               {!loading && <Feather name="arrow-right" size={18} color={t.onBrand} />}
             </Pressable>
 
-            <Pressable testID="go-to-register" onPress={() => router.push("/(auth)/register")} style={s.linkBtn}>
+            <Pressable testID="go-to-register" accessibilityRole="button" onPress={() => router.push("/(auth)/register")} style={s.linkBtn}>
               <Text style={{ color: t.onSurfaceSecondary, textAlign: "center" }}>Non hai un account? <Text style={{ color: t.brand, fontWeight: "700" }}>Registrati</Text></Text>
             </Pressable>
-            <Pressable testID="go-to-forgot-password" onPress={() => router.push("/(auth)/forgot-password")} style={s.linkBtn}>
+            <Pressable testID="go-to-forgot-password" accessibilityRole="button" onPress={() => router.push("/(auth)/forgot-password")} style={s.linkBtn}>
               <Text style={{ color: t.brand, textAlign: "center", fontWeight: "600" }}>Password dimenticata?</Text>
             </Pressable>
           </View>
