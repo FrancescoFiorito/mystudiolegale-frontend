@@ -6,11 +6,15 @@ import { SPACING, RADIUS } from "@/src/theme";
 import DataInput from "@/src/components/DataInput";
 import SelectInput from "@/src/components/SelectInput";
 
-export type CampoRigaLista =
+export type CampoRigaLista = (
   | { tipo: "numero"; key: string; label: string; default?: string }
   | { tipo: "testo"; key: string; label: string; default?: string }
   | { tipo: "data"; key: string; label: string; default?: string }
-  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string };
+  | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string }
+) & {
+  // Se presente, il campo compare solo quando la funzione (che riceve la riga) restituisce true.
+  mostraSe?: (riga: Record<string, string>) => boolean;
+};
 
 function rigaVuota(campiRiga: CampoRigaLista[]): Record<string, string> {
   const riga: Record<string, string> = {};
@@ -54,7 +58,7 @@ export default function ListaInput({
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
           </View>
-          {campiRiga.map((c) => (
+          {campiRiga.filter((c) => !c.mostraSe || c.mostraSe(riga)).map((c) => (
             <View key={c.key} style={{ marginTop: SPACING.xs }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceSecondary, marginBottom: 4 }}>{c.label}</Text>
               {c.tipo === "data" ? (
