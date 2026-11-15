@@ -152,4 +152,4 @@ Chiamate reali a `/documenti/esporta`, `/studio/intestazione*`, apertura del fog
 
 ## PR e sha dei merge
 
-PR_PLACEHOLDER
+- PR #167 (funzionalità e resoconto), merge `b64ddc2`.
