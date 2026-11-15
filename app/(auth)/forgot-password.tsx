@@ -34,7 +34,7 @@ export default function ForgotPassword() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={s.hero}>
-            <Pressable testID="back-btn" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+            <Pressable testID="back-btn" accessibilityRole="button" accessibilityLabel="Indietro" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
               <Feather name="arrow-left" size={20} color={t.onBrand} />
             </Pressable>
             <View style={[s.logoBox, { backgroundColor: "rgba(255,255,255,0.16)" }]}>
@@ -50,6 +50,7 @@ export default function ForgotPassword() {
               <Feather name="mail" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="forgot-email-input"
+                accessibilityLabel="Email"
                 style={[s.input, { color: t.onSurface }]}
                 placeholder="mario.rossi@studio.it"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -60,7 +61,7 @@ export default function ForgotPassword() {
               />
             </View>
             {err ? <Text style={[s.err, { color: t.error }]} testID="forgot-error">{err}</Text> : null}
-            <Pressable testID="forgot-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
+            <Pressable testID="forgot-submit-button" accessibilityRole="button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
               <Text style={[s.btnTxt, { color: t.onBrand }]}>{loading ? "Invio..." : "Invia codice"}</Text>
             </Pressable>
           </View>

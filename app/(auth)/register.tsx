@@ -42,6 +42,7 @@ export default function Register() {
         {label}{required ? <Text style={{ color: t.error }}> *</Text> : null}
       </Text>
       <TextInput
+        accessibilityLabel={label}
         testID={`register-${k}-input`}
         style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
         placeholderTextColor={t.onSurfaceTertiary}
@@ -56,7 +57,7 @@ export default function Register() {
     <SafeAreaView style={[s.wrap, { backgroundColor: t.surface }]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
-          <Pressable testID="back-to-login" onPress={() => router.back()} style={[s.back, { backgroundColor: t.surfaceSecondary }]}>
+          <Pressable testID="back-to-login" accessibilityRole="button" accessibilityLabel="Indietro" onPress={() => router.back()} style={[s.back, { backgroundColor: t.surfaceSecondary }]}>
             <Feather name="arrow-left" size={20} color={t.onSurface} />
           </Pressable>
           <Text style={[s.title, { color: t.onSurface, marginBottom: SPACING.lg }]}>Crea account</Text>
@@ -67,6 +68,7 @@ export default function Register() {
             <PasswordFieldLabel label="Password" required style={[s.label, { color: t.onSurfaceSecondary }]} />
             <TextInput
               testID="register-password-input"
+              accessibilityLabel="Password"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
               placeholderTextColor={t.onSurfaceTertiary}
               placeholder="Inserisci password"
@@ -78,6 +80,7 @@ export default function Register() {
             <Text style={[s.label, { color: t.onSurfaceSecondary }]}>Conferma password<Text style={{ color: t.error }}> *</Text></Text>
             <TextInput
               testID="register-password2-input"
+              accessibilityLabel="Conferma password"
               style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
               placeholderTextColor={t.onSurfaceTertiary}
               placeholder="Ripeti la password"
@@ -93,7 +96,7 @@ export default function Register() {
             {field("studio", "Studio legale", { placeholder: "Studio Rossi & Associati" })}
             <Text style={[s.hint, { color: t.onSurfaceTertiary }]}>* campi obbligatori</Text>
 
-            <Pressable testID="consenso-privacy" onPress={() => setConsenso(!consenso)} style={s.consensoRow}>
+            <Pressable testID="consenso-privacy" accessibilityRole="checkbox" accessibilityState={{ checked: consenso }} onPress={() => setConsenso(!consenso)} style={s.consensoRow}>
               <View style={[s.checkbox, { borderColor: t.border, backgroundColor: consenso ? t.brand : "transparent" }]}>
                 {consenso ? <Feather name="check" size={14} color={t.onBrand} /> : null}
               </View>
@@ -109,6 +112,7 @@ export default function Register() {
             {err ? <Text style={[s.err, { color: t.error }]} testID="register-error">{err}</Text> : null}
             <Pressable
               testID="register-submit-button"
+              accessibilityRole="button"
               onPress={submit}
               disabled={loading}
               style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1 }]}

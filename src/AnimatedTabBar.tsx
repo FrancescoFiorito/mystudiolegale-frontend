@@ -72,6 +72,8 @@ export default function AnimatedTabBar({ state, descriptors, navigation, positio
           <Pressable
             key={route.key}
             testID={options.tabBarTestID}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
             onPress={onPress}
             style={s.item}
             onLayout={(e) => {

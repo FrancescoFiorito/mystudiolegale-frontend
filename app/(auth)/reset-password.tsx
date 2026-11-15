@@ -45,7 +45,7 @@ export default function ResetPassword() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={s.hero}>
-            <Pressable testID="back-btn" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+            <Pressable testID="back-btn" accessibilityRole="button" accessibilityLabel="Indietro" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
               <Feather name="arrow-left" size={20} color={t.onBrand} />
             </Pressable>
             <View style={[s.logoBox, { backgroundColor: "rgba(255,255,255,0.16)" }]}>
@@ -61,6 +61,7 @@ export default function ResetPassword() {
               <Feather name="lock" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="reset-newpw-input"
+                accessibilityLabel="Nuova password"
                 style={[s.input, { color: t.onSurface }]}
                 placeholder="Almeno 8 caratteri, un numero e un simbolo"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -69,7 +70,7 @@ export default function ResetPassword() {
                 value={pw}
                 onChangeText={setPw}
               />
-              <Pressable onPress={() => setShowPw(!showPw)} hitSlop={8}>
+              <Pressable onPress={() => setShowPw(!showPw)} accessibilityRole="button" accessibilityLabel={showPw ? "Nascondi password" : "Mostra password"} hitSlop={8}>
                 <Feather name={showPw ? "eye-off" : "eye"} size={17} color={t.onSurfaceTertiary} />
               </Pressable>
             </View>
@@ -79,6 +80,7 @@ export default function ResetPassword() {
               <Feather name="lock" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="reset-newpw2-input"
+                accessibilityLabel="Conferma nuova password"
                 style={[s.input, { color: t.onSurface }]}
                 placeholder="Ripeti la nuova password"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -90,7 +92,7 @@ export default function ResetPassword() {
 
             {err ? <Text style={[s.err, { color: t.error }]} testID="reset-error">{err}</Text> : null}
 
-            <Pressable testID="reset-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
+            <Pressable testID="reset-submit-button" accessibilityRole="button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
               <Text style={[s.btnTxt, { color: t.onBrand }]}>{loading ? "Salvataggio..." : "Reimposta password"}</Text>
             </Pressable>
           </View>

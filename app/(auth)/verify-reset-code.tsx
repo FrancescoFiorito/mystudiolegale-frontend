@@ -61,7 +61,7 @@ export default function VerifyResetCode() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={s.hero}>
-            <Pressable testID="back-btn" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+            <Pressable testID="back-btn" accessibilityRole="button" accessibilityLabel="Indietro" onPress={() => router.back()} style={[s.backBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
               <Feather name="arrow-left" size={20} color={t.onBrand} />
             </Pressable>
             <View style={[s.logoBox, { backgroundColor: "rgba(255,255,255,0.16)" }]}>
@@ -79,7 +79,7 @@ export default function VerifyResetCode() {
               {cooldown > 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>Rinvia tra {cooldown}s</Text>
               ) : (
-                <Pressable testID="resend-code-button" onPress={resend} disabled={resending} hitSlop={6}>
+                <Pressable testID="resend-code-button" accessibilityRole="button" accessibilityLabel="Invia di nuovo il codice" onPress={resend} disabled={resending} hitSlop={6}>
                   <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700", opacity: resending ? 0.5 : 1 }}>
                     {resending ? "Invio..." : "Rinvia codice"}
                   </Text>
@@ -90,6 +90,7 @@ export default function VerifyResetCode() {
               <Feather name="hash" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="verify-token-input"
+                accessibilityLabel="Codice di verifica"
                 style={[s.input, s.codeInput, { color: t.onSurface }]}
                 placeholder="000000"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -103,7 +104,7 @@ export default function VerifyResetCode() {
 
             {err ? <Text style={[s.err, { color: t.error }]} testID="verify-error">{err}</Text> : null}
 
-            <Pressable testID="verify-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
+            <Pressable testID="verify-submit-button" accessibilityRole="button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
               <Text style={[s.btnTxt, { color: t.onBrand }]}>{loading ? "Verifica..." : "Verifica codice"}</Text>
             </Pressable>
           </View>

@@ -74,7 +74,7 @@ export default function VerifyEmail() {
               {cooldown > 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12 }}>Rinvia tra {cooldown}s</Text>
               ) : (
-                <Pressable testID="resend-verification-button" onPress={resend} disabled={resending} hitSlop={6}>
+                <Pressable testID="resend-verification-button" accessibilityRole="button" accessibilityLabel="Invia di nuovo il codice" onPress={resend} disabled={resending} hitSlop={6}>
                   <Text style={{ color: t.brand, fontSize: 12, fontWeight: "700", opacity: resending ? 0.5 : 1 }}>
                     {resending ? "Invio..." : "Rinvia codice"}
                   </Text>
@@ -85,6 +85,7 @@ export default function VerifyEmail() {
               <Feather name="hash" size={17} color={t.onSurfaceTertiary} />
               <TextInput
                 testID="verify-email-token-input"
+                accessibilityLabel="Codice di verifica"
                 style={[s.input, s.codeInput, { color: t.onSurface }]}
                 placeholder="000000"
                 placeholderTextColor={t.onSurfaceTertiary}
@@ -98,11 +99,11 @@ export default function VerifyEmail() {
 
             {err ? <Text style={[s.err, { color: t.error }]} testID="verify-email-error">{err}</Text> : null}
 
-            <Pressable testID="verify-email-submit-button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
+            <Pressable testID="verify-email-submit-button" accessibilityRole="button" onPress={submit} disabled={loading} style={[s.btn, { backgroundColor: t.brand, opacity: loading ? 0.6 : 1, marginTop: SPACING.xl }]}>
               <Text style={[s.btnTxt, { color: t.onBrand }]}>{loading ? "Verifica..." : "Verifica email"}</Text>
             </Pressable>
 
-            <Pressable testID="verify-email-logout" onPress={logout} style={s.linkBtn}>
+            <Pressable testID="verify-email-logout" accessibilityRole="button" onPress={logout} style={s.linkBtn}>
               <Text style={{ color: t.onSurfaceSecondary, textAlign: "center" }}>Non sei tu? <Text style={{ color: t.brand, fontWeight: "700" }}>Esci</Text></Text>
             </Pressable>
           </View>
