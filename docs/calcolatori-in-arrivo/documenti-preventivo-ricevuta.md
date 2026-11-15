@@ -131,4 +131,4 @@ Firma:
 Posizione e aspetto del blocco "Documento" e dei pulsanti Copia/Condividi; scelta di non rendere obbligatori i nuovi campi per il calcolo; limite o meno del numero di parti; conferma dei due punti sulla risposta del backend.
 
 ## PR e merge
-Frontend: vedi sezione finale del messaggio di consegna (PR e sha del merge). Backend: non toccato.
+Frontend: PR #163, merge `72690ff` (ultimo commit feature `5f4b17a`). Backend: non toccato, nessun PR, nessun deploy. Nessuna build iOS lanciata: la modifica non è in nessuna build.
