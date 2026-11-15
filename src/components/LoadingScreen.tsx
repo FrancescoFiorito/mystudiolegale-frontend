@@ -57,7 +57,7 @@ export default function LoadingScreen() {
   return (
     <Modal visible animationType="none" transparent={false} statusBarTranslucent presentationStyle="fullScreen">
       <View style={s.wrap}>
-        <Image source={require("@/assets/images/loading-logo.png")} style={s.logo} resizeMode="contain" />
+        <Image source={require("@/assets/images/loading-logo.png")} accessible={false} style={s.logo} resizeMode="contain" />
 
         <View style={s.gavelBox}>
           <View style={s.block} />

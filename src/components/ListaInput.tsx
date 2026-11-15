@@ -50,7 +50,7 @@ export default function ListaInput({
       {value.map((riga, indice) => (
         <View key={indice} style={{ marginTop: indice === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
           <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
-            <Pressable testID={testID ? `${testID}-rimuovi-${indice}` : undefined} onPress={() => rimuovi(indice)} style={{ padding: 4 }}>
+            <Pressable testID={testID ? `${testID}-rimuovi-${indice}` : undefined} onPress={() => rimuovi(indice)} accessibilityRole="button" accessibilityLabel="Rimuovi voce" style={{ padding: 4 }}>
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
           </View>
@@ -58,12 +58,13 @@ export default function ListaInput({
             <View key={c.key} style={{ marginTop: SPACING.xs }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceSecondary, marginBottom: 4 }}>{c.label}</Text>
               {c.tipo === "data" ? (
-                <DataInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} />
+                <DataInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} accessibilityLabel={c.label} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} />
               ) : c.tipo === "scelta" ? (
-                <SelectInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} opzioni={typeof c.opzioni === "function" ? c.opzioni(form || {}) : c.opzioni} />
+                <SelectInput testID={testID ? `${testID}-${indice}-${c.key}` : undefined} accessibilityLabel={c.label} value={riga[c.key] || ""} onChange={(v) => aggiorna(indice, c.key, v)} opzioni={typeof c.opzioni === "function" ? c.opzioni(form || {}) : c.opzioni} />
               ) : (
                 <TextInput
                   testID={testID ? `${testID}-${indice}-${c.key}` : undefined}
+                  accessibilityLabel={c.label}
                   value={riga[c.key] ?? ""}
                   onChangeText={(v) => aggiorna(indice, c.key, v)}
                   keyboardType={c.tipo === "testo" ? "default" : "numeric"}
@@ -77,7 +78,7 @@ export default function ListaInput({
           ))}
         </View>
       ))}
-      <Pressable testID={testID ? `${testID}-aggiungi` : undefined} onPress={aggiungi} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
+      <Pressable testID={testID ? `${testID}-aggiungi` : undefined} accessibilityRole="button" onPress={aggiungi} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
         <Feather name="plus-circle" size={16} color={t.brand} />
         <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{etichettaAggiungi}</Text>
       </Pressable>

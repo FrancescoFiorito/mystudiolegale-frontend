@@ -23,11 +23,11 @@ export default function Header({ title, subtitle, onBack, backTestID, avatarInit
   const { t } = useTheme();
   const hero = variant === "hero";
   const leftAction = onBack ? (
-    <Pressable testID={backTestID} onPress={onBack} style={[s.roundBtn, { backgroundColor: hero ? "rgba(255,255,255,0.18)" : t.surfaceSecondary }]}>
+    <Pressable testID={backTestID} onPress={onBack} accessibilityRole="button" accessibilityLabel="Indietro" style={[s.roundBtn, { backgroundColor: hero ? "rgba(255,255,255,0.18)" : t.surfaceSecondary }]}>
       <Feather name="arrow-left" size={20} color={hero ? t.onBrand : t.onSurface} />
     </Pressable>
   ) : avatarInitials ? (
-    <Pressable testID="avatar-to-profile" onPress={onAvatarPress} style={[s.roundBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+    <Pressable testID="avatar-to-profile" onPress={onAvatarPress} accessibilityRole="button" accessibilityLabel="Apri il profilo" style={[s.roundBtn, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
       <Text style={{ color: t.onBrand, fontWeight: "800", fontSize: 15 }}>{avatarInitials}</Text>
       <View style={[s.menuBadge, { backgroundColor: t.onBrand, borderColor: t.brand }]}>
         <Feather name="more-horizontal" size={9} color={t.brand} />
@@ -58,7 +58,7 @@ export default function Header({ title, subtitle, onBack, backTestID, avatarInit
           {subtitle ? (
             <Text style={{ color: hero ? t.onBrand : t.onSurfaceTertiary, opacity: hero ? 0.75 : 1, fontSize: 12, lineHeight: 16, height: 16 }}>{subtitle}</Text>
           ) : null}
-          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: 19, lineHeight: 24, fontFamily: FONT.serif, includeFontPadding: false }} numberOfLines={1}>{title}</Text>
+          <Text style={{ color: hero ? t.onBrand : t.onSurface, fontSize: 19, lineHeight: 24, fontFamily: FONT.serif, includeFontPadding: false }} numberOfLines={1} accessibilityRole="header">{title}</Text>
         </View>
         {right || <View style={s.roundBtn} />}
       </View>

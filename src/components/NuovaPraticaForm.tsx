@@ -36,6 +36,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
           <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{k}</Text>
           <TextInput
             testID={`new-pratica-${k}`}
+            accessibilityLabel={k}
             value={form[k]}
             onChangeText={(v) => setForm({ ...form, [k]: v })}
             style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
@@ -45,7 +46,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
       ))}
       <View style={{ marginBottom: SPACING.md }}>
         <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Valore causa €</Text>
-        <TextInput testID="new-pratica-valore" value={form.valore_causa} onChangeText={(v) => setForm({ ...form, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+        <TextInput testID="new-pratica-valore" accessibilityLabel="Valore causa €" value={form.valore_causa} onChangeText={(v) => setForm({ ...form, valore_causa: v })} keyboardType="numeric" style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
       </View>
       <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Cliente</Text>
       {form.cliente_id ? (
@@ -56,7 +57,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
               {(clienti.find((c) => c.id === form.cliente_id)?.ragione_sociale) || `${clienti.find((c) => c.id === form.cliente_id)?.nome || ""} ${clienti.find((c) => c.id === form.cliente_id)?.cognome || ""}`.trim()}
             </Text>
           </View>
-          <Pressable testID="cliente-deseleziona" onPress={() => setForm({ ...form, cliente_id: null })} style={{ padding: 8 }}>
+          <Pressable testID="cliente-deseleziona" accessibilityRole="button" accessibilityLabel="Rimuovi cliente selezionato" onPress={() => setForm({ ...form, cliente_id: null })} style={{ padding: 8 }}>
             <Feather name="x" size={16} color={t.onSurfaceTertiary} />
           </Pressable>
         </View>
@@ -66,6 +67,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
             <Feather name="search" size={15} color={t.onSurfaceTertiary} />
             <TextInput
               testID="new-pratica-cliente-search"
+              accessibilityLabel="Cerca cliente registrato"
               value={clienteQ}
               onChangeText={setClienteQ}
               placeholder="Cerca cliente registrato..."
@@ -78,7 +80,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
               {clientiFiltrati.length === 0 ? (
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic", paddingVertical: 6 }}>Nessun cliente trovato</Text>
               ) : clientiFiltrati.map((c) => (
-                <Pressable key={c.id} testID={`cliente-opzione-${c.id}`} onPress={() => { setForm({ ...form, cliente_id: c.id }); setClienteQ(""); }} style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Pressable key={c.id} testID={`cliente-opzione-${c.id}`} accessibilityRole="button" accessibilityLabel={nomeCliente(c)} onPress={() => { setForm({ ...form, cliente_id: c.id }); setClienteQ(""); }} style={{ paddingVertical: 9, paddingHorizontal: 10, borderRadius: RADIUS.md, flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: t.brandTertiary, alignItems: "center", justifyContent: "center" }}>
                     <Text style={{ color: t.brand, fontSize: 11, fontWeight: "700" }}>{inizialiCliente(c)}</Text>
                   </View>
@@ -89,6 +91,7 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
           ) : null}
           <Pressable
             testID="vai-nuovo-cliente"
+            accessibilityRole="button"
             onPress={onNuovoCliente}
             style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 9, paddingHorizontal: 12, borderRadius: RADIUS.pill, borderWidth: 1, borderColor: t.brand, alignSelf: "flex-start", marginBottom: SPACING.md }}
           >
@@ -100,12 +103,12 @@ export default function NuovaPraticaForm({ form, setForm, clienti, clienteQ, set
       <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Priorità</Text>
       <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.lg }}>
         {["bassa", "media", "alta"].map((p) => (
-          <Pressable key={p} testID={`priorita-${p}`} onPress={() => setForm({ ...form, priorita: p })} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: form.priorita === p ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
+          <Pressable key={p} testID={`priorita-${p}`} accessibilityRole="radio" accessibilityLabel={`Priorità ${p}`} accessibilityState={{ checked: form.priorita === p }} onPress={() => setForm({ ...form, priorita: p })} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: form.priorita === p ? t.brand : t.surfaceSecondary, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
             <Text style={{ color: form.priorita === p ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "600", textTransform: "capitalize" }}>{p}</Text>
           </Pressable>
         ))}
       </View>
-      <Pressable testID="submit-new-pratica" onPress={onSubmit} disabled={saving} style={[s.submit, { backgroundColor: t.brand, opacity: saving ? 0.6 : 1 }]}>
+      <Pressable testID="submit-new-pratica" accessibilityRole="button" accessibilityState={{ disabled: saving }} onPress={onSubmit} disabled={saving} style={[s.submit, { backgroundColor: t.brand, opacity: saving ? 0.6 : 1 }]}>
         <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Crea pratica"}</Text>
       </Pressable>
     </ScrollView>

@@ -11,6 +11,8 @@ export default function PasswordHint({ style }: { style?: StyleProp<ViewStyle> }
   return (
     <Pressable
       testID="password-hint-button"
+      accessibilityRole="button"
+      accessibilityLabel="Requisiti della password"
       onPress={() => Alert.alert(PASSWORD_REQUIREMENTS_TITLE, PASSWORD_REQUIREMENTS_TEXT)}
       hitSlop={10}
       style={[

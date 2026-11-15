@@ -27,13 +27,14 @@ function parti(value: string): { mese: number; anno: number } {
 // @react-native-community/datetimepicker non offre un modo che mostri solo
 // mese e anno (ha solo "date" con giorno incluso).
 function Ruota<T>({
-  voci, etichetta, selezionata, onSeleziona, testID,
+  voci, etichetta, selezionata, onSeleziona, testID, accessibilityLabel,
 }: {
   voci: T[];
   etichetta: (v: T) => string;
   selezionata: T;
   onSeleziona: (v: T) => void;
   testID?: string;
+  accessibilityLabel?: string;
 }) {
   const { t } = useTheme();
   const ref = React.useRef<FlatList<T>>(null);
@@ -97,6 +98,8 @@ function Ruota<T>({
       }} />
       <FlatList
         testID={testID}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityValue={{ text: etichetta(selezionata) }}
         ref={ref}
         data={voci}
         keyExtractor={(v) => String(v)}
@@ -107,7 +110,7 @@ function Ruota<T>({
         contentContainerStyle={{ paddingVertical: PADDING_RUOTA }}
         onMomentumScrollEnd={scorri}
         renderItem={({ item, index }) => (
-          <Pressable onPress={() => tocca(index)} style={{ height: ALTEZZA_VOCE, alignItems: "center", justifyContent: "center" }}>
+          <Pressable onPress={() => tocca(index)} accessibilityRole="button" accessibilityLabel={etichetta(item)} accessibilityState={{ selected: item === selezionata }} style={{ height: ALTEZZA_VOCE, alignItems: "center", justifyContent: "center" }}>
             <Text style={{
               fontSize: 15, color: item === selezionata ? t.brand : t.onSurface,
               fontWeight: item === selezionata ? "700" : "400",
@@ -129,11 +132,12 @@ function Ruota<T>({
 // ruote (mese, anno) invece delle tre native giorno/mese/anno. value/onChange
 // usano il formato "AAAA-MM".
 export default function MeseAnnoInput({
-  value, onChange, testID,
+  value, onChange, testID, accessibilityLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
   testID?: string;
+  accessibilityLabel?: string;
 }) {
   const { t } = useTheme();
   const [aperto, setAperto] = React.useState(false);
@@ -143,6 +147,9 @@ export default function MeseAnnoInput({
     <View>
       <Pressable
         testID={testID}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel ?? "Mese e anno"}
+        accessibilityState={{ expanded: aperto }}
         onPress={() => setAperto(!aperto)}
         style={{
           flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -160,6 +167,7 @@ export default function MeseAnnoInput({
           <View style={{ flexDirection: "row" }}>
             <Ruota
               testID={testID ? `${testID}-mese` : undefined}
+              accessibilityLabel="Mese"
               voci={Array.from({ length: 12 }, (_, i) => i + 1)}
               etichetta={(m) => MESI_IT[m - 1]}
               selezionata={mese}
@@ -167,13 +175,14 @@ export default function MeseAnnoInput({
             />
             <Ruota
               testID={testID ? `${testID}-anno` : undefined}
+              accessibilityLabel="Anno"
               voci={ANNI}
               etichetta={(a) => String(a)}
               selezionata={anno}
               onSeleziona={(a) => onChange(`${a}-${String(mese).padStart(2, "0")}`)}
             />
           </View>
-          <Pressable testID={testID ? `${testID}-fatto` : undefined} onPress={() => setAperto(false)} style={{ paddingVertical: SPACING.sm, alignItems: "center", borderTopWidth: 1, borderTopColor: t.border }}>
+          <Pressable testID={testID ? `${testID}-fatto` : undefined} accessibilityRole="button" onPress={() => setAperto(false)} style={{ paddingVertical: SPACING.sm, alignItems: "center", borderTopWidth: 1, borderTopColor: t.border }}>
             <Text style={{ color: t.brand, fontWeight: "700" }}>Fatto</Text>
           </Pressable>
         </View>

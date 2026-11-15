@@ -15,6 +15,8 @@ export default function OrarioInput({ value, onChange }: { value: string | null;
       <View style={{ flexDirection: "row", gap: 8 }}>
         <Pressable
           testID="orario-tutto-giorno"
+          accessibilityRole="radio"
+          accessibilityState={{ checked: tuttoIlGiorno }}
           onPress={() => onChange(null)}
           style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: tuttoIlGiorno ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}
         >
@@ -22,6 +24,8 @@ export default function OrarioInput({ value, onChange }: { value: string | null;
         </Pressable>
         <Pressable
           testID="orario-specifico"
+          accessibilityRole="radio"
+          accessibilityState={{ checked: !tuttoIlGiorno }}
           onPress={() => onChange(value || "09:00")}
           style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: !tuttoIlGiorno ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}
         >
@@ -31,6 +35,7 @@ export default function OrarioInput({ value, onChange }: { value: string | null;
       {!tuttoIlGiorno ? (
         <TextInput
           testID="orario-input"
+          accessibilityLabel="Orario specifico, formato HH:MM"
           value={value || ""}
           onChangeText={onChange}
           placeholder="HH:MM"
