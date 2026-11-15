@@ -5993,7 +5993,7 @@ export default function Calcolatori() {
                             opzioni={cuProcesso === "amministrativo" ? VALORE_TIPI_CU_APPALTI : cuProcesso === "tributario" ? VALORE_TIPI_CU_TRIBUTARIO : VALORE_TIPI_CU_CIVILE}
                           />
                           {cuValoreTipo === "determinato" ? (
-                            <TextInput testID="cu-valore-causa" accessibilityLabel="Valore della causa" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                            <TextInput testID="cu-valore-causa" accessibilityLabel="Importo della causa €" value={cuValoreCausa} onChangeText={setCuValoreCausa} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
                           ) : null}
                           {cuProcesso === "civile" && cuValoreTipo === "indeterminabile" ? (
                             <>
