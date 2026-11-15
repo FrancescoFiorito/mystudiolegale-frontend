@@ -140,10 +140,10 @@ export default function ClienteDettaglio() {
         onBack={() => router.back()}
         right={
           <View style={{ flexDirection: "row", gap: SPACING.sm }}>
-            <Pressable testID="edit-cliente" onPress={apriModifica} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+            <Pressable testID="edit-cliente" accessibilityRole="button" accessibilityLabel="Modifica cliente" onPress={apriModifica} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
               <Feather name="edit-2" size={17} color={t.onSurfaceSecondary} />
             </Pressable>
-            <Pressable testID="delete-cliente" onPress={eliminaCliente} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
+            <Pressable testID="delete-cliente" accessibilityRole="button" accessibilityLabel="Elimina cliente" onPress={eliminaCliente} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: t.surfaceSecondary }}>
               <Feather name="trash-2" size={18} color={t.error} />
             </Pressable>
           </View>
@@ -160,7 +160,7 @@ export default function ClienteDettaglio() {
           {campiInfo.length === 0 ? (
             <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, fontStyle: "italic" }}>Nessun altro dato compilato</Text>
           ) : campiInfo.map((c) => (
-            <Pressable key={c.label} testID={`copia-${c.label}`} onPress={() => copiaValore(c.label, c.valore)} style={[s.infoRow, { paddingVertical: 4 }]}>
+            <Pressable key={c.label} testID={`copia-${c.label}`} accessibilityRole="button" accessibilityLabel={`Copia ${c.label}`} onPress={() => copiaValore(c.label, c.valore)} style={[s.infoRow, { paddingVertical: 4 }]}>
               <Feather name={c.icon as any} size={14} color={t.onSurfaceTertiary} />
               <Text style={{ color: t.onSurfaceSecondary, fontSize: 13, flex: 1 }}>{c.valore}</Text>
               <Feather name={campoCopiato === c.label ? "check" : "copy"} size={13} color={campoCopiato === c.label ? t.success : t.onSurfaceTertiary} />
@@ -174,6 +174,7 @@ export default function ClienteDettaglio() {
             <Feather name="search" size={15} color={t.onSurfaceTertiary} />
             <TextInput
               testID="cliente-pratiche-search"
+              accessibilityLabel="Cerca pratica"
               value={q}
               onChangeText={setQ}
               placeholder="Cerca per oggetto o controparte..."
@@ -187,7 +188,7 @@ export default function ClienteDettaglio() {
             {pratiche && pratiche.length > 0 ? "Nessuna pratica trovata" : "Nessuna pratica per questo cliente"}
           </Text>
         ) : praticheFiltrate.map((p) => (
-          <Pressable key={p.id} testID={`cliente-pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+          <Pressable key={p.id} testID={`cliente-pratica-${p.id}`} accessibilityRole="button" accessibilityLabel={p.oggetto} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
             <View style={[s.rowIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -210,7 +211,7 @@ export default function ClienteDettaglio() {
             <ScrollView contentContainerStyle={{ padding: SPACING.lg }}>
               <View style={{ flexDirection: "row", gap: 8, marginBottom: SPACING.md }}>
                 {["persona", "azienda"].map((tp) => (
-                  <Pressable key={tp} onPress={() => setEditForm({ ...editForm, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: editForm.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
+                  <Pressable key={tp} accessibilityRole="radio" accessibilityLabel={tp} accessibilityState={{ checked: editForm.tipo === tp }} onPress={() => setEditForm({ ...editForm, tipo: tp })} style={{ flex: 1, padding: 10, borderRadius: RADIUS.md, backgroundColor: editForm.tipo === tp ? t.brand : t.surfaceSecondary, alignItems: "center", borderWidth: 1, borderColor: t.border }}>
                     <Text style={{ color: editForm.tipo === tp ? t.onBrand : t.onSurfaceSecondary, textTransform: "capitalize", fontWeight: "600" }}>{tp}</Text>
                   </Pressable>
                 ))}
@@ -231,13 +232,14 @@ export default function ClienteDettaglio() {
                   <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>{l}</Text>
                   <TextInput
                     testID={`edit-cliente-${k}`}
+                    accessibilityLabel={l}
                     value={editForm[k] || ""}
                     onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
                     style={[s.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
                   />
                 </View>
               ))}
-              <Pressable testID="submit-edit-cliente" onPress={salvaModifiche} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
+              <Pressable testID="submit-edit-cliente" accessibilityRole="button" onPress={salvaModifiche} disabled={saving} style={{ marginTop: SPACING.md, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: saving ? 0.6 : 1 }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>{saving ? "Salvataggio..." : "Salva modifiche"}</Text>
               </Pressable>
             </ScrollView>

@@ -57,7 +57,7 @@ export default function Team() {
                 <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{m.email}</Text>
               </View>
               {m.id !== user?.id ? (
-                <Pressable onPress={() => rimuovi(m)} hitSlop={8}><Feather name="user-x" size={18} color={t.error} /></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Rimuovi membro" onPress={() => rimuovi(m)} hitSlop={8}><Feather name="user-x" size={18} color={t.error} /></Pressable>
               ) : (
                 <View style={[s.tag, { backgroundColor: t.brandSecondary }]}><Text style={{ color: t.onBrandSecondary, fontSize: 10, fontWeight: "700" }}>TU</Text></View>
               )}
@@ -66,6 +66,9 @@ export default function Team() {
               {RUOLI.map((r) => (
                 <Pressable
                   key={r}
+                  accessibilityRole="radio"
+                  accessibilityLabel={r}
+                  accessibilityState={{ checked: m.ruolo === r, disabled: m.id === user?.id }}
                   disabled={m.id === user?.id}
                   onPress={() => cambiaRuolo(m.id, r)}
                   style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, backgroundColor: m.ruolo === r ? t.brand : "transparent", borderWidth: 1, borderColor: m.ruolo === r ? t.brand : t.border, opacity: m.id === user?.id ? 0.6 : 1 }}

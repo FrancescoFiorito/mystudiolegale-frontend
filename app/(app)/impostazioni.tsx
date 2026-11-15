@@ -69,7 +69,7 @@ export default function Impostazioni() {
   // esplicitamente navigates. Le voci che compiono direttamente un'azione
   // (export, collegamento calendario, ecc.) non ce l'hanno.
   const Item = ({ icon, label, onPress, testID, right, navigates, disabled }: any) => (
-    <Pressable testID={testID} onPress={onPress} disabled={disabled} style={[s.item, { backgroundColor: t.surface, opacity: disabled ? 0.6 : 1 }, SHADOW.card]}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} onPress={onPress} disabled={disabled} style={[s.item, { backgroundColor: t.surface, opacity: disabled ? 0.6 : 1 }, SHADOW.card]}>
       <View style={[s.itemIcon, { backgroundColor: t.brandSecondary }]}>
         <Feather name={icon} size={16} color={t.brand} />
       </View>
@@ -172,11 +172,11 @@ export default function Impostazioni() {
           onPress={gestisciCalendarioDispositivo}
           right={
             <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <Pressable testID="info-calendario-dispositivo" onPress={infoCalendarioDispositivo} hitSlop={8}>
+              <Pressable testID="info-calendario-dispositivo" accessibilityRole="button" accessibilityLabel="Informazioni sul calendario del dispositivo" onPress={infoCalendarioDispositivo} hitSlop={8}>
                 <Feather name="info" size={16} color={t.onSurfaceTertiary} />
               </Pressable>
               {dispositivoConnesso ? (
-                <Pressable onPress={disconnettiDispositivo}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
+                <Pressable accessibilityRole="button" onPress={disconnettiDispositivo}><Text style={{ color: t.error, fontSize: 12 }}>Scollega</Text></Pressable>
               ) : null}
             </View>
           }
@@ -212,7 +212,7 @@ export default function Impostazioni() {
           <Text style={{ flex: 1, color: t.onSurface, fontSize: 14, fontWeight: "600" }}>Tema</Text>
           <View style={{ flexDirection: "row", gap: 4 }}>
             {(["light", "dark", "system"] as const).map((m) => (
-              <Pressable key={m} testID={`theme-${m}`} onPress={() => setMode(m)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, backgroundColor: mode === m ? t.brand : t.surfaceSecondary }}>
+              <Pressable key={m} testID={`theme-${m}`} accessibilityRole="radio" accessibilityLabel={m === "system" ? "Automatico" : m === "dark" ? "Scuro" : "Chiaro"} accessibilityState={{ checked: mode === m }} onPress={() => setMode(m)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: RADIUS.pill, backgroundColor: mode === m ? t.brand : t.surfaceSecondary }}>
                 <Text style={{ color: mode === m ? t.onBrand : t.onSurfaceSecondary, fontSize: 11, textTransform: "capitalize" }}>{m === "system" ? "Auto" : m === "dark" ? "Scuro" : "Chiaro"}</Text>
               </Pressable>
             ))}

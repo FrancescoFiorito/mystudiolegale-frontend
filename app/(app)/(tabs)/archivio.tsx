@@ -75,16 +75,16 @@ export default function Archivio() {
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Archivio" />
       <View style={{ flexDirection: "row", backgroundColor: t.surface, padding: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
-        <Pressable testID="archivio-tab-pratiche" onPress={() => setTab("pratiche")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "pratiche" ? t.brand : t.surfaceSecondary }}>
+        <Pressable testID="archivio-tab-pratiche" accessibilityRole="tab" accessibilityState={{ selected: tab === "pratiche" }} onPress={() => setTab("pratiche")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "pratiche" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "pratiche" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Pratiche</Text>
         </Pressable>
-        <Pressable testID="archivio-tab-documenti" onPress={() => setTab("documenti")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "documenti" ? t.brand : t.surfaceSecondary }}>
+        <Pressable testID="archivio-tab-documenti" accessibilityRole="tab" accessibilityState={{ selected: tab === "documenti" }} onPress={() => setTab("documenti")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "documenti" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "documenti" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Documenti</Text>
         </Pressable>
-        <Pressable testID="archivio-tab-parcelle" onPress={() => setTab("parcelle")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "parcelle" ? t.brand : t.surfaceSecondary }}>
+        <Pressable testID="archivio-tab-parcelle" accessibilityRole="tab" accessibilityState={{ selected: tab === "parcelle" }} onPress={() => setTab("parcelle")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "parcelle" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "parcelle" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Parcelle</Text>
         </Pressable>
-        <Pressable testID="archivio-tab-atti" onPress={() => setTab("atti")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "atti" ? t.brand : t.surfaceSecondary }}>
+        <Pressable testID="archivio-tab-atti" accessibilityRole="tab" accessibilityState={{ selected: tab === "atti" }} onPress={() => setTab("atti")} style={{ flex: 1, paddingVertical: 10, borderRadius: RADIUS.pill, alignItems: "center", backgroundColor: tab === "atti" ? t.brand : t.surfaceSecondary }}>
           <Text style={{ color: tab === "atti" ? t.onBrand : t.onSurfaceSecondary, fontWeight: "700", fontSize: 13 }}>Atti</Text>
         </Pressable>
       </View>
@@ -220,11 +220,11 @@ function SezionePratiche({
       <View style={{ backgroundColor: t.surface, paddingTop: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: t.border }}>
         <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
           <Feather name="search" size={16} color={t.onSurfaceTertiary} />
-          <TextInput testID="pratiche-search" value={q} onChangeText={setQ} placeholder="Cerca pratica..." placeholderTextColor={t.onSurfaceTertiary} style={{ flex: 1, color: t.onSurface, fontSize: 14 }} />
+          <TextInput testID="pratiche-search" accessibilityLabel="Cerca pratica" value={q} onChangeText={setQ} placeholder="Cerca pratica..." placeholderTextColor={t.onSurfaceTertiary} style={{ flex: 1, color: t.onSurface, fontSize: 14 }} />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 48 }} contentContainerStyle={{ paddingHorizontal: SPACING.lg, gap: 8, alignItems: "center", height: 48 }}>
           {STATI.map((st) => (
-            <Pressable key={st} testID={`filter-${st}`} onPress={() => setStato(st)} style={{ flexShrink: 0, height: 34, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: st === stato ? t.brand : t.surfaceSecondary, alignItems: "center", justifyContent: "center" }}>
+            <Pressable key={st} testID={`filter-${st}`} accessibilityRole="radio" accessibilityLabel={st} accessibilityState={{ checked: st === stato }} onPress={() => setStato(st)} style={{ flexShrink: 0, height: 34, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: st === stato ? t.brand : t.surfaceSecondary, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ color: st === stato ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "600" }}>{st}</Text>
             </Pressable>
           ))}
@@ -240,7 +240,7 @@ function SezionePratiche({
             </View>
           ) : items.map((p) => (
             <SwipeToDelete key={p.id} testID={`pratica-${p.id}`} onDelete={() => eliminaPratica(p)}>
-              <Pressable testID={`pratica-${p.id}`} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface, alignItems: "flex-start" }, SHADOW.card]}>
+              <Pressable testID={`pratica-${p.id}`} accessibilityRole="button" accessibilityLabel={p.oggetto} onPress={() => router.push({ pathname: "/(app)/pratica/[id]", params: { id: p.id } })} style={[s.card, { backgroundColor: t.surface, alignItems: "flex-start" }, SHADOW.card]}>
                 <View style={[s.cardIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
                 <View style={{ flex: 1 }}>
                   <View style={[s.cardHead, { justifyContent: "space-between" }]}>
@@ -260,7 +260,7 @@ function SezionePratiche({
           ))}
       </ScrollView>
 
-      <Pressable testID="new-pratica-fab" onPress={() => setShowNew(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+      <Pressable testID="new-pratica-fab" accessibilityRole="button" accessibilityLabel="Nuova pratica" onPress={() => setShowNew(true)} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
         <Feather name="plus" size={22} color={t.onBrand} />
       </Pressable>
 
@@ -358,10 +358,10 @@ function SezioneDocumenti() {
         <View style={{ paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm }}>
           <View style={[s.searchBox, { backgroundColor: t.surfaceSecondary }]}>
             <Feather name="search" size={16} color={t.onSurfaceTertiary} />
-            <TextInput testID="doc-search" placeholder="Cerca documenti..." placeholderTextColor={t.onSurfaceTertiary} value={q} onChangeText={setQ} style={{ flex: 1, marginLeft: 8, color: t.onSurface }} />
+            <TextInput testID="doc-search" accessibilityLabel="Cerca documenti" placeholder="Cerca documenti..." placeholderTextColor={t.onSurfaceTertiary} value={q} onChangeText={setQ} style={{ flex: 1, marginLeft: 8, color: t.onSurface }} />
           </View>
           {!q && cartellaCorrente ? (
-            <Pressable onPress={() => setCartellaCorrente(null)} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: SPACING.sm }}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Torna alla cartella principale" onPress={() => setCartellaCorrente(null)} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: SPACING.sm }}>
               <Feather name="arrow-left" size={14} color={t.brand} />
               <Text style={{ color: t.brand, fontSize: 13, fontWeight: "600" }}>Cartella principale</Text>
             </Pressable>
@@ -371,7 +371,7 @@ function SezioneDocumenti() {
 
       <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
         {!q && cartelleVisibili.map((c) => (
-          <Pressable key={c.id} onPress={() => setCartellaCorrente(c.id)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+          <Pressable key={c.id} accessibilityRole="button" accessibilityLabel={c.nome} onPress={() => setCartellaCorrente(c.id)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
             <View style={[s.rowIcon, { backgroundColor: t.brandSecondary }]}><Feather name="folder" size={18} color={t.brand} /></View>
             <Text style={{ flex: 1, color: t.onSurface, fontWeight: "700" }}>{c.nome}</Text>
             <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
@@ -382,7 +382,7 @@ function SezioneDocumenti() {
         ) : null}
         {documentiVisibili.map((d) => (
           <SwipeToDelete key={d.id} testID={`doc-${d.id}`} onDelete={() => eliminaDocumento(d)}>
-            <Pressable onPress={() => apriDocumento(d)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+            <Pressable accessibilityRole="button" onPress={() => apriDocumento(d)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
               <View style={[s.rowIcon, { backgroundColor: t.surfaceTertiary }]}><Feather name={iconForDoc(d.tipo) as any} size={18} color={t.onSurfaceSecondary} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{d.nome}</Text>
@@ -393,7 +393,7 @@ function SezioneDocumenti() {
         ))}
       </ScrollView>
 
-      <Pressable testID="doc-upload-fab" onPress={caricaFile} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
+      <Pressable testID="doc-upload-fab" accessibilityRole="button" accessibilityLabel="Carica documento" onPress={caricaFile} disabled={uploading} style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}>
         {uploading ? <ActivityIndicator color={t.onBrand} /> : <Feather name="upload" size={22} color={t.onBrand} />}
       </Pressable>
     </>
@@ -458,17 +458,17 @@ function SezioneParcelle() {
             {p.cliente ? <Text style={{ color: t.onSurfaceSecondary, marginTop: 2 }}>{p.cliente.ragione_sociale || `${p.cliente.nome} ${p.cliente.cognome || ""}`}</Text> : null}
             <View style={{ flexDirection: "row", gap: 8, width: "100%", marginTop: SPACING.md }}>
               {p.emessa ? (
-                <Pressable testID={`pdf-${p.id}`} onPress={() => openPdf(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                <Pressable testID={`pdf-${p.id}`} accessibilityRole="button" onPress={() => openPdf(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
                   <Feather name="download" size={14} color={t.onBrand} />
                   <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>PDF</Text>
                 </Pressable>
               ) : (
-                <Pressable testID={`emetti-${p.id}`} onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
+                <Pressable testID={`emetti-${p.id}`} accessibilityRole="button" onPress={() => emettiParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.brand }}>
                   <Feather name="check-circle" size={14} color={t.onBrand} />
                   <Text style={{ color: t.onBrand, fontWeight: "700", fontSize: 12 }}>Emetti</Text>
                 </Pressable>
               )}
-              <Pressable testID={`modifica-${p.id}`} onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
+              <Pressable testID={`modifica-${p.id}`} accessibilityRole="button" onPress={() => modificaParcella(p)} style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", padding: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary, borderWidth: 1, borderColor: t.border }}>
                 <Feather name="edit-2" size={14} color={t.onSurface} />
                 <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 12 }}>Modifica</Text>
               </Pressable>
@@ -480,6 +480,8 @@ function SezioneParcelle() {
 
       <Pressable
         testID="calcolatori-fab"
+        accessibilityRole="button"
+        accessibilityLabel="Apri i calcolatori"
         onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })}
         style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
       >
@@ -518,7 +520,7 @@ function SezioneAtti() {
           </View>
         ) : items.map((a) => (
           <SwipeToDelete key={a.id} testID={`atto-${a.id}`} onDelete={() => eliminaAtto(a)}>
-            <Pressable onPress={() => apriAtto(a)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+            <Pressable accessibilityRole="button" onPress={() => apriAtto(a)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
               <View style={[s.rowIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={18} color={t.brand} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>
@@ -533,6 +535,8 @@ function SezioneAtti() {
 
       <Pressable
         testID="calcolatori-fab-atti"
+        accessibilityRole="button"
+        accessibilityLabel="Apri i calcolatori"
         onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })}
         style={[s.fab, { backgroundColor: t.brand }, SHADOW.floating]}
       >

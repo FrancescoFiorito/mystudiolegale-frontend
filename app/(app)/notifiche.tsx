@@ -33,7 +33,7 @@ export default function Notifiche() {
             <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessuna notifica</Text>
           </View>
         ) : items.map((n) => (
-          <Pressable key={n.id} testID={`notif-${n.id}`} onPress={() => !n.letta && markRead(n.id)} style={[s.card, { backgroundColor: n.letta ? t.surface : t.brandTertiary }, SHADOW.card]}>
+          <Pressable key={n.id} testID={`notif-${n.id}`} accessibilityRole="button" onPress={() => !n.letta && markRead(n.id)} style={[s.card, { backgroundColor: n.letta ? t.surface : t.brandTertiary }, SHADOW.card]}>
             <Feather name={n.tipo === "warning" ? "alert-triangle" : n.tipo === "error" ? "alert-circle" : "info"} size={18} color={n.letta ? t.onSurfaceTertiary : t.brand} />
             <View style={{ flex: 1 }}>
               <Text style={{ color: t.onSurface, fontWeight: n.letta ? "500" : "700" }}>{n.titolo}</Text>

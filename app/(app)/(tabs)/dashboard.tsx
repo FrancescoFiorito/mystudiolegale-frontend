@@ -156,7 +156,7 @@ export default function Dashboard() {
         <Feather name="alert-triangle" size={40} color={t.onSurfaceTertiary} />
         <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 16, marginTop: SPACING.md, textAlign: "center" }}>Impossibile caricare i dati</Text>
         <Text style={{ color: t.onSurfaceTertiary, fontSize: 13, marginTop: 4, textAlign: "center" }}>Controlla la connessione e riprova.</Text>
-        <Pressable testID="dashboard-retry" onPress={load} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.md }}>
+        <Pressable testID="dashboard-retry" accessibilityRole="button" onPress={load} style={{ marginTop: SPACING.lg, backgroundColor: t.brand, paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, borderRadius: RADIUS.md }}>
           <Text style={{ color: t.onBrand, fontWeight: "700" }}>Riprova</Text>
         </Pressable>
       </SafeAreaView>
@@ -168,7 +168,7 @@ export default function Dashboard() {
   }
 
   const Stat = ({ label, value, icon, color, bg, testID, onPress }: any) => (
-    <Pressable testID={testID} onPress={onPress} style={[s.stat, { backgroundColor: t.surface }, SHADOW.card]}>
+    <Pressable testID={testID} onPress={onPress} accessibilityRole="button" accessibilityLabel={label} accessibilityValue={{ text: String(value) }} style={[s.stat, { backgroundColor: t.surface }, SHADOW.card]}>
       <View style={[s.statBadge, { backgroundColor: bg }]}>
         <Feather name={icon} size={18} color={color} />
       </View>
@@ -188,7 +188,7 @@ export default function Dashboard() {
         avatarInitials={initials(user?.nome)}
         onAvatarPress={() => setShowMenu(true)}
         right={
-          <Pressable testID="calendar-btn" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: 10, borderRadius: RADIUS.pill, backgroundColor: "rgba(255,255,255,0.18)" }}>
+          <Pressable testID="calendar-btn" accessibilityRole="button" accessibilityLabel="Apri il calendario" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={{ flexDirection: "row", alignItems: "center", gap: 6, height: 38, paddingHorizontal: 10, borderRadius: RADIUS.pill, backgroundColor: "rgba(255,255,255,0.18)" }}>
             <Feather name="calendar" size={17} color={t.onBrand} />
             <View>
               <Text style={{ color: t.onBrand, fontSize: 12, fontWeight: "800", lineHeight: 14 }}>{new Date().getDate()} {new Date().toLocaleDateString("it-IT", { month: "short" }).replace(".", "")}</Text>
@@ -199,18 +199,18 @@ export default function Dashboard() {
       />
 
       <Modal visible={showMenu} transparent animationType="fade" onRequestClose={() => setShowMenu(false)}>
-        <Pressable style={s.menuBackdrop} onPress={() => setShowMenu(false)}>
+        <Pressable style={s.menuBackdrop} accessibilityRole="button" accessibilityLabel="Chiudi il menù" onPress={() => setShowMenu(false)}>
           <View style={[s.menuCard, { backgroundColor: t.surface }, SHADOW.floating]}>
-            <Pressable testID="quickmenu-notifiche" onPress={() => { setShowMenu(false); router.push("/(app)/notifiche"); }} style={s.menuItem}>
+            <Pressable testID="quickmenu-notifiche" accessibilityRole="button" onPress={() => { setShowMenu(false); router.push("/(app)/notifiche"); }} style={s.menuItem}>
               <Feather name="bell" size={17} color={t.onSurfaceSecondary} />
               <Text style={[s.menuItemLbl, { color: t.onSurface }]}>Notifiche</Text>
             </Pressable>
-            <Pressable testID="quickmenu-profilo" onPress={() => { setShowMenu(false); router.push("/(app)/profilo"); }} style={s.menuItem}>
+            <Pressable testID="quickmenu-profilo" accessibilityRole="button" onPress={() => { setShowMenu(false); router.push("/(app)/profilo"); }} style={s.menuItem}>
               <Feather name="user" size={17} color={t.onSurfaceSecondary} />
               <Text style={[s.menuItemLbl, { color: t.onSurface }]}>Profilo</Text>
             </Pressable>
             <View style={[s.menuDivider, { backgroundColor: t.gold, opacity: 0.55 }]} />
-            <Pressable testID="quickmenu-settings" onPress={() => { setShowMenu(false); router.push("/(app)/impostazioni"); }} style={s.menuItem}>
+            <Pressable testID="quickmenu-settings" accessibilityRole="button" onPress={() => { setShowMenu(false); router.push("/(app)/impostazioni"); }} style={s.menuItem}>
               <Feather name="settings" size={17} color={t.brand} />
               <Text style={[s.menuItemLbl, { color: t.brand, fontWeight: "700" }]}>Impostazioni</Text>
             </Pressable>
@@ -229,7 +229,7 @@ export default function Dashboard() {
           <Stat testID="stat-scadenze-settimana" label="Questa settimana" value={data.scadenze_settimana} icon="clock" color={t.warning} bg={t.mode === "dark" ? t.surfaceTertiary : "#FFFBEB"} onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Settimana", _t: String(Date.now()) } })} />
         </View>
 
-        <Pressable testID="prossimi-impegni-card" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={[s.calCard, { backgroundColor: t.surface }, SHADOW.card]}>
+        <Pressable testID="prossimi-impegni-card" accessibilityRole="button" accessibilityLabel="Prossimi impegni, apri il calendario" onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", _t: String(Date.now()) } })} style={[s.calCard, { backgroundColor: t.surface }, SHADOW.card]}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.sm }}>
             <Text style={{ color: t.onSurface, fontWeight: "800", fontSize: 14 }}>Prossimi impegni</Text>
             <Feather name="chevron-right" size={16} color={t.onSurfaceTertiary} />
@@ -240,6 +240,8 @@ export default function Dashboard() {
             prossimi.map((ev) => (
               <Pressable
                 key={ev.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${ev.titolo}, ${giornoBreve(ev.data)} ${formatOra(ev.ora)}`}
                 onPress={() => router.push({ pathname: "/(app)/calendario", params: { view: "Mese", day: ev.data, _t: String(Date.now()) } })}
                 style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 5 }}
               >
@@ -251,13 +253,13 @@ export default function Dashboard() {
           )}
         </Pressable>
 
-        <Pressable testID="nuova-pratica-btn" onPress={apriNuovaPratica} style={[s.banner, { backgroundColor: t.brand }]}>
+        <Pressable testID="nuova-pratica-btn" accessibilityRole="button" onPress={apriNuovaPratica} style={[s.banner, { backgroundColor: t.brand }]}>
           <View style={s.bannerIcon}><Feather name="folder-plus" size={22} color={t.onBrand} /></View>
           <Text style={[s.bannerTitle, { color: t.onBrand }]}>Nuova pratica</Text>
           <Feather name="chevron-right" size={20} color={t.onBrand} />
         </Pressable>
 
-        <Pressable testID="calcolatori-btn" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
+        <Pressable testID="calcolatori-btn" accessibilityRole="button" onPress={() => router.push({ pathname: "/(app)/calcolatori", params: { _t: String(Date.now()) } })} style={[s.banner, { backgroundColor: t.surface, marginTop: SPACING.md }, SHADOW.card]}>
           <View style={[s.bannerIcon, { backgroundColor: t.brandSecondary }]}><Feather name="percent" size={22} color={t.brand} /></View>
           <Text style={[s.bannerTitle, { color: t.onSurface }]}>Calcolatori</Text>
           <Feather name="chevron-right" size={20} color={t.onSurfaceTertiary} />

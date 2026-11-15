@@ -155,17 +155,17 @@ export default function Calendario() {
   };
 
   const EventCard = ({ e }: { e: any }) => (
-    <Pressable onLongPress={() => apriSposta(e)} style={[{ flexDirection: "row", borderRadius: RADIUS.lg, marginBottom: SPACING.sm, overflow: "hidden", backgroundColor: t.surface }, SHADOW.card]}>
+    <Pressable onLongPress={() => apriSposta(e)} accessibilityRole="button" accessibilityLabel={e.titolo} accessibilityHint="Tieni premuto per spostare l'evento" style={[{ flexDirection: "row", borderRadius: RADIUS.lg, marginBottom: SPACING.sm, overflow: "hidden", backgroundColor: t.surface }, SHADOW.card]}>
       <View style={{ width: 4, backgroundColor: priColor(e.priorita) }} />
       <View style={{ flex: 1, padding: SPACING.md }}>
         <Text style={{ color: t.onSurface, fontWeight: "700" }}>{e.titolo}</Text>
         <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2, fontVariant: ["tabular-nums"] }}>{e.data} · {formatOra(e.ora)} · {e.categoria}</Text>
         {e.pratica ? <Text style={{ color: t.onSurfaceSecondary, fontSize: 12 }} numberOfLines={1}>{e.pratica.oggetto}</Text> : null}
       </View>
-      <Pressable onPress={() => apriSposta(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+      <Pressable onPress={() => apriSposta(e)} accessibilityRole="button" accessibilityLabel="Sposta evento" style={{ padding: SPACING.md, justifyContent: "center" }}>
         <Feather name="move" size={16} color={t.onSurfaceTertiary} />
       </Pressable>
-      <Pressable onPress={() => eliminaEvento(e)} style={{ padding: SPACING.md, justifyContent: "center" }}>
+      <Pressable onPress={() => eliminaEvento(e)} accessibilityRole="button" accessibilityLabel="Elimina evento" style={{ padding: SPACING.md, justifyContent: "center" }}>
         <Feather name="trash-2" size={16} color={t.error} />
       </Pressable>
     </Pressable>
@@ -197,7 +197,7 @@ export default function Calendario() {
         title="Calendario"
         onBack={() => router.back()}
         right={
-          <Pressable testID="new-evento-btn" onPress={apriNuovo} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" }}>
+          <Pressable testID="new-evento-btn" accessibilityRole="button" accessibilityLabel="Nuovo evento" onPress={apriNuovo} style={{ width: 38, height: 38, borderRadius: RADIUS.pill, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.18)" }}>
             <Feather name="plus" size={20} color={t.onBrand} />
           </Pressable>
         }
@@ -205,7 +205,7 @@ export default function Calendario() {
 
       <View style={{ flexDirection: "row", backgroundColor: t.surface, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm, paddingBottom: SPACING.md, gap: 8, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
         {VIEWS.map((v) => (
-          <Pressable key={v} testID={`cal-view-${v}`} onPress={() => setView(v)} style={{ flex: 1, paddingVertical: 9, borderRadius: RADIUS.pill, backgroundColor: view === v ? t.brand : t.surfaceSecondary, alignItems: "center" }}>
+          <Pressable key={v} testID={`cal-view-${v}`} accessibilityRole="tab" accessibilityState={{ selected: view === v }} onPress={() => setView(v)} style={{ flex: 1, paddingVertical: 9, borderRadius: RADIUS.pill, backgroundColor: view === v ? t.brand : t.surfaceSecondary, alignItems: "center" }}>
             <Text style={{ color: view === v ? t.onBrand : t.onSurfaceSecondary, fontSize: 12, fontWeight: "700" }}>{v}</Text>
           </Pressable>
         ))}
@@ -213,11 +213,11 @@ export default function Calendario() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xxxl + 80 }}>
         <View style={[s.monthBar, { backgroundColor: t.surface, borderBottomColor: t.border }]}>
-          <Pressable testID="cal-prev" onPress={goPrev}><Feather name="chevron-left" size={22} color={t.onSurface} /></Pressable>
+          <Pressable testID="cal-prev" accessibilityRole="button" accessibilityLabel="Precedente" onPress={goPrev}><Feather name="chevron-left" size={22} color={t.onSurface} /></Pressable>
           <Text style={{ color: t.onSurface, fontSize: 16, fontWeight: "700" }}>
             {view === "Mese" ? `${MONTHS[m]} ${y}` : view === "Settimana" ? `${toISODate(weekDays[0])} → ${toISODate(weekDays[6])}` : toISODate(cursor)}
           </Text>
-          <Pressable testID="cal-next" onPress={goNext}><Feather name="chevron-right" size={22} color={t.onSurface} /></Pressable>
+          <Pressable testID="cal-next" accessibilityRole="button" accessibilityLabel="Successivo" onPress={goNext}><Feather name="chevron-right" size={22} color={t.onSurface} /></Pressable>
         </View>
 
         {view === "Mese" && (
@@ -237,7 +237,7 @@ export default function Calendario() {
                   const isToday = ds === toISODate(today);
                   const dotColor = sel ? t.onBrand : hasAlta ? t.error : t.brand;
                   return (
-                    <Pressable key={i} testID={`day-${d}`} onPress={() => setSelectedDay(ds)} style={{ width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}>
+                    <Pressable key={i} testID={`day-${d}`} accessibilityRole="button" accessibilityLabel={ds} accessibilityState={{ selected: selectedDay === ds }} onPress={() => setSelectedDay(ds)} style={{ width: "14.28%", aspectRatio: 1, alignItems: "center", justifyContent: "center" }}>
                       <View
                         style={{
                           width: 34, height: 34, borderRadius: 17,
@@ -308,10 +308,10 @@ export default function Calendario() {
             <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceTertiary, marginBottom: 4 }}>Nuova data</Text>
             <DataInput testID="sposta-data" value={moveDate} onChange={setMoveDate} />
             <View style={{ flexDirection: "row", gap: 8, marginTop: SPACING.lg }}>
-              <Pressable onPress={() => setMoveTarget(null)} style={{ flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
+              <Pressable accessibilityRole="button" onPress={() => setMoveTarget(null)} style={{ flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, borderWidth: 1, borderColor: t.border, alignItems: "center" }}>
                 <Text style={{ color: t.onSurface }}>Annulla</Text>
               </Pressable>
-              <Pressable onPress={confermaSposta} style={{ flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brand, alignItems: "center" }}>
+              <Pressable accessibilityRole="button" onPress={confermaSposta} style={{ flex: 1, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.brand, alignItems: "center" }}>
                 <Text style={{ color: t.onBrand, fontWeight: "700" }}>Sposta</Text>
               </Pressable>
             </View>
@@ -327,6 +327,7 @@ export default function Calendario() {
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Titolo *</Text>
               <TextInput
                 testID="nuovo-evento-titolo"
+                accessibilityLabel="Titolo"
                 value={nuovoTitolo}
                 onChangeText={setNuovoTitolo}
                 placeholder="Es. Udienza"
@@ -377,6 +378,7 @@ export default function Calendario() {
               <Text style={[s.lbl, { color: t.onSurfaceSecondary }]}>Descrizione (facoltativa)</Text>
               <TextInput
                 testID="nuovo-evento-descrizione"
+                accessibilityLabel="Descrizione (facoltativa)"
                 value={nuovoDescrizione}
                 onChangeText={setNuovoDescrizione}
                 multiline
@@ -387,6 +389,7 @@ export default function Calendario() {
 
               <Pressable
                 testID="submit-nuovo-evento"
+                accessibilityRole="button"
                 onPress={creaEvento}
                 disabled={savingNuovo || !nuovoTitolo.trim()}
                 style={{ marginTop: SPACING.lg, backgroundColor: t.brand, padding: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", opacity: savingNuovo || !nuovoTitolo.trim() ? 0.6 : 1 }}
