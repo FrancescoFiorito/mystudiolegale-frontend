@@ -67,3 +67,63 @@ Per ogni calcolatore: funzioni dell'app eseguite con node (valori di partenza e 
 - Il Preventivo: salvataggio, modifica e PDF di una parcella con `fasi_preventivo` provati solo sul calcolo (`/calc/parcella`), non su `POST/PUT /parcelle` né sul PDF.
 - Il backend è stato eseguito come funzione (coroutine con `u=None`), non via HTTP: validazione delle richieste ed errori 422 non provati.
 - Non ho confrontato i risultati con il sito di riferimento (non consultato): i confronti sono con gli esempi delle specifiche.
+
+---
+
+# Aggiornamento del 16/11/2026: i calcolatori rimasti fuori
+
+Specifiche lette in sola lettura da `mystudiolegale-backend` (`docs/differenze-lotto-penale-vari.md` aggiornato, commit `c041428`) e controllate contro i modelli di richiesta di `server.py`; dove specifica e codice non coincidono vale il codice. Nessuna build iOS, workflow, `expo start`, deploy, nessuna chiamata alla produzione; il backend non è stato modificato; il sito di riferimento non è stato consultato (la specifica bastava anche per il Maggior Danno). Questo aggiornamento sostituisce la sezione "Calcolatori rimasti fuori" qui sopra.
+
+## PR e sha dei merge
+
+| PR | Contenuto | Sha merge |
+|---|---|---|
+| #181 | Prescrizione e decadenza | `713562a` |
+| #182 | Interessi 1284 cc | `d547bd5` |
+| #183 | Calcolo TAEG | `62a8601` |
+| #184 | Maggior Danno | `01d32a1` |
+| #185 | Etichette trovate dall'audit (Imposte, Tassa Registro, Scorporo, Maggior Danno) | `327cea6` |
+
+Nessuna di queste modifiche è in una build iOS.
+
+## Cosa è stato aggiunto e come l'ho provato
+
+Per ogni calcolatore: funzione che costruisce il corpo eseguita con node (estratta dal file dell'app), corpo passato alla coroutine vera di `server.py` caricata in locale (`u=None`, Mongo non usato), funzione `risultato` dell'app applicata alla risposta vera. Gli script stavano nello scratchpad, non nel repository. `tsc` 11 righe e lint 10 problemi (6 errori, 4 warning) dopo ogni PR (baseline), con `.expo/types` assente.
+
+| Calcolatore | Aggiunto | Prova |
+|---|---|---|
+| Prescrizione e decadenza | Il menu "Tipo di termine" (43 voci sintetiche) è sostituito da "Diritto" con le 49 voci del sito (a0-a39, b0-b8, etichette e ordine del codice; di partenza "Scegli..." con avviso se non scelto); "Data Riferimento" (oggi di partenza); corpo con `diritto`; righe nuove: note di proroga, frase del risultato, "Norma di Riferimento" (non mostrata se assente). "Data ultimo atto interruttivo" non toccato. | 49 voci senza errori, 6 casi mirati (a0 Natale, bollette a due regimi, bollo auto a fine anno, domenica, Immacolata, atto interruttivo); esempio della specifica coincidente (28 Dicembre 2026, Art. 2948 c.c.) |
+| Interessi 1284 cc | Etichette del sito (Importo credito, Decorrenza credito, Domanda giudiziale, Calcola interessi al, Tasso fisso con "Interessi %", Rivaluta annualmente, Rivaluta al %); con "Tasso fisso" spuntato si invia sempre `tasso_fisso_da_decorrenza: true`; nota sulla domanda giudiziale con tasso fisso; risultato con una riga per periodo (dal → al, giorni, tasso, credito), sezione moratori, totale giorni, totali legali/moratori (o "Totale interessi" col tasso fisso), rivalutazione, "Credito (rivalutato) + interessi", "Rivalutazione + interessi". | 6 corpi (tasso fisso, legale+moratori con e senza rivalutazione, al 75%, domanda anteriore al 2014, tasso decimale); esempio della specifica coincidente (604,80 / 607,06 / 609,60 / 648,60 / 289,08; 2.759,14; 1.130,00; 13.889,14) |
+| Calcolo TAEG | Etichette "Spese Incasso Rata", "Spese Assicurative", "Spese di Gestione Annuali" con le note del sito (assicurazione = importo mensile riportato a rata; gestione addebitata a fine anno); righe del risultato nell'ordine del sito, comprese le tre nuove (rata con spese ricorrenti, spese ricorrenti complessive, totale con spese ricorrenti) e "Interessi totali calcolati all'X%". | 4 corpi (mensile, semestrale, trimestrale con durata in rate, senza spese); esempio della specifica coincidente (269,37 / 272,37 / 480,00 / 32.804,94 / 1,99%) |
+| Calcolo Ammortamento | Nessuna modifica: la specifica aggiornata non ha campi nuovi della richiesta e la risposta (interessi residui, riepilogo annuale, durata, modalità) era già mostrata dalla PR #179. Riletto il codice dell'app contro la specifica: copre tutto. | 6 corpi (francese/italiano, con e senza singole rate e riepilogo, durata in anni e in rate); riepilogo annuale coincidente (51.577,45 / 2.326,46 / 49.250,99 / 828,45 / 50.749,01), interessi residui della 1ª rata 2.904,91 |
+| Maggior Danno | Valore di partenza del tasso di riferimento: BOT 3/6/12 (netti, annuale) come il sito, al posto di Istat; dettaglio per riga come il sito (tasso legale, tasso di riferimento o "-", interessi legali, maggior danno o "-", più "Totale giorni"); i tassi sono arrotondati a 4 decimali nella riga. | 5 corpi (tutti i tassi, netti/lordi, annuale/mensile); esempio della specifica coincidente (64,62 / 35,34 / 89,24; 189,20; totale 10.320,20) |
+
+## Audit dei campi (punto 4)
+
+Confrontati con la "Specifica per il frontend" aggiornata: Fine Pena, Prescrizione Reati, Maggior Danno, Scorporo, Valore Catastale, Imposte Compravendita, Tassa Registro, Ammortamento, TAEG, Prescrizione e decadenza, Interessi 1284. **Nessun campo della richiesta mancava** (tutti i campi elencati hanno il loro campo nell'app, anche quelli del lotto già portato dalla sessione precedente). Buchi trovati e chiusi (solo etichette, PR #185):
+
+- Imposte Compravendita: le voci del Venditore avevano una virgola e un "dal" in più rispetto al sito ("Impresa costruttrice entro/oltre 5 anni fine lavori").
+- Tassa Registro: il campo era "Importo del canone €" preceduto da una scelta con voci diverse; ora "Importo Canone €" seguito dalla scelta annuale / mensile / intera durata (la scelta ha un'etichetta propria, "Importo canone riferito a", per VoiceOver).
+- Scorporo: "Tipo Regime" (maiuscola come sul sito).
+- Maggior Danno: tolti i due punti dalle etichette aggiunte in #184 (l'app non li usa mai; la specifica li riporta ma resto coerente con il resto dell'app).
+
+## Scostamenti e scelte prudenti (da rivedere)
+
+1. **Prescrizione e decadenza, gruppi del menu**: il motore delle scelte non ha intestazioni di gruppo, quindi le 49 voci sono in un solo elenco nell'ordine del sito (prima le "persone fisiche e/o giuridiche" con "Prescrizione ordinaria" in fondo, poi "enti e pubblica amministrazione"), senza le due intestazioni. Le voci sintetiche non sono più raggiungibili dall'app (il backend le accetta ancora). Le righe di risultato "Proroga" e "Risultato" hanno etichette scelte da me.
+2. **Prescrizione e decadenza, "Data Riferimento"**: sul sito è la data di riferimento del calcolo; qui resta il campo `data_decorrenza` (è quello che il backend usa come decorrenza) con l'etichetta del sito.
+3. **Interessi 1284, tasso decimale**: il sito accetta solo interi per "Interessi %" e "Rivaluta al"; l'app accetta anche decimali (il backend li accetta) per non bloccare input validi.
+4. **Interessi 1284, sezioni legali/moratori**: la risposta non le distingue; le ricavo nell'app dalla data della domanda (righe con `al` ≤ domanda = legali). Il rigo con la frase del sito sui moratori ha il valore vuoto.
+5. **Interessi 1284, "Tasso fisso"**: l'app non ha un campo "tasso" a sé (il vecchio "Tasso di mora convenzionale %") ma casella + "Interessi %", come il sito; il vecchio comportamento (tasso fisso solo dalla domanda) non è più raggiungibile dall'app, resta nel backend.
+6. **TAEG, righe sulle spese ricorrenti**: mostrate sempre, anche con spese a zero (la specifica non dice se il sito le nasconde); le altre etichette dei campi non sono state cambiate perché la specifica non ne dà il testo esatto.
+7. **Maggior Danno, dettaglio**: con "Sviluppo mensile" su 1980-2026 le righe sono ~560; l'etichetta di riga è una stringa unica, non una tabella.
+8. **Un'avvertenza di processo**: il primo ramo (Prescrizione) è partito da un `origin/main` locale non aggiornato (non avevo fatto il `fetch`); l'unione su GitHub è avvenuta senza conflitti e ho rieseguito `tsc`, lint e le prove sul `main` risultante (stessi risultati). Gli altri rami partono da un `fetch` fatto prima.
+
+## Cosa non è stato possibile provare senza dispositivo
+
+Come nella sezione precedente: nessuna schermata aperta (layout delle note sui campi, lunghezza dei risultati di Interessi, Ammortamento e Maggior Danno mensile, VoiceOver, pulsanti PDF/Word con i campi nuovi); backend eseguito come funzione e non via HTTP (errori 422 non provati); confronto col sito solo tramite gli esempi delle specifiche.
+
+## Cosa resta fuori
+
+- I quattro campi che l'app ha e il sito no e i valori di partenza delle "Osservazioni fuori tabella": non toccati, come da mandato.
+- Residui dichiarati dal backend (Fine Pena 1-2 giorni, Scorporo 1 centesimo in ~4% dei casi, TAEG 1 centesimo con tassi molto alti, Interessi 1 caso su 80 con rivalutazione 2010): sono del motore, non dell'app.
+- Ammortamento: il menu del sito sembra limitare il numero di rate (letti fino a 72 mensili); l'app accetta 2-360 come prima.
