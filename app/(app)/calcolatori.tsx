@@ -2770,9 +2770,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "spese_notarili", label: "Spese notarili €", default: "0" },
       { tipo: "numero", key: "spese_iniziali_altre", label: "Altre spese iniziali €", default: "0" },
       { tipo: "titolo", key: "tit_spese_ricorrenti", label: "Spese ricorrenti:" },
-      { tipo: "numero", key: "spese_incasso_rata", label: "Spese di incasso rata €", default: "0" },
-      { tipo: "numero", key: "spese_assicurazione", label: "Spese assicurative per rata €", default: "0" },
-      { tipo: "numero", key: "spese_gestione_annuale", label: "Spese di gestione annuali €", default: "0" },
+      { tipo: "numero", key: "spese_incasso_rata", label: "Spese Incasso Rata", default: "0", nota: () => "Importo addebitato a ogni rata." },
+      { tipo: "numero", key: "spese_assicurazione", label: "Spese Assicurative", default: "0", nota: () => "Importo da indicare con la stessa frequenza mensile del finanziamento: l'importo viene riportato a rata." },
+      { tipo: "numero", key: "spese_gestione_annuale", label: "Spese di Gestione Annuali", default: "0", nota: () => "Se si conosce l'importo mensile inserire quello moltiplicato per 12." },
     ],
     endpoint: "/calc/taeg",
     validate: validaDurataFinanziamento,
@@ -2784,13 +2784,18 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       spese_incasso_rata: parseNumeroIt(f.spese_incasso_rata), spese_assicurazione: parseNumeroIt(f.spese_assicurazione),
       spese_gestione_annuale: parseNumeroIt(f.spese_gestione_annuale),
     }),
-    risultato: (r) => [
-      ["Importo rata", formatEuro(r.importo_rata)],
-      ["TAEG", `${r.taeg_pct}%`],
-      ["Interessi totali al TAN", formatEuro(r.interessi_totali_tan)],
-      ["Spese iniziali complessive", formatEuro(r.spese_iniziali_complessive)],
-      ["Totale da restituire (senza spese)", formatEuro(r.importo_totale_da_restituire)],
-    ],
+    // Righe nell'ordine del sito di riferimento; le tre sulle spese ricorrenti sono nuove (backend PR #196).
+    risultato: (r) => {
+      const out: [string, string][] = [["Importo della Rata", formatEuro(r.importo_rata)]];
+      if (r.importo_rata_con_spese_ricorrenti != null) out.push(["Importo della rata comprese le spese ricorrenti", formatEuro(r.importo_rata_con_spese_ricorrenti)]);
+      out.push([`Interessi totali calcolati all\u2019${fmtPct(r.tasso_annuo_nominale_pct)}%`, formatEuro(r.interessi_totali_tan)]);
+      out.push(["Importo totale da restituire (senza spese)", formatEuro(r.importo_totale_da_restituire)]);
+      if (r.spese_ricorrenti_complessive != null) out.push(["Importo complessivo delle spese ricorrenti", formatEuro(r.spese_ricorrenti_complessive)]);
+      if (r.importo_totale_con_spese_ricorrenti != null) out.push(["Importo totale da restituire comprese le spese ricorrenti", formatEuro(r.importo_totale_con_spese_ricorrenti)]);
+      out.push(["Importo complessivo delle spese iniziali", formatEuro(r.spese_iniziali_complessive)]);
+      out.push(["TAEG su base annua", `${fmtPct(r.taeg_pct)}%`]);
+      return out;
+    },
   },
   "compenso-ore": {
     campi: [
