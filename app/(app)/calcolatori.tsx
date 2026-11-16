@@ -78,6 +78,9 @@ export type CampoGenerico =
   // form è un array di oggetti {chiave: stringa}, uno per riga.
   | (CampoGenericoBase & { tipo: "lista"; campiRiga: CampoRigaLista[]; etichettaAggiungi?: string });
 
+// Percentuali di partenza della cassa del mediatore familiare.
+const PCT_CASSA_MEDIATORE: Record<string, string> = { enpap: "2", enpam: "2", inps_gestione_separata: "4" };
+
 type ConfigGenerico = {
   campi: CampoGenerico[];
   endpoint: string | ((form: Record<string, any>) => string);
@@ -1166,6 +1169,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_iva", label: "Percentuale IVA %", default: "22", mostraSe: (f) => !!f.applica_iva },
       { tipo: "bool", key: "applica_contributo_cassa", label: "Applica contributo previdenziale", default: true },
       { tipo: "numero", key: "pct_contributo_cassa", label: "Percentuale di contribuzione %", default: "4", mostraSe: (f) => !!f.applica_contributo_cassa },
+      { tipo: "bool", key: "applica_ritenuta", label: "Ritenuta d'acconto", default: true },
     ],
     endpoint: "/calc/compenso-delegati-vendite",
     validate: (f) => ([1, 2, 3, 4].some((n) => !!f[`fase_${n}`]) ? null : "Seleziona almeno una fase da compensare."),
@@ -1180,14 +1184,19 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       carico_aggiudicatario_manuale: f.carico_aggiudicatario_manuale ? parseNumeroIt(f.carico_aggiudicatario_manuale) : null,
       applica_iva: f.applica_iva, pct_iva: parseNumeroIt(f.pct_iva),
       applica_contributo_cassa: f.applica_contributo_cassa, pct_contributo_cassa: parseNumeroIt(f.pct_contributo_cassa),
+      // Sempre inviata: attiva gli arrotondamenti del backend allineati al sito di riferimento.
+      applica_ritenuta: !!f.applica_ritenuta,
     }),
     risultato: (r) => [
       ["Compenso tabellare", formatEuro(r.compenso_tabellare)],
+      // Con la limitazione attiva il backend riporta il compenso limitato in `compenso_totale`.
+      ...(r.flag_limitazione ? ([["Compenso con limitazione", formatEuro(r.compenso_totale)]] as [string, string][]) : []),
       ["Totale imponibile", formatEuro(r.totale_imponibile)],
       ["IVA", formatEuro(r.iva)],
       ["Quota a carico dell'aggiudicatario", formatEuro(r.carico_aggiudicatario)],
-      ["Ritenuta d'acconto", formatEuro(r.ritenuta_acconto)],
-      ["Netto a pagare", formatEuro(r.netto_a_pagare)],
+      // Senza ritenuta il backend non restituisce ritenuta e netto: le righe non si mostrano.
+      ...(r.ritenuta_acconto != null ? ([["Ritenuta d'acconto", formatEuro(r.ritenuta_acconto)]] as [string, string][]) : []),
+      ...(r.netto_a_pagare != null ? ([["Netto a pagare", formatEuro(r.netto_a_pagare)]] as [string, string][]) : []),
     ],
   },
   "compenso-mediatore-familiare": {
@@ -1199,21 +1208,52 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "spese_esenti", label: "Spese esenti €", default: "0" },
       { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €", default: "0" },
       { tipo: "scelta", key: "cassa", label: "Cassa previdenziale", default: "", opzioni: [
-        { value: "", label: "Nessuna" }, { value: "enpap", label: "ENPAP" }, { value: "enpam", label: "ENPAM" }, { value: "inps_gestione_separata", label: "INPS gestione separata" },
+        { value: "", label: "Nessuna" }, { value: "enpap", label: "Psicologi (ENPAP)" }, { value: "enpam", label: "Medici (ENPAM)" }, { value: "inps_gestione_separata", label: "INPS (gestione separata)" },
       ] },
+      { tipo: "bool", key: "applica_cassa", label: "Cassa", default: true, mostraSe: (f) => !!f.cassa },
+      { tipo: "numero", key: "pct_cassa", label: "Percentuale cassa %", default: "", mostraSe: (f) => !!f.cassa && !!f.applica_cassa },
       { tipo: "bool", key: "regime_semplificato", label: "Regime fiscale semplificato (no IVA)", default: false },
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo regime", default: "forfettario_2014", mostraSe: (f) => !!f.regime_semplificato, opzioni: [
+        { value: "forfettario_2014", label: "Regime forfettario agevolato 2014" }, { value: "vantaggio_2011", label: "Regime di vantaggio 2011" }, { value: "minimi_2008", label: "Regime dei minimi 2008" },
+      ] },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo", default: true, mostraSe: (f) => !!f.regime_semplificato },
     ],
     endpoint: "/calc/compenso-mediatore-familiare",
+    // Alla scelta della cassa la percentuale torna a quella di partenza della cassa.
+    alCambio: (chiave, f) => (chiave === "cassa" ? { ...f, pct_cassa: PCT_CASSA_MEDIATORE[f.cassa] ?? "" } : f),
+    validate: (f) => {
+      if (f.cassa && f.applica_cassa && String(f.pct_cassa ?? "").trim() !== "") {
+        const p = parseNumeroIt(f.pct_cassa);
+        if (!(p > 0 && p < 50)) return "La percentuale della cassa deve essere maggiore di 0 e minore di 50.";
+      }
+      const n = parseNumeroIt(f.numero_incontri);
+      if (!(n >= 1 && n <= 100)) return "Il numero di incontri deve essere da 1 a 100.";
+      return null;
+    },
     buildBody: (f) => ({
       complessita: f.complessita, numero_incontri: parseNumeroIt(f.numero_incontri) || 1,
       spese_esenti: parseNumeroIt(f.spese_esenti), spese_imponibili: parseNumeroIt(f.spese_imponibili),
       cassa: f.cassa || null, regime_semplificato: f.regime_semplificato,
+      applica_cassa: f.cassa ? !!f.applica_cassa : true,
+      ...(f.cassa && f.applica_cassa && String(f.pct_cassa ?? "").trim() !== "" ? { pct_cassa: parseNumeroIt(f.pct_cassa) } : {}),
+      ...(f.regime_semplificato ? { tipo_regime: f.tipo_regime, addebito_bollo: !!f.addebito_bollo } : {}),
     }),
-    risultato: (r) => [
-      ["Compenso", formatEuro(r.compenso)],
-      ["Totale imponibile", formatEuro(r.totale_imponibile)],
-      ["Totale", formatEuro(r.totale)],
-    ],
+    risultato: (r) => {
+      const righe: [string, string][] = [
+        [`Compenso per ${r.numero_incontri} ${r.numero_incontri === 1 ? "incontro" : "incontri"}`, formatEuro(r.compenso)],
+        ["Spese forfettarie ex art. 8, comma 6 (21% sul compenso)", formatEuro(r.spese_forfettarie)],
+      ];
+      if (r.spese_imponibili > 0) righe.push(["Spese imponibili", formatEuro(r.spese_imponibili)]);
+      if (r.imposta_di_bollo > 0) righe.push(["Imposta di bollo", formatEuro(r.imposta_di_bollo)]);
+      if (r.contributo_cassa > 0) righe.push([`${r.etichetta_cassa ?? "Contributo previdenziale"} (${String(r.pct_cassa).replace(".", ",")}%)`, formatEuro(r.contributo_cassa)]);
+      // Nel regime semplificato il totale imponibile compare solo con spese esenti.
+      if (!r.regime_semplificato || r.spese_esenti > 0) righe.push(["Totale imponibile", formatEuro(r.totale_imponibile)]);
+      if (!r.regime_semplificato) righe.push(["IVA 22% su imponibile", formatEuro(r.iva)]);
+      if (r.spese_esenti > 0) righe.push(["Spese esenti ex art. 15, DPR 633/72", formatEuro(r.spese_esenti)]);
+      righe.push(["Totale documento", formatEuro(r.totale)]);
+      for (const nota of Array.isArray(r.note_regime) ? r.note_regime : []) righe.push(["Nota", String(nota)]);
+      return righe;
+    },
   },
   "parametri-stragiudiziali": {
     campi: [
@@ -4344,6 +4384,17 @@ function RiepilogoChips({ voci, color, fontSize = 12 }: { voci: { label: string;
 // li vede l'utente a schermo, per la prima sezione del file esportato.
 type OpzioneEsp = { value: string; label: string };
 const etichettaOpz = (opz: OpzioneEsp[], v: string) => opz.find((o) => o.value === v)?.label ?? v;
+// Righe dell'incarico collegiale (art. 53): compaiono solo con più di un perito.
+const righeCtuPeriti = (r: any): [string, string][] =>
+  r?.numero_periti > 1
+    ? [
+        ["Numero periti", String(r.numero_periti)],
+        ["Onorario pro-capite", formatEuro(r.onorario_pro_capite)],
+        ["Incarico collegiale + 40% (Art. 53)", formatEuro(r.incarico_collegiale_40)],
+        ["TOTALE PRO-CAPITE", formatEuro(r.totale_pro_capite)],
+        ...(r.totale_onorari_e_spese != null ? ([["TOTALE ONORARI e SPESE", formatEuro(r.totale_onorari_e_spese)]] as [string, string][]) : []),
+      ]
+    : [];
 const siNo = (b: boolean) => (b ? "Sì" : "No");
 const meseAnnoIt = (v: string) => (/^\d{4}-\d{2}$/.test(v) ? `${v.slice(5, 7)}/${v.slice(0, 4)}` : v);
 const pieno = (v: unknown) => v !== undefined && v !== null && String(v).trim() !== "";
@@ -4576,6 +4627,7 @@ export default function Calcolatori() {
   const [ctuValoreStimato, setCtuValoreStimato] = React.useState("");
   const [ctuTariffaPredefinita, setCtuTariffaPredefinita] = React.useState("massima");
   const [ctuCaricoOnorari, setCtuCaricoOnorari] = React.useState("100");
+  const [ctuNumeroPeriti, setCtuNumeroPeriti] = React.useState("1");
   const [titoloCtu, setTitoloCtu] = React.useState("Compenso CTU");
   const [risCtu, setRisCtu] = React.useState<any>(null);
   const [calcolandoCtu, setCalcolandoCtu] = React.useState(false);
@@ -5034,6 +5086,11 @@ export default function Calcolatori() {
   };
 
   const calcolaCtu = async () => {
+    const periti = parseNumeroIt(ctuNumeroPeriti);
+    if (!Number.isInteger(periti) || periti < 1 || periti > 9) {
+      Alert.alert("Non disponibile", "Il numero dei periti deve essere un intero da 1 a 9.");
+      return;
+    }
     Keyboard.dismiss();
     setCalcolandoCtu(true);
     setRisCtu(null);
@@ -5052,6 +5109,8 @@ export default function Calcolatori() {
         valore_stimato: parseNumeroIt(ctuValoreStimato) || 0,
         tariffa_predefinita: ctuTariffaPredefinita,
         carico_onorari_pct: parseNumeroIt(ctuCaricoOnorari) || 100,
+        // Sempre inviato: attiva gli arrotondamenti del backend allineati al sito di riferimento.
+        numero_periti: periti,
       });
       setRisCtu(r);
     } catch (e: any) {
@@ -5086,7 +5145,7 @@ export default function Calcolatori() {
     setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariRivalutaAlPct("100"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
-    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("massima"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
+    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("massima"); setCtuCaricoOnorari("100"); setCtuNumeroPeriti("1"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
   };
 
@@ -6730,6 +6789,9 @@ export default function Calcolatori() {
                     </>
                   ) : null}
 
+                  <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Numero Periti</Text>
+                  <TextInput testID="ctu-numero-periti" accessibilityLabel="Numero Periti" value={ctuNumeroPeriti} onChangeText={setCtuNumeroPeriti} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+
                   <Pressable testID="btn-calc-ctu" accessibilityRole="button" onPress={calcolaCtu} disabled={calcolandoCtu} style={[st.submit, { backgroundColor: t.brand, opacity: calcolandoCtu ? 0.6 : 1 }]}>
                     <Text style={{ color: t.onBrand, fontWeight: "700" }}>{calcolandoCtu ? "Calcolo..." : "Calcola"}</Text>
                   </Pressable>
@@ -6743,6 +6805,7 @@ export default function Calcolatori() {
                         ...(risCtu.maggiorazione_complessita > 0 ? [{ label: "Complessità", value: formatEuro(risCtu.maggiorazione_complessita) }] : []),
                         ...(risCtu.rimborso_km > 0 ? [{ label: "Rimborso km", value: formatEuro(risCtu.rimborso_km) }] : []),
                         ...(risCtu.onorario_tabellare > 0 ? [{ label: "Onorario tabellare", value: formatEuro(risCtu.onorario_tabellare) }] : []),
+                        ...righeCtuPeriti(risCtu).map(([label, value]) => ({ label, value })),
                       ]} />
                       <EsportaDocumento
                         testIDPrefix="ctu"
@@ -6757,6 +6820,7 @@ export default function Calcolatori() {
                           ["Spese documentate €", ctuSpeseDocumentate],
                           ["Rimborso chilometrico € per km", ctuRimborsoKmUnitario],
                           ["Numero km", ctuNumeroKm],
+                          ["Numero Periti", ctuNumeroPeriti],
                           ["Onorario tabellare (DM 182/2002)", ctuArticoloTabellare ? etichettaOpz(ARTICOLI_DM182_CON_NESSUNO, ctuArticoloTabellare) : ""],
                           ...(ctuArticoloTabellare ? [
                             ["Valore stimato €", ctuValoreStimato] as [string, string],
@@ -6771,6 +6835,7 @@ export default function Calcolatori() {
                           ...(risCtu.maggiorazione_complessita > 0 ? [["Complessità", formatEuro(risCtu.maggiorazione_complessita)] as [string, string]] : []),
                           ...(risCtu.rimborso_km > 0 ? [["Rimborso km", formatEuro(risCtu.rimborso_km)] as [string, string]] : []),
                           ...(risCtu.onorario_tabellare > 0 ? [["Onorario tabellare", formatEuro(risCtu.onorario_tabellare)] as [string, string]] : []),
+                          ...righeCtuPeriti(risCtu),
                         ]}
                       />
                       {!risCtu.salvata ? (
