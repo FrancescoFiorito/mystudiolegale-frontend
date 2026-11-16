@@ -817,21 +817,44 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "prescrizione-reati": {
     campi: [
-      { tipo: "data", key: "data_reato", label: "Data del reato" },
-      { tipo: "scelta", key: "tipo_pena", label: "Tipo di pena", default: "reclusione", opzioni: [
-        { value: "reclusione", label: "Reclusione" }, { value: "arresto", label: "Arresto" },
-        { value: "multa", label: "Multa" }, { value: "ammenda", label: "Ammenda" },
+      { tipo: "bool", key: "confronta_normativa_previgente", label: "Confronta con normativa antecedente la legge 251/2005", default: true },
+      { tipo: "data", key: "data_reato", label: "Data reato" },
+      { tipo: "data_opzionale", key: "data_ultimo_atto", label: "Data ultimo atto interruttivo", nota: () => "Se non indicata si usa la data del reato." },
+      { tipo: "scelta", key: "tipo_pena", label: "Pena prevista", default: "reclusione", opzioni: [
+        { value: "ammenda", label: "Ammenda" }, { value: "arresto", label: "Arresto" }, { value: "multa", label: "Multa" },
+        { value: "reclusione", label: "Reclusione" }, { value: "sostitutiva", label: "Sostitutiva" },
       ] },
-      { tipo: "numero", key: "pena_edittale_anni", label: "Pena edittale massima (anni)", default: "", mostraSe: (f) => f.tipo_pena === "reclusione" || f.tipo_pena === "arresto" },
-      { tipo: "bool", key: "raddoppio", label: "Raddoppio dei termini (es. art. 157 c.8 c.p.)", default: false },
+      { tipo: "numero", key: "pena_edittale_anni", label: "Anni", default: "", mostraSe: (f) => f.tipo_pena === "reclusione" },
+      { tipo: "bool", key: "raddoppio", label: "Raddoppio termini", default: false },
+      { tipo: "titolo", key: "tit_recidiva", label: "Aggravante per recidiva o abitualità:" },
+      { tipo: "bool", key: "recidiva_art_99_c2", label: "art. 99 comma 2", etichettaAcc: "Aggravante: recidiva, art. 99 comma 2", default: false },
+      { tipo: "bool", key: "recidiva_art_99_c4", label: "art. 99 comma 4", etichettaAcc: "Aggravante: recidiva, art. 99 comma 4", default: false },
+      { tipo: "bool", key: "abitualita", label: "artt. 102 103 105 c.p.", etichettaAcc: "Aggravante: abitualità, artt. 102 103 105 c.p.", default: false },
     ],
     endpoint: "/calc/prescrizione-reati",
+    // Le tre aggravanti sono alternative: spuntarne una toglie le altre.
+    alCambio: (chiave, f) => (["recidiva_art_99_c2", "recidiva_art_99_c4", "abitualita"].includes(chiave) && f[chiave]
+      ? { ...f, ...Object.fromEntries(["recidiva_art_99_c2", "recidiva_art_99_c4", "abitualita"].filter((k) => k !== chiave).map((k) => [k, false])) }
+      : f),
+    validate: (f) => (f.data_ultimo_atto && f.data_reato && f.data_ultimo_atto < f.data_reato ? "La data dell'ultimo atto interruttivo non può essere precedente alla data del reato." : null),
     buildBody: (f) => ({
       data_reato: f.data_reato, tipo_pena: f.tipo_pena,
-      pena_edittale_anni: (f.tipo_pena === "reclusione" || f.tipo_pena === "arresto") ? parseNumeroIt(f.pena_edittale_anni) : null,
+      pena_edittale_anni: f.tipo_pena === "reclusione" ? parseNumeroIt(f.pena_edittale_anni) : null,
       raddoppio: f.raddoppio,
+      recidiva_art_99_c2: !!f.recidiva_art_99_c2, recidiva_art_99_c4: !!f.recidiva_art_99_c4, abitualita: !!f.abitualita,
+      data_ultimo_atto: f.data_ultimo_atto || null,
+      confronta_normativa_previgente: !!f.confronta_normativa_previgente,
     }),
-    risultato: (r) => [["Termine massimo di prescrizione", isoToDataIt(r.termine_massimo)]],
+    // Come sul sito: prima la riga ANTE (se richiesta), poi EX, ciascuna con le colonne «dal reato» e «dall'ultimo atto interruttivo».
+    risultato: (r) => [
+      ...(r.ante_termine_massimo ? ([
+        ["ANTE L. 251/2005 — dal reato", isoToDataIt(r.ante_termine_massimo)],
+        ["ANTE L. 251/2005 — dall'ultimo atto interruttivo", isoToDataIt(r.ante_dal_ultimo_atto)],
+      ] as [string, string][]) : []),
+      ["EX L. 251/2005 — dal reato", isoToDataIt(r.termine_massimo)],
+      ["EX L. 251/2005 — dall'ultimo atto interruttivo", isoToDataIt(r.ex_dal_ultimo_atto)],
+      ["Nota", "Il calcolatore non tiene conto della sospensione ex art. 159 c.p. La prima colonna è sempre il termine massimo, anche se la seconda è più lontana."],
+    ],
     scadenze: (r) => [{ titolo: "Prescrizione del reato", data: r.termine_massimo }],
   },
   "fine-pena": {
@@ -843,6 +866,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "bool", key: "liberazione_anticipata", label: "Applica liberazione anticipata (45gg a semestre)", default: true },
       { tipo: "data_opzionale", key: "data_limite", label: "Calcola fino al (opzionale)", mostraSe: (f) => !!f.liberazione_anticipata },
       { tipo: "bool", key: "solo_semestri_completi", label: "Conta solo i semestri completi", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
+      { tipo: "bool", key: "liberazione_anticipata_speciale", label: "L. a. speciale", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
+      { tipo: "bool", key: "integrazione", label: "Integrazione", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
       {
         tipo: "lista", key: "crediti", label: "Periodi già scontati (crediti di pena)", etichettaAggiungi: "Aggiungi un periodo",
         campiRiga: [
@@ -860,6 +885,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
           ] },
           { tipo: "data", key: "dal", label: "Dal" },
           { tipo: "data", key: "al", label: "Al" },
+          { tipo: "numero", key: "anni", label: "oppure: anni", default: "0" },
+          { tipo: "numero", key: "mesi", label: "mesi", default: "0" },
+          { tipo: "numero", key: "giorni", label: "giorni", default: "0" },
         ],
       },
       {
@@ -871,20 +899,38 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       },
     ],
     endpoint: "/calc/fine-pena",
+    // Spuntando «Liberazione anticipata» si spuntano anche le due caselle collegate.
+    alCambio: (chiave, f) => (chiave === "liberazione_anticipata" ? { ...f, liberazione_anticipata_speciale: !!f.liberazione_anticipata, integrazione: !!f.liberazione_anticipata } : f),
+    validate: (f) => {
+      for (const c of (f.crediti || []) as Record<string, string>[]) {
+        const durata = ["anni", "mesi", "giorni"].some((k) => parseNumeroIt(c[k]) > 0);
+        if (!((c.dal && c.al) || durata)) return "Per ogni periodo già scontato indicare le date «dal» e «al» oppure la durata (anni, mesi, giorni).";
+      }
+      return null;
+    },
     buildBody: (f) => ({
       data_inizio: f.data_inizio, durata_anni: parseNumeroIt(f.durata_anni), durata_mesi: parseNumeroIt(f.durata_mesi),
       durata_giorni: parseNumeroIt(f.durata_giorni), liberazione_anticipata: f.liberazione_anticipata,
       data_limite: f.liberazione_anticipata ? (f.data_limite || null) : null,
       solo_semestri_completi: f.solo_semestri_completi,
-      crediti: (f.crediti || []).map((c: Record<string, string>) => ({ tipo: c.tipo, dal: c.dal, al: c.al })),
+      liberazione_anticipata_speciale: !!f.liberazione_anticipata_speciale, integrazione: !!f.integrazione,
+      // Date o durata: se ci sono le date la durata è ignorata dal backend, quindi si invia solo l'una o l'altra.
+      crediti: (f.crediti || []).map((c: Record<string, string>) => (c.dal && c.al
+        ? { tipo: c.tipo, dal: c.dal, al: c.al }
+        : { tipo: c.tipo, anni: parseNumeroIt(c.anni), mesi: parseNumeroIt(c.mesi), giorni: parseNumeroIt(c.giorni) })),
       interruzioni: (f.interruzioni || []).map((i: Record<string, string>) => ({ dal: i.dal, al: i.al })),
     }),
-    risultato: (r) => r.fine_pena_con_liberazione_anticipata ? [
-      ["Fine pena (senza detrazioni)", isoToDataIt(r.fine_pena_senza_detrazioni)],
-      ["Giorni di detrazione spettanti", String(r.giorni_detrazione_spettanti)],
-      ["Fine pena (con liberazione anticipata)", isoToDataIt(r.fine_pena_con_liberazione_anticipata)],
-      ["Termine attivazione ufficio (90gg prima)", isoToDataIt(r.termine_attivazione_ufficio)],
-    ] : [["Fine pena", isoToDataIt(r.fine_pena_senza_detrazioni)]],
+    // Righe come sul sito: senza semestri maturati restano solo il totale dei periodi e la fine pena senza detrazioni.
+    risultato: (r) => [
+      ...((r.totale_periodi_scontati_mesi || r.totale_periodi_scontati_giorni)
+        ? ([["Totale periodi già scontati", `${r.totale_periodi_scontati_mesi ?? 0} mesi e ${r.totale_periodi_scontati_giorni ?? 0} giorni`]] as [string, string][]) : []),
+      ["Fine pena senza detrazioni", isoToDataIt(r.fine_pena_senza_detrazioni)],
+      ...(r.fine_pena_con_liberazione_anticipata && r.giorni_detrazione_spettanti > 0 ? ([
+        ["Giorni di detrazione spettanti", String(r.giorni_detrazione_spettanti)],
+        ["Fine pena con liberazione anticipata", isoToDataIt(r.fine_pena_con_liberazione_anticipata)],
+        ["Termine ultimo per attivazione d'ufficio", isoToDataIt(r.termine_attivazione_ufficio)],
+      ] as [string, string][]) : []),
+    ],
     scadenze: (r) => [{ titolo: "Fine pena", data: r.fine_pena_con_liberazione_anticipata || r.fine_pena_senza_detrazioni }],
   },
   "conversione-pena": {
@@ -1014,10 +1060,28 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
       { tipo: "data", key: "data_inizio", label: "Data iniziale" },
       { tipo: "data", key: "data_fine", label: "Data finale" },
+      { tipo: "scelta", key: "tasso_riferimento", label: "Seleziona il tasso di riferimento", default: "istat", opzioni: [
+        { value: "bot_3_6_12", label: "rendimento medio dei BOT a 3, 6 e 12 mesi (Cass. n.19499/2008)" },
+        { value: "bot_annuali", label: "rendimento medio dei soli BOT annuali" },
+        { value: "rendistato", label: "rendistato (rendimento medio titoli con scadenza > 12 mesi)" },
+        { value: "istat", label: "tasso d'inflazione Istat (indice FOI)" },
+      ] },
+      { tipo: "scelta", key: "rendimenti", label: "Rendimenti", default: "netti", mostraSe: (f) => f.tasso_riferimento !== "istat", opzioni: [
+        { value: "netti", label: "netti" }, { value: "lordi", label: "lordi" },
+      ] },
+      { tipo: "scelta", key: "sviluppo", label: "Sviluppo del calcolo", default: "annuale", opzioni: [
+        { value: "annuale", label: "annuale (confronta con i tassi medi annuali)" }, { value: "mensile", label: "mensile (confronta con i tassi rilevati mensilmente)" },
+      ] },
     ],
     endpoint: "/calc/maggior-danno",
-    buildBody: (f) => ({ capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine, tasso_riferimento: "istat" }),
+    buildBody: (f) => ({
+      capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine,
+      tasso_riferimento: f.tasso_riferimento, sviluppo: f.sviluppo,
+      ...(f.tasso_riferimento !== "istat" ? { rendimenti: f.rendimenti } : {}),
+    }),
     risultato: (r) => [
+      ...(r.descrizione_tasso_riferimento ? ([["Tasso di riferimento", String(r.descrizione_tasso_riferimento)]] as [string, string][]) : []),
+      ...(r.descrizione_sviluppo ? ([["Sviluppo del calcolo", String(r.descrizione_sviluppo)]] as [string, string][]) : []),
       ["Totale interessi legali", formatEuro(r.totale_interessi_legali)],
       ["Totale maggior danno", formatEuro(r.totale_maggior_danno)],
       ["Totale", formatEuro(r.totale)],
