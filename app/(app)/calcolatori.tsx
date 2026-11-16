@@ -25,6 +25,7 @@ import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItali
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
 import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
+import { CAMPI_PARAMETRI_CIVILI_2014, alCambioParametriCivili2014, validaParametriCivili2014, corpoParametriCivili2014, CAMPI_PARAMETRI_STRAGIUDIZIALI, alCambioParametriStragiudiziali, validaParametriStragiudiziali, corpoParametriStragiudiziali, righeParametriCompenso } from "@/src/utils/parametriFasi";
 import { CAMPI_DANNO_NON_PATRIMONIALE, alCambioDannoNonPatrimoniale, validaDannoNonPatrimoniale, corpoDannoNonPatrimoniale, righeDannoNonPatrimoniale } from "@/src/utils/dannoNonPatrimoniale";
 import { codiceFiscaleValido, partitaIvaValida, dataNascitaDaCodiceFiscale } from "@/src/documenti/formati";
 
@@ -531,47 +532,12 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     scadenze: (r) => [{ titolo: "Termine ultimo per la disdetta di locazione", data: r.termine_ultimo_disdetta }],
   },
   "parametri-forensi": {
-    campi: [
-      {
-        tipo: "scelta", key: "competenza", label: "Competenza per giurisdizione o materia", default: "tribunale", opzioni: COMPETENZE_PARCELLA,
-        nota: (f) => (COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito
-          ? null
-          : "Per questa competenza non abbiamo una tabella di parametri forensi verificata (disponibile per Giudice di pace, Tribunale, Corte d'Appello e Cassazione)."),
-      },
-      { tipo: "bool", key: "valore_indeterminabile", label: "Valore della causa indeterminabile", default: false },
-      { tipo: "numero", key: "valore_causa", label: "Valore della causa €", default: "", mostraSe: (f) => !f.valore_indeterminabile },
-      { tipo: "scelta", key: "complessita_indeterminabile", label: "Complessità", default: "alta", mostraSe: (f) => !!f.valore_indeterminabile, opzioni: [
-        { value: "bassa", label: "Bassa" }, { value: "media", label: "Media" }, { value: "alta", label: "Alta" }, { value: "particolare_importanza", label: "Particolare importanza" },
-      ] },
-      { tipo: "numero", key: "numero_parti_stessa_posizione", label: "N. parti assistite con la stessa posizione", default: "1" },
-      { tipo: "bool", key: "gratuito_patrocinio", label: "Gratuito patrocinio (riduzione del 50%)", default: false },
-    ],
+    campi: CAMPI_PARAMETRI_CIVILI_2014,
     endpoint: "/calc/parametri-forensi",
-    validate: (f) => {
-      const rito = COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito;
-      if (!rito) return "Per la competenza scelta non abbiamo una tabella di parametri forensi verificata (disponibile per Giudice di pace, Tribunale, Corte d'Appello e Cassazione).";
-      return null;
-    },
-    buildBody: (f) => ({
-      rito: COMPETENZE_PARCELLA.find((c) => c.value === f.competenza)?.rito,
-      valore_indeterminabile: !!f.valore_indeterminabile,
-      valore_causa: f.valore_indeterminabile ? 0 : parseNumeroIt(f.valore_causa),
-      complessita_indeterminabile: f.complessita_indeterminabile,
-      numero_parti_stessa_posizione: parseNumeroIt(f.numero_parti_stessa_posizione) || 1,
-      gratuito_patrocinio: !!f.gratuito_patrocinio,
-    }),
-    risultato: (r) => [
-      ["Fase di studio", formatEuro(r.fasi.studio)],
-      ["Fase introduttiva", formatEuro(r.fasi.introduttiva)],
-      ...(r.fasi.istruttoria != null ? ([["Fase istruttoria", formatEuro(r.fasi.istruttoria)]] as [string, string][]) : []),
-      ["Fase decisionale", formatEuro(r.fasi.decisionale)],
-      ...(r.maggiorazione_parti_pct ? ([["Maggiorazione pluralità parti", `+${r.maggiorazione_parti_pct}%`]] as [string, string][]) : []),
-      ...(r.incremento_oltre_520k_pct ? ([["Incremento oltre 520.000€ (fino a)", `+${r.incremento_oltre_520k_pct}%`]] as [string, string][]) : []),
-      ["Totale medio", formatEuro(r.totale_medio)],
-      ...(r.totale_minimo_discrezionale != null
-        ? ([["Range discrezionale del giudice", `${formatEuro(r.totale_minimo_discrezionale)} - ${formatEuro(r.totale_massimo_discrezionale)}`]] as [string, string][])
-        : []),
-    ],
+    alCambio: alCambioParametriCivili2014,
+    validate: validaParametriCivili2014,
+    buildBody: corpoParametriCivili2014,
+    risultato: righeParametriCompenso,
   },
   "compenso-mediazione": {
     campi: [
@@ -1256,26 +1222,12 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     },
   },
   "parametri-stragiudiziali": {
-    campi: [
-      { tipo: "scelta", key: "competenza", label: "Tipo di attività", default: "assistenza", opzioni: [
-        { value: "assistenza", label: "Assistenza stragiudiziale" }, { value: "mediazione", label: "Mediazione e negoziazione assistita" },
-      ] },
-      { tipo: "bool", key: "valore_indeterminabile", label: "Valore indeterminabile", default: false },
-      { tipo: "numero", key: "valore_causa", label: "Valore della pratica €", default: "", mostraSe: (f) => !f.valore_indeterminabile },
-      { tipo: "scelta", key: "complessita_indeterminabile", label: "Complessità", default: "media", mostraSe: (f) => !!f.valore_indeterminabile, opzioni: [
-        { value: "bassa", label: "Bassa" }, { value: "media", label: "Media" }, { value: "alta", label: "Alta" }, { value: "particolare_importanza", label: "Particolare importanza" },
-      ] },
-    ],
+    campi: CAMPI_PARAMETRI_STRAGIUDIZIALI,
     endpoint: "/calc/parametri-stragiudiziali",
-    buildBody: (f) => ({
-      competenza: f.competenza, valore_causa: f.valore_indeterminabile ? 0 : parseNumeroIt(f.valore_causa),
-      valore_indeterminabile: f.valore_indeterminabile, complessita_indeterminabile: f.complessita_indeterminabile,
-    }),
-    risultato: (r) => [
-      ["Totale (valore medio)", formatEuro(r.totale_medio)],
-      ["Totale minimo (-50%)", formatEuro(r.totale_minimo_discrezionale)],
-      ["Totale massimo (+50%)", formatEuro(r.totale_massimo_discrezionale)],
-    ],
+    alCambio: alCambioParametriStragiudiziali,
+    validate: validaParametriStragiudiziali,
+    buildBody: corpoParametriStragiudiziali,
+    risultato: righeParametriCompenso,
   },
   "parametri-penali-2014": {
     campi: [
