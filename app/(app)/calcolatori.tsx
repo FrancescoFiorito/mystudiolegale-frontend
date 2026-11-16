@@ -26,6 +26,7 @@ import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragi
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
 import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
 import { CAMPI_PARAMETRI_CIVILI_2014, alCambioParametriCivili2014, validaParametriCivili2014, corpoParametriCivili2014, CAMPI_PARAMETRI_STRAGIUDIZIALI, alCambioParametriStragiudiziali, validaParametriStragiudiziali, corpoParametriStragiudiziali, righeParametriCompenso } from "@/src/utils/parametriFasi";
+import { CODICE_COMPETENZA_PREVENTIVO, scaglioniPreventivoPer, campiScaglione, fasiDaParametri, validaFasiPreventivo, corpoFasiPreventivo, importoFasePreventivo, type FasePreventivo } from "@/src/utils/preventivoCauseCivili";
 import { CAMPI_DANNO_NON_PATRIMONIALE, alCambioDannoNonPatrimoniale, validaDannoNonPatrimoniale, corpoDannoNonPatrimoniale, righeDannoNonPatrimoniale } from "@/src/utils/dannoNonPatrimoniale";
 import { codiceFiscaleValido, partitaIvaValida, dataNascitaDaCodiceFiscale } from "@/src/documenti/formati";
 
@@ -4455,7 +4456,7 @@ export default function Calcolatori() {
   // corromperebbe un testo libero.
   const [parDati, setParDati] = React.useState<any>({
     avvocato_nome: "", studio_indirizzo: "", studio_cf: "", ordine_avvocati: "", studio_assicurazione: "",
-    oggetto: "", controparte: "", valore_causa: "",
+    oggetto: "", controparte: "", valore_causa: "", scaglione_sel: "",
     competenza: "", ufficio_giudiziario: "Tribunale", sede_ufficio: "",
     accessori_di_legge: true, luogo: "",
     data_preventivo: new Date().toISOString().slice(0, 10),
@@ -4470,6 +4471,8 @@ export default function Calcolatori() {
   ]);
   const [vociSpese, setVociSpese] = React.useState<{ descrizione: string; importo: string; esente: boolean }[]>([]);
   const [risPar, setRisPar] = React.useState<any>(null);
+  // Fasi del preventivo una per riga (dipendono da competenza e scaglione); null = si usano le 4 fasi fisse.
+  const [fasiPrev, setFasiPrev] = React.useState<FasePreventivo[] | null>(null);
   const [titoloPar, setTitoloPar] = React.useState("");
   const [saving, setSaving] = React.useState(false);
   const [suggerendoPar, setSuggerendoPar] = React.useState(false);
@@ -4703,6 +4706,7 @@ export default function Calcolatori() {
         oggetto: doc.oggetto || "",
         controparte: doc.controparte || "",
         valore_causa: doc.valore_causa ? String(doc.valore_causa) : "",
+        scaglione_sel: doc.scaglione || "",
         competenza: doc.competenza || "",
         ufficio_giudiziario: doc.ufficio_giudiziario || "Tribunale",
         sede_ufficio: doc.sede_ufficio || "",
@@ -4726,6 +4730,9 @@ export default function Calcolatori() {
           ? doc.voci_spese.map((v: any) => ({ descrizione: v.descrizione || "", importo: String(v.importo ?? 0), esente: v.esente ?? true }))
           : doc.anticipazioni ? [{ descrizione: "Anticipazioni", importo: String(doc.anticipazioni), esente: true }] : []
       );
+      setFasiPrev(Array.isArray(doc.fasi_preventivo) && doc.fasi_preventivo.length > 0
+        ? doc.fasi_preventivo.map((x: any) => ({ cod: Number(x.cod), descrizione: String(x.descrizione ?? ""), importo_medio: Number(x.importo_medio ?? 0), adj_pct: String(x.adj_pct ?? 0), importo: x.importo != null && x.importo !== "" ? String(x.importo) : "", attiva: x.attiva !== false }))
+        : null);
       setTitoloPar(doc.titolo || "");
       setPraticaId(doc.pratica_id || null);
       setRisPar(doc.calcolo || null);
@@ -4760,35 +4767,38 @@ export default function Calcolatori() {
   // voglia pattuire un compenso diverso da quello tabellare.
   const suggerisciDaParametriForensi = async () => {
     const valoreCausa = parseNumeroIt(parDati.valore_causa);
-    if (!valoreCausa) {
-      Alert.alert("Valore causa mancante", "Inserisci il valore della controversia (sopra, in \"Dati del procedimento\"), oppure inserisci gli importi di fase manualmente.");
+    if (!parDati.scaglione_sel && !valoreCausa) {
+      Alert.alert("Valore causa mancante", "Scegli il valore della controversia (sopra, in \"Dati del procedimento\"), oppure inserisci gli importi di fase manualmente.");
       return;
     }
-    const rito = COMPETENZE_PARCELLA.find((c) => c.value === parDati.competenza)?.rito;
-    if (!rito) {
-      Alert.alert("Nessuna tabella disponibile", "Per la competenza scelta non abbiamo una tabella di parametri forensi verificata: inserisci gli importi di fase manualmente.");
+    const competenza = CODICE_COMPETENZA_PREVENTIVO[parDati.competenza];
+    if (!competenza) {
+      Alert.alert("Competenza mancante", "Scegli la competenza per giurisdizione o materia (sopra, in \"Dati del procedimento\").");
       return;
     }
     setSuggerendoPar(true);
     try {
-      const r = await api.post("/calc/parametri-forensi", { rito, valore_causa: valoreCausa });
-      setPar({
-        ...par,
-        fase_studio: String(r.fasi.studio ?? 0),
-        fase_introduttiva: String(r.fasi.introduttiva ?? 0),
-        fase_istruttoria: String(r.fasi.istruttoria ?? 0),
-        fase_decisionale: String(r.fasi.decisionale ?? 0),
-      });
+      const r = await api.post("/calc/parametri-forensi", { anno: "2022", competenza, ...(parDati.scaglione_sel ? { scaglione: parDati.scaglione_sel } : { valore_causa: valoreCausa }) });
+      setFasiPrev(fasiDaParametri(r));
     } catch (e: any) {
-      Alert.alert("Errore", e.message || "Impossibile calcolare i parametri forensi per questo valore causa/rito.");
+      Alert.alert("Errore", e.message || "Impossibile calcolare i parametri forensi per questo valore causa/competenza.");
     } finally {
       setSuggerendoPar(false);
     }
   };
 
+  // Campi del corpo di calcolo/salvataggio legati al valore della controversia e alle fasi del preventivo.
+  const corpoScaglioneEFasi = () => ({
+    ...campiScaglione(parDati.scaglione_sel),
+    fasi_preventivo: corpoFasiPreventivo(fasiPrev),
+  });
+
   const calcPar = async () => {
     try {
-      const body: any = { ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
+      const errFasi = validaFasiPreventivo(fasiPrev);
+      if (errFasi) { Alert.alert("Non disponibile", errFasi); return; }
+      const body: any = { ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa), ...corpoScaglioneEFasi() };
+      delete body.scaglione_sel;
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       body.voci_spese = buildVociSpeseBody();
       body.voci_custom = buildVociCustomBody();
@@ -4824,7 +4834,10 @@ export default function Calcolatori() {
   const savePar = async () => {
     setSaving(true);
     try {
-      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa) };
+      const errFasi = validaFasiPreventivo(fasiPrev);
+      if (errFasi) { Alert.alert("Non disponibile", errFasi); setSaving(false); return; }
+      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa), ...corpoScaglioneEFasi() };
+      delete body.scaglione_sel;
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       body.voci_spese = buildVociSpeseBody();
       body.voci_custom = buildVociCustomBody();
@@ -5087,7 +5100,7 @@ export default function Calcolatori() {
   const apriCalcolatore = (idc: CalcId) => {
     setCalcAperto(idc);
     setRisScad(null); setTitoloScad(""); setVoceCpcSelezionata(null); setTerminLibero(false); setRitoTermini("nuovo");
-    setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]);
+    setRisPar(null); setTitoloPar(""); setVociSpese([]); setVociCustom([]); setFasiPrev(null);
     setPartiAssistite([{ nominativo: "", persona_giuridica: false, rappresentante_legale: "", cf_piva: "" }]);
     setRisTassi(null); setTassiCapitale(""); setTassiDataInizio(new Date().toISOString().slice(0, 10)); setTassiDataFine(new Date().toISOString().slice(0, 10)); setTassiMaggiorazione("8");
     setRisCu(null); setCuValoreCausa("");
@@ -5486,7 +5499,7 @@ export default function Calcolatori() {
         <SelectInput
           testID="par-competenza" accessibilityLabel="Competenza per giurisdizione o materia"
           value={parDati.competenza}
-          onChange={(v) => setParDati({ ...parDati, competenza: v })}
+          onChange={(v) => { setParDati({ ...parDati, competenza: v, scaglione_sel: scaglioniPreventivoPer(v).some((o) => o.value === parDati.scaglione_sel) ? parDati.scaglione_sel : "" }); setFasiPrev(null); }}
           opzioni={COMPETENZE_PARCELLA}
           placeholder="Seleziona"
         />
@@ -5503,6 +5516,15 @@ export default function Calcolatori() {
         placeholderTextColor={t.onSurfaceTertiary}
         style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]}
       />
+      <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Valore della controversia (scaglione o indeterminabile)</Text>
+      <View style={{ marginBottom: SPACING.sm }}>
+        <SelectInput
+          testID="par-scaglione" accessibilityLabel="Valore della controversia (scaglione o indeterminabile)"
+          value={parDati.scaglione_sel}
+          onChange={(v) => { setParDati({ ...parDati, scaglione_sel: v }); setFasiPrev(null); }}
+          opzioni={scaglioniPreventivoPer(parDati.competenza)}
+        />
+      </View>
 
       <Text style={sezioneLbl}>Attività e compensi — sezione automatica</Text>
       <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
@@ -5517,12 +5539,22 @@ export default function Calcolatori() {
         <Feather name="zap" size={14} color={t.brand} />
         <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{suggerendoPar ? "Calcolo..." : "Calcola importi dai parametri forensi"}</Text>
       </Pressable>
-      {!COMPETENZE_PARCELLA.find((c) => c.value === parDati.competenza)?.rito ? (
-        <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginBottom: SPACING.sm }}>
-          Richiede una competenza con tabella di parametri forensi disponibile (Giudice di pace, Tribunale, Corte d&apos;Appello o Cassazione) e un valore della controversia.
-        </Text>
-      ) : null}
-      {([
+      {fasiPrev ? fasiPrev.map((fp, i) => (
+        <View key={`${fp.cod}-${i}`} style={{ marginTop: SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          {checkbox(fp.attiva, () => setFasiPrev(fasiPrev.map((x, j) => (j === i ? { ...x, attiva: !x.attiva } : x))), fp.descrizione, `par-fase-${i}-attiva`)}
+          <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: SPACING.xs }}>{`Importo medio ${formatEuro(fp.importo_medio)} · importo della fase ${formatEuro(importoFasePreventivo(fp))}`}</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Percentuale (da -100 a +100)</Text>
+              <TextInput testID={`par-fase-${i}-pct`} accessibilityLabel={`${fp.descrizione}, percentuale`} value={fp.adj_pct} onChangeText={(v) => setFasiPrev(fasiPrev.map((x, j) => (j === i ? { ...x, adj_pct: v } : x)))} keyboardType="numbers-and-punctuation" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>Importo libero €</Text>
+              <TextInput testID={`par-fase-${i}-importo`} accessibilityLabel={`${fp.descrizione}, importo libero €`} value={fp.importo} onChangeText={(v) => setFasiPrev(fasiPrev.map((x, j) => (j === i ? { ...x, importo: v } : x)))} keyboardType="numeric" style={[st.input, { backgroundColor: t.surface, color: t.onSurface, borderColor: t.border }]} />
+            </View>
+          </View>
+        </View>
+      )) : ([
         ["fase_studio", "adj_studio_pct", "Fase di studio"],
         ["fase_introduttiva", "adj_introduttiva_pct", "Fase introduttiva"],
         ["fase_istruttoria", "adj_istruttoria_pct", "Fase istruttoria"],
@@ -5648,6 +5680,7 @@ export default function Calcolatori() {
       {risPar ? (
         <View style={[st.result, { backgroundColor: t.surfaceSecondary, borderColor: t.border }]}>
           {([
+            ...((Array.isArray(risPar.fasi_dettaglio) ? risPar.fasi_dettaglio : []).filter((x: any) => x.attiva).map((x: any) => [x.descrizione, x.importo]) as [string, number][]),
             ["A) Totale compensi per fase", risPar.compensi_fasi],
             ["B) Totale voci personalizzate", risPar.voci_custom_totale],
             ...(risPar.diritti ? [["Diritti", risPar.diritti]] : []),
