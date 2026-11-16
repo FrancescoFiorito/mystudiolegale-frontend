@@ -63,3 +63,26 @@ export function partitaIvaValida(piva: string): boolean {
   }
   return (10 - (somma % 10)) % 10 === piva.charCodeAt(10) - 48;
 }
+
+// Data di nascita (ISO aaaa-mm-gg) letta da un codice fiscale valido, oppure
+// null. Nel codice fiscale l'anno ha solo due cifre: si sceglie il secolo che
+// dà la data più recente non nel futuro rispetto a `oggi`.
+const CF_MESI = "ABCDEHLMPRST";
+export function dataNascitaDaCodiceFiscale(cf: string, oggi: Date = new Date()): string | null {
+  const s = (cf || "").trim().toUpperCase();
+  if (!codiceFiscaleValido(s)) return null;
+  const mese = CF_MESI.indexOf(s[8]) + 1;
+  let giorno = parseInt(s.slice(9, 11), 10);
+  const aa = parseInt(s.slice(6, 8), 10);
+  if (!mese || Number.isNaN(giorno) || Number.isNaN(aa)) return null;
+  if (giorno > 40) giorno -= 40; // donne: giorno + 40
+  const valida = (anno: number) => {
+    const d = new Date(Date.UTC(anno, mese - 1, giorno));
+    return d.getUTCFullYear() === anno && d.getUTCMonth() === mese - 1 && d.getUTCDate() === giorno;
+  };
+  const oggiMs = Date.UTC(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+  let anno = 2000 + aa;
+  if (Date.UTC(anno, mese - 1, giorno) > oggiMs || !valida(anno)) anno = 1900 + aa;
+  if (!valida(anno)) return null;
+  return `${anno}-${String(mese).padStart(2, "0")}-${String(giorno).padStart(2, "0")}`;
+}
