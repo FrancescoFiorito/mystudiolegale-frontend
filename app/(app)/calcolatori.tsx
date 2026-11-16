@@ -26,7 +26,7 @@ import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragi
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
 import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
 import { CAMPI_DANNO_NON_PATRIMONIALE, alCambioDannoNonPatrimoniale, validaDannoNonPatrimoniale, corpoDannoNonPatrimoniale, righeDannoNonPatrimoniale } from "@/src/utils/dannoNonPatrimoniale";
-import { codiceFiscaleValido, partitaIvaValida } from "@/src/documenti/formati";
+import { codiceFiscaleValido, partitaIvaValida, dataNascitaDaCodiceFiscale } from "@/src/documenti/formati";
 
 type CalcId =
   | "scadenze" | "parcelle"
@@ -582,15 +582,15 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
           { value: "alto", label: "Alto" },
         ],
       },
-      { tipo: "bool", key: "condizione_procedibilita", label: "Mediazione obbligatoria o demandata dal giudice (-1/5)", default: false },
+      { tipo: "bool", key: "condizione_procedibilita", label: "Mediazione obbligatoria o demandata dal giudice (-1/5)", default: true },
       {
-        tipo: "scelta", key: "numero_incontri", label: "Numero di incontri", default: "uno",
+        tipo: "scelta", key: "numero_incontri", label: "Numero di incontri", default: "piu_di_uno",
         opzioni: [
           { value: "uno", label: "Uno" },
           { value: "piu_di_uno", label: "Più di uno" },
         ],
       },
-      { tipo: "bool", key: "accordo_raggiunto", label: "Accordo raggiunto", default: false },
+      { tipo: "bool", key: "accordo_raggiunto", label: "Accordo raggiunto", default: true },
       { tipo: "numero", key: "maggiorazione_discrezionale_pct", label: "Maggiorazione discrezionale dell'organismo sull'accordo (0-20%)", default: "0", mostraSe: (f) => !!f.accordo_raggiunto },
       { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: false },
     ],
@@ -643,10 +643,20 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "eta-anagrafica": {
     campi: [
       { tipo: "data", key: "data_nascita", label: "Data di nascita" },
+      {
+        tipo: "testo", key: "codice_fiscale", label: "Codice Fiscale", default: "",
+        nota: (f) => {
+          const cf = String(f.codice_fiscale || "").trim();
+          if (!cf) return "Facoltativo: se lo inserisci, la data di nascita viene letta da qui.";
+          const d = dataNascitaDaCodiceFiscale(cf);
+          return d ? `Data di nascita letta dal codice fiscale: ${isoToDataIt(d)}` : "Codice fiscale non valido.";
+        },
+      },
       { tipo: "data_opzionale", key: "data_riferimento", label: "Data di riferimento (default oggi)" },
     ],
     endpoint: "/calc/eta-anagrafica",
-    buildBody: (f) => ({ data_nascita: f.data_nascita, data_riferimento: f.data_riferimento || null }),
+    validate: (f) => (String(f.codice_fiscale || "").trim() && !dataNascitaDaCodiceFiscale(String(f.codice_fiscale)) ? "Il codice fiscale non è valido: controllalo oppure cancellalo e usa la data di nascita." : null),
+    buildBody: (f) => ({ data_nascita: dataNascitaDaCodiceFiscale(String(f.codice_fiscale || "")) || f.data_nascita, data_riferimento: f.data_riferimento || null }),
     risultato: (r) => [["Età", `${r.anni} anni, ${r.mesi} mesi, ${r.giorni} giorni`]],
   },
   "aggiungi-giorni-lavorativi": {
@@ -682,7 +692,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "473bis17", label: "Memorie (udienza di prima comparizione, art. 473-bis.17 c.p.c.)" },
         { value: "473bis28", label: "Comparse e repliche (udienza di discussione, art. 473-bis.28 c.p.c.)" },
       ] },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
       { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
     ],
     endpoint: "/calc/termini-separazione-divorzio",
@@ -705,7 +715,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
       { tipo: "data", key: "data_consegna_verbale", label: "Data consegna verbale di pignoramento (UNEP)" },
       { tipo: "data", key: "data_compimento_pignoramento", label: "Data compimento pignoramento", mostraSe: (f) => f.tipo !== "presso_terzi" },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
     ],
     endpoint: "/calc/termini-esecuzioni",
     buildBody: (f) => ({
@@ -726,7 +736,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "data", key: "data_udienza", label: "Data della prima udienza" },
       { tipo: "numero", key: "giorni_primo_termine", label: "Giorni per il primo termine", default: "" },
       { tipo: "numero", key: "giorni_secondo_termine", label: "Giorni per il secondo termine", default: "" },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
       { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
       { tipo: "bool", key: "prudenziale", label: "Calcolo prudenziale (termine più favorevole)", default: false },
     ],
@@ -748,7 +758,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "termini-deposito-appello": {
     campi: [
       { tipo: "data", key: "data_udienza", label: "Data udienza di precisazione delle conclusioni" },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
       { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
     ],
     endpoint: "/calc/termini-deposito-appello",
@@ -769,7 +779,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "giorni_bozza", label: "Giorni per l'invio della bozza ai CTP", default: "20" },
       { tipo: "numero", key: "giorni_osservazioni", label: "Giorni per le osservazioni dei CTP", default: "15" },
       { tipo: "numero", key: "giorni_deposito", label: "Giorni per il deposito della relazione definitiva", default: "15" },
-      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: false },
+      { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
       { tipo: "bool", key: "prudenziale", label: "Calcolo prudenziale (termine più favorevole)", default: false },
     ],
     endpoint: "/calc/termini-deposito-ctu",
@@ -861,7 +871,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "durata_anni", label: "Durata pena — anni", default: "0" },
       { tipo: "numero", key: "durata_mesi", label: "Durata pena — mesi", default: "0" },
       { tipo: "numero", key: "durata_giorni", label: "Durata pena — giorni", default: "0" },
-      { tipo: "bool", key: "liberazione_anticipata", label: "Applica liberazione anticipata (45gg a semestre)", default: false },
+      { tipo: "bool", key: "liberazione_anticipata", label: "Applica liberazione anticipata (45gg a semestre)", default: true },
       { tipo: "data_opzionale", key: "data_limite", label: "Calcola fino al (opzionale)", mostraSe: (f) => !!f.liberazione_anticipata },
       { tipo: "bool", key: "solo_semestri_completi", label: "Conta solo i semestri completi", default: true, mostraSe: (f) => !!f.liberazione_anticipata },
       {
@@ -1057,7 +1067,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "12", label: "12" }, { value: "13", label: "13" }, { value: "14", label: "14" },
       ] },
       { tipo: "bool", key: "accredito_conto", label: "Accreditato su conto corrente", default: false },
-      { tipo: "numero", key: "giacenza_conto", label: "Giacenza media sul conto €", default: "", mostraSe: (f) => !!f.accredito_conto },
+      { tipo: "numero", key: "giacenza_conto", label: "Liquidità su CC €", default: "", mostraSe: (f) => !!f.accredito_conto },
       { tipo: "bool", key: "credito_alimentare", label: "Credito di natura alimentare", default: false },
       { tipo: "numero", key: "fraz_pers_num", label: "Frazione personalizzata — numeratore (il giudice può fissarla liberamente)", default: "1", mostraSe: (f) => !!f.credito_alimentare },
       { tipo: "numero", key: "fraz_pers_den", label: "Frazione personalizzata — denominatore", default: "5", mostraSe: (f) => !!f.credito_alimentare },
@@ -1395,7 +1405,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "titolo", key: "tit_spese", label: "Spese" },
       { tipo: "numero", key: "spese_esenti", label: "Spese esenti € (art. 15 DPR 633/72)", default: "" },
       { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €", default: "" },
-      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: false },
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
       { tipo: "titolo", key: "tit_acc", label: "Accessori" },
       { tipo: "bool", key: "cassa", label: "CPA (Cassa Avvocati 4%)", default: false },
@@ -1543,7 +1553,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "titolo", key: "tit_spese", label: "Spese" },
       { tipo: "numero", key: "spese_esenti", label: "Spese esenti € (art. 15 DPR 633/72)", default: "" },
       { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €", default: "" },
-      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
+      { tipo: "bool", key: "spese_generali", label: "Spese generali", default: false },
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
       { tipo: "titolo", key: "tit_acc", label: "Accessori" },
       { tipo: "bool", key: "cassa", label: "CPA (Cassa Avvocati 4%)", default: false },
@@ -2081,7 +2091,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "legittima", label: "Successione legittima (senza testamento)" }, { value: "testamentaria", label: "Quota di legittima (con testamento)" },
       ] },
       { tipo: "numero", key: "patrimonio", label: "Patrimonio ereditario €", default: "" },
-      { tipo: "bool", key: "coniuge", label: "Coniuge superstite", default: false },
+      { tipo: "bool", key: "coniuge", label: "Coniuge superstite", default: true },
       { tipo: "numero", key: "numero_figli", label: "Numero di figli", default: "0" },
       { tipo: "numero", key: "numero_ascendenti", label: "Numero di ascendenti (genitori, max 2)", default: "0" },
       { tipo: "numero", key: "numero_fratelli", label: "Numero di fratelli", default: "0", mostraSe: (f) => f.modalita === "legittima" },
@@ -2131,7 +2141,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         "T",
       ].map((v) => ({ value: v, label: v === "T" ? "Terreni" : v })) },
       { tipo: "numero", key: "rendita_catastale", label: "Rendita catastale (o reddito dominicale per i terreni) €", default: "" },
-      { tipo: "bool", key: "abitazione_principale", label: "Abitazione principale (non di lusso)", default: false },
+      { tipo: "bool", key: "abitazione_principale", label: "Abitazione principale (non di lusso)", default: true },
     ],
     endpoint: "/calc/valore-catastale",
     buildBody: (f) => ({ categoria_catastale: f.categoria_catastale, rendita_catastale: parseNumeroIt(f.rendita_catastale), abitazione_principale: f.abitazione_principale }),
@@ -2144,7 +2154,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "imposte-compravendita-immobiliare": {
     campi: [
       { tipo: "scelta", key: "tipo_immobile", label: "Tipo di immobile", default: "prima_casa", opzioni: [
-        { value: "prima_casa", label: "Prima casa" }, { value: "abitazione_secondaria", label: "Abitazione secondaria" }, { value: "lusso", label: "Immobile di lusso" },
+        { value: "prima_casa", label: "Prima casa e/o pertinenze" }, { value: "abitazione_secondaria", label: "Abitazione secondaria e/o pertinenze" }, { value: "lusso", label: "Abitazione di lusso (cat. A/1, A/8, A/9)" },
       ] },
       { tipo: "scelta", key: "venditore", label: "Venditore", default: "privato", opzioni: [
         { value: "privato", label: "Privato" }, { value: "costruttrice_entro_5_anni", label: "Impresa costruttrice, entro 5 anni dal fine lavori" },
@@ -2206,7 +2216,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "punti", label: "Punti di invalidità (0-9, anche con decimali 0,25/0,5/0,75)", default: "" },
       { tipo: "numero", key: "eta", label: "Età del danneggiato", default: "" },
       { tipo: "numero", key: "giorni_invalidita_totale", label: "Giorni di invalidità assoluta (ITT)", default: "0" },
-      { tipo: "numero", key: "pct_danno_morale", label: "Personalizzazione per danno morale (%)", default: "0" },
+      { tipo: "numero", key: "pct_danno_morale", label: "Personalizzazione per danno morale (%)", default: "33,33" },
       { tipo: "scelta", key: "danno_morale_su_temporanea", label: "Calcolo del danno morale", default: "si", opzioni: [
         { value: "si", label: "Su invalidità permanente e temporanea" }, { value: "no", label: "Solo su invalidità permanente" },
       ] },
@@ -2312,20 +2322,20 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "danno-perdita-parentale-milano": {
     campi: [
       { tipo: "scelta", key: "parentela", label: "Grado di parentela", default: "coniuge", opzioni: [
-        { value: "genitore", label: "Genitore" }, { value: "figlio", label: "Figlio" }, { value: "coniuge", label: "Coniuge" },
+        { value: "genitore", label: "Genitore" }, { value: "figlio", label: "Figlio" }, { value: "coniuge", label: "Coniuge non separato" },
         { value: "unione_civile", label: "Parte dell'unione civile" }, { value: "convivente_fatto", label: "Convivente di fatto" },
         { value: "fratello", label: "Fratello" }, { value: "nonno", label: "Nonno" }, { value: "nipote", label: "Nipote" }, { value: "zio", label: "Zio" },
       ] },
       { tipo: "numero", key: "eta_congiunto", label: "Età del congiunto superstite", default: "" },
       { tipo: "numero", key: "eta_vittima", label: "Età della vittima al momento del decesso", default: "" },
-      { tipo: "bool", key: "convivenza", label: "Convivenza tra congiunto e vittima", default: false },
+      { tipo: "bool", key: "convivenza", label: "Convivenza tra congiunto e vittima", default: true },
       { tipo: "scelta", key: "durata_convivenza", label: "Durata della convivenza", default: "meno_30",
         mostraSe: (f) => !!f.convivenza && ["fratello", "nonno", "nipote", "zio"].includes(f.parentela),
         opzioni: [
           { value: "meno_30", label: "Meno di 30 anni" }, { value: "oltre_30", label: "Oltre 30 anni" }, { value: "oltre_40", label: "Oltre 40 anni" },
         ] },
       { tipo: "bool", key: "stesso_condominio", label: "Stesso condominio (se non convivenza)", default: false, mostraSe: (f) => !f.convivenza },
-      { tipo: "scelta", key: "altri_familiari", label: "Numero di altri familiari nel nucleo primario", default: "0", opzioni: [
+      { tipo: "scelta", key: "altri_familiari", label: "Numero di altri familiari nel nucleo primario", default: "2", opzioni: [
         { value: "0", label: "Nessuno" }, { value: "1", label: "1" }, { value: "2", label: "2" }, { value: "3", label: "3" }, { value: "99", label: "Oltre 3" },
       ] },
       { tipo: "numero", key: "relazione", label: "Qualità/intensità della relazione affettiva (0-30)", default: "15" },
@@ -2351,7 +2361,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
       { tipo: "numero", key: "eta_congiunto", label: "Età del congiunto superstite", default: "" },
       { tipo: "numero", key: "eta_vittima", label: "Età della vittima al momento del decesso", default: "" },
-      { tipo: "bool", key: "convivenza", label: "Convivenza con la vittima", default: false },
+      { tipo: "bool", key: "convivenza", label: "Convivenza con la vittima", default: true },
       { tipo: "bool", key: "altri_conviventi", label: "Presenza di altri familiari conviventi del congiunto", default: false },
       { tipo: "bool", key: "altri_familiari", label: "Presenza di altri familiari non conviventi entro il 2° grado", default: false },
     ],
@@ -4564,7 +4574,7 @@ export default function Calcolatori() {
   const [ctuNumeroKm, setCtuNumeroKm] = React.useState("0");
   const [ctuArticoloTabellare, setCtuArticoloTabellare] = React.useState("");
   const [ctuValoreStimato, setCtuValoreStimato] = React.useState("");
-  const [ctuTariffaPredefinita, setCtuTariffaPredefinita] = React.useState("media");
+  const [ctuTariffaPredefinita, setCtuTariffaPredefinita] = React.useState("massima");
   const [ctuCaricoOnorari, setCtuCaricoOnorari] = React.useState("100");
   const [titoloCtu, setTitoloCtu] = React.useState("Compenso CTU");
   const [risCtu, setRisCtu] = React.useState<any>(null);
@@ -5076,7 +5086,7 @@ export default function Calcolatori() {
     setRisVari(null); setVariCapitale(""); setVariDataInizio(new Date().toISOString().slice(0, 10)); setVariDataFine(new Date().toISOString().slice(0, 10)); setVariTipoInteresse("legali"); setVariTassoFisso(""); setVariMaggiorazione(""); setVariAnatocismo("nessuna"); setVariRivaluta(false); setVariBaseRivalutazione("iniziale_fissa"); setVariRivalutaAlPct("100"); setVariIgnoraDeflazione(true); setVariGiornoIniziale("escluso"); setVariConvenzioneGiorni("civile");
     setRisMem(null); setMemUdienza(new Date().toISOString().slice(0, 10)); setMemEscludiFer(true); setTipoMem("171-ter");
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
-    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
+    setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("massima"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
   };
 
@@ -6838,6 +6848,9 @@ export default function Calcolatori() {
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
                           <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} multiline={c.multiline} numberOfLines={c.multiline ? 4 : undefined} style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }, c.multiline ? { minHeight: 90, textAlignVertical: "top" } : null]} />
+                          {c.nota?.(genForm) ? (
+                            <Text testID={`gen-${c.key}-nota`} style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic", marginTop: 4, marginBottom: SPACING.sm }}>{c.nota(genForm)}</Text>
+                          ) : null}
                         </View>
                       );
                     }
