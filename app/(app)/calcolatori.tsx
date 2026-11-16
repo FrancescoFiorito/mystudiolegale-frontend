@@ -1051,25 +1051,57 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "interessi-corso-causa": {
     campi: [
-      { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
-      { tipo: "data", key: "data_inizio", label: "Decorrenza del credito" },
-      { tipo: "data", key: "data_causa", label: "Data della domanda giudiziale" },
-      { tipo: "data", key: "data_fine", label: "Data finale" },
-      { tipo: "numero", key: "tasso_fisso", label: "Tasso di mora convenzionale %, se pattuito (opzionale)", default: "" },
-      { tipo: "bool", key: "rivaluta", label: "Applica rivalutazione monetaria (Cass. SU 1712/1995)", default: true },
-      { tipo: "numero", key: "rivaluta_al_pct", label: "Percentuale di rivalutazione", default: "100", mostraSe: (f) => !!f.rivaluta },
+      { tipo: "numero", key: "capitale", label: "Importo credito", default: "" },
+      { tipo: "data", key: "data_inizio", label: "Decorrenza credito" },
+      { tipo: "data", key: "data_causa", label: "Domanda giudiziale",
+        nota: (f) => (f.tasso_fisso_attivo ? "Con il tasso fisso la domanda giudiziale non influisce sul calcolo." : null) },
+      { tipo: "data", key: "data_fine", label: "Calcola interessi al" },
+      { tipo: "bool", key: "tasso_fisso_attivo", label: "Tasso fisso", default: false },
+      { tipo: "numero", key: "tasso_fisso", label: "Interessi %", default: "", mostraSe: (f) => !!f.tasso_fisso_attivo },
+      { tipo: "bool", key: "rivaluta", label: "Rivaluta annualmente", default: true },
+      { tipo: "numero", key: "rivaluta_al_pct", label: "Rivaluta al %", default: "100", mostraSe: (f) => !!f.rivaluta },
     ],
     endpoint: "/calc/interessi-corso-causa",
+    validate: (f) => (f.tasso_fisso_attivo && !f.tasso_fisso ? "Inserisci il tasso fisso (Interessi %)." : null),
+    // Con il tasso fisso il sito lo applica a tutto il periodo dalla decorrenza: si invia sempre
+    // tasso_fisso_da_decorrenza = true insieme al tasso (il default del backend resta il vecchio comportamento).
     buildBody: (f) => ({
       capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_causa: f.data_causa, data_fine: f.data_fine,
-      tasso_fisso: f.tasso_fisso ? parseNumeroIt(f.tasso_fisso) : null,
+      tasso_fisso: f.tasso_fisso_attivo && f.tasso_fisso ? parseNumeroIt(f.tasso_fisso) : null,
+      tasso_fisso_da_decorrenza: !!(f.tasso_fisso_attivo && f.tasso_fisso),
       rivaluta: f.rivaluta, rivaluta_al_pct: parseNumeroIt(f.rivaluta_al_pct),
     }),
-    risultato: (r) => [
-      ["Rivalutazione", formatEuro(r.rivalutazione)],
-      ["Totale interessi", formatEuro(r.totale_interessi)],
-      ["Totale", formatEuro(r.totale)],
-    ],
+    risultato: (r, form) => {
+      const dett: any[] = r.dettaglio || [];
+      const riga = (d: any): [string, string] => [
+        `${isoToDataIt(d.dal)} → ${isoToDataIt(d.al)} · ${d.giorni} gg · ${fmtPct(d.tasso_pct)}% su ${formatEuro(d.capitale_base)}`,
+        formatEuro(d.interesse),
+      ];
+      const somma = (v: any[]) => Math.round(v.reduce((a, d) => a + d.interesse, 0) * 100) / 100;
+      const out: [string, string][] = [];
+      const fisso = !!r.tasso_fisso_da_decorrenza;
+      const dataCausa = form?.data_causa;
+      // Il sito mostra due tabelle (legali fino alla domanda, moratori dopo) quando la domanda giudiziale conta.
+      const dividi = !!r.domanda_giudiziale_rileva && !!dataCausa;
+      const legali = dividi ? dett.filter((d) => d.al <= dataCausa) : dett;
+      const moratori = dividi ? dett.filter((d) => d.al > dataCausa) : [];
+      legali.forEach((d) => out.push(riga(d)));
+      if (moratori.length) {
+        out.push(["Dalla domanda giudiziale si applicano gli interessi moratori (art. 1284 c.c. comma 4):", ""]);
+        moratori.forEach((d) => out.push(riga(d)));
+      }
+      out.push(["Totale giorni", String(r.totale_giorni)]);
+      if (fisso) out.push(["Totale interessi", formatEuro(r.totale_interessi)]);
+      else {
+        if (legali.length) out.push(["Totale interessi legali", formatEuro(somma(legali))]);
+        if (moratori.length) out.push(["Totale interessi moratori", formatEuro(somma(moratori))]);
+      }
+      const rivalutato = form ? !!form.rivaluta : r.rivalutazione > 0;
+      if (rivalutato) out.push(["Rivalutazione", formatEuro(r.rivalutazione)]);
+      out.push([rivalutato ? "Credito rivalutato + interessi" : "Credito + interessi", formatEuro(r.totale)]);
+      if (rivalutato) out.push(["Rivalutazione + interessi", formatEuro(Math.round((r.rivalutazione + r.totale_interessi) * 100) / 100)]);
+      return out;
+    },
   },
   "interessi-mora-appalti": {
     campi: [
