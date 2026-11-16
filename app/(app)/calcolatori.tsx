@@ -80,6 +80,12 @@ export type CampoGenerico =
   // form è un array di oggetti {chiave: stringa}, uno per riga.
   | (CampoGenericoBase & { tipo: "lista"; campiRiga: CampoRigaLista[]; etichettaAggiungi?: string });
 
+// Valore catastale: categorie a cui si applica il moltiplicatore da abitazione principale.
+const CATEGORIE_ABITAZIONE_PRINCIPALE = ["A/1", "A/2", "A/3", "A/4", "A/5", "A/6", "A/7", "A/8", "A/9", "A/11", "C/2", "C/6", "C/7"];
+
+// Imposte compravendita: «Prezzo-Valore» non si applica con l'impresa costruttrice entro 5 anni (atto con IVA).
+const prezzoValoreAttivo = (f: Record<string, any>) => f.venditore !== "costruttrice_entro_5_anni" && !!f.prezzo_valore;
+
 // Percentuali di partenza della cassa del mediatore familiare.
 const PCT_CASSA_MEDIATORE: Record<string, string> = { enpap: "2", enpam: "2", inps_gestione_separata: "4" };
 
@@ -2197,15 +2203,24 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         "E/1", "E/2", "E/3", "E/4", "E/5", "E/6", "E/7", "E/8", "E/9",
         "T",
       ].map((v) => ({ value: v, label: v === "T" ? "Terreni" : v })) },
+      { tipo: "data_opzionale", key: "data_riferimento", label: "Data di riferimento", nota: () => "Se non indicata si usa la data di oggi (valori attuali). Da 01/01/1992." },
       { tipo: "numero", key: "rendita_catastale", label: "Rendita catastale (o reddito dominicale per i terreni) €", default: "" },
-      { tipo: "bool", key: "abitazione_principale", label: "Abitazione principale (non di lusso)", default: true },
+      { tipo: "bool", key: "abitazione_principale", label: "Abitazione principale (non di lusso)", default: true, mostraSe: (f) => CATEGORIE_ABITAZIONE_PRINCIPALE.includes(f.categoria_catastale) },
     ],
     endpoint: "/calc/valore-catastale",
-    buildBody: (f) => ({ categoria_catastale: f.categoria_catastale, rendita_catastale: parseNumeroIt(f.rendita_catastale), abitazione_principale: f.abitazione_principale }),
+    validate: (f) => (f.data_riferimento && f.data_riferimento < "1992-01-01" ? "La data di riferimento deve essere dal 01/01/1992." : null),
+    buildBody: (f) => ({
+      categoria_catastale: f.categoria_catastale, rendita_catastale: parseNumeroIt(f.rendita_catastale),
+      // La casella vale solo per le categorie che ne beneficiano (per le altre il backend risponderebbe 400).
+      abitazione_principale: CATEGORIE_ABITAZIONE_PRINCIPALE.includes(f.categoria_catastale) && !!f.abitazione_principale,
+      ...(f.data_riferimento ? { data_riferimento: f.data_riferimento } : {}),
+    }),
+    // Prima del 1997 la rendita non si rivaluta (niente riga); per D/10-D/12 prima del 1997 non c'è moltiplicatore (valore 0).
     risultato: (r) => [
-      ["Rendita rivalutata", formatEuro(r.rendita_rivalutata)],
-      ["Moltiplicatore catastale", String(r.moltiplicatore_catastale)],
+      ...(r.pct_rivalutazione ? ([["Rendita rivalutata", formatEuro(r.rendita_rivalutata)]] as [string, string][]) : []),
+      ...(r.moltiplicatore_catastale != null ? ([["Moltiplicatore catastale", String(r.moltiplicatore_catastale).replace(".", ",")]] as [string, string][]) : []),
       ["Valore catastale", formatEuro(r.valore_catastale)],
+      ...(r.dieci_per_cento_valore_catastale != null ? ([["10% del valore catastale", formatEuro(r.dieci_per_cento_valore_catastale)]] as [string, string][]) : []),
     ],
   },
   "imposte-compravendita-immobiliare": {
@@ -2217,18 +2232,32 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "privato", label: "Privato" }, { value: "costruttrice_entro_5_anni", label: "Impresa costruttrice, entro 5 anni dal fine lavori" },
         { value: "costruttrice_oltre_5_anni", label: "Impresa costruttrice, oltre 5 anni dal fine lavori" }, { value: "non_costruttrice", label: "Impresa non costruttrice" },
       ] },
-      { tipo: "numero", key: "valore", label: "Prezzo (o valore catastale) €", default: "" },
+      { tipo: "bool", key: "prezzo_valore", label: "Prezzo-Valore", default: true, mostraSe: (f) => f.venditore !== "costruttrice_entro_5_anni" },
+      { tipo: "bool", key: "calcola_da_rendita", label: "Calcola valore catastale dalla rendita", default: true, mostraSe: prezzoValoreAttivo },
+      { tipo: "numero", key: "valore_rendita", label: "Rendita catastale €", default: "", mostraSe: (f) => prezzoValoreAttivo(f) && !!f.calcola_da_rendita, nota: () => "(non rivalutata)" },
+      { tipo: "numero", key: "valore_catastale", label: "Valore catastale €", default: "", mostraSe: (f) => prezzoValoreAttivo(f) && !f.calcola_da_rendita },
+      { tipo: "numero", key: "valore_pattuito", label: "Valore pattuito €", default: "", mostraSe: (f) => !prezzoValoreAttivo(f), nota: () => "(come indicato nell'atto notarile)" },
     ],
     endpoint: "/calc/imposte-compravendita-immobiliare",
-    buildBody: (f) => ({ tipo_immobile: f.tipo_immobile, venditore: f.venditore, valore: parseNumeroIt(f.valore) }),
+    buildBody: (f) => {
+      const pv = prezzoValoreAttivo(f);
+      const da_rendita = pv && !!f.calcola_da_rendita;
+      return {
+        tipo_immobile: f.tipo_immobile, venditore: f.venditore,
+        valore: parseNumeroIt(da_rendita ? f.valore_rendita : pv ? f.valore_catastale : f.valore_pattuito),
+        prezzo_valore: pv, calcola_da_rendita: da_rendita,
+      };
+    },
     risultato: (r) => [
+      [r.etichetta_valore ?? "Valore", formatEuro(r.valore_imposte ?? r.valore)],
       ...(r.iva > 0 ? ([["IVA", formatEuro(r.iva)]] as [string, string][]) : []),
-      ["Imposta di registro", formatEuro(r.imposta_registro)],
+      [r.pct_registro != null ? `Imposta di registro (${String(r.pct_registro).replace(".", ",")}%)` : "Imposta di registro", formatEuro(r.imposta_registro)],
       ["Imposta ipotecaria", formatEuro(r.imposta_ipotecaria)],
       ["Imposta catastale", formatEuro(r.imposta_catastale)],
       ...(r.imposta_bollo > 0 ? ([["Imposta di bollo", formatEuro(r.imposta_bollo)]] as [string, string][]) : []),
       ...(r.diritti_trascrizione > 0 ? ([["Diritti di trascrizione", formatEuro(r.diritti_trascrizione)]] as [string, string][]) : []),
       ["Totale", formatEuro(r.totale)],
+      ...(r.differenza_2013 != null && r.etichetta_confronto_2013 ? ([[String(r.etichetta_confronto_2013), formatEuro(Math.abs(r.differenza_2013))]] as [string, string][]) : []),
     ],
   },
   "tassa-registro-locazione": {
@@ -2236,7 +2265,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "tipo_immobile", label: "Tipo di immobile", default: "abitativo", opzioni: [
         { value: "abitativo", label: "Abitativo" }, { value: "strumentale", label: "Strumentale" }, { value: "fondo_rustico", label: "Fondo rustico" }, { value: "altro", label: "Altro" },
       ] },
-      { tipo: "numero", key: "durata_anni", label: "Durata del contratto (anni)", default: "" },
+      { tipo: "numero", key: "durata", label: "Durata del Contratto", default: "" },
+      { tipo: "scelta", key: "unita_durata", label: "Durata espressa in", default: "anni", opzioni: [
+        { value: "anni", label: "anni" }, { value: "mesi", label: "mesi" },
+      ] },
       { tipo: "scelta", key: "tipo_canone", label: "L'importo del canone è riferito a", default: "annuale", opzioni: [
         { value: "annuale", label: "Un intero anno" }, { value: "mensile", label: "Un solo mese" }, { value: "intera_durata", label: "Tutta la durata del contratto" },
       ] },
@@ -2248,25 +2280,50 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
     ],
     endpoint: "/calc/tassa-registro-locazione",
-    buildBody: (f) => {
-      const durataAnni = parseNumeroIt(f.durata_anni);
-      const canone = parseNumeroIt(f.canone);
-      const canoneAnnuo = f.tipo_canone === "mensile" ? canone * 12 : f.tipo_canone === "intera_durata" ? canone / (durataAnni || 1) : canone;
-      return {
-        tipo_immobile: f.tipo_immobile, durata_anni: durataAnni, canone_annuo: canoneAnnuo,
-        canone_concordato: f.tipo_immobile === "abitativo" ? f.canone_concordato : false,
-        soggetto_iva: f.tipo_immobile === "strumentale" ? f.soggetto_iva : false, pagamento: f.pagamento,
-      };
+    validate: (f) => {
+      const d = parseNumeroIt(f.durata);
+      if (!Number.isInteger(d) || d < 1 || d > 102) return "La durata del contratto deve essere un numero intero da 1 a 102 (anni o mesi).";
+      return null;
     },
-    risultato: (r) => r.pagamento === "unica_soluzione" ? [
-      ["Imposta calcolata", formatEuro(r.imposta_calcolata)],
-      ["Sconto", formatEuro(r.sconto)],
-      ["Imposta da versare", formatEuro(r.imposta_da_versare)],
-    ] : [
-      ["Prima rata", formatEuro(r.prima_rata)],
-      ["Rata successiva (annuale)", formatEuro(r.rata_successiva)],
-      ["Imposta complessiva", formatEuro(r.imposta_complessiva)],
-    ],
+    // Il canone si invia come scritto: anno, mese o intera durata li riporta all'anno il backend (tipo_importo_canone).
+    buildBody: (f) => ({
+      tipo_immobile: f.tipo_immobile,
+      ...(f.unita_durata === "mesi" ? { durata_mesi: parseNumeroIt(f.durata) } : { durata_anni: parseNumeroIt(f.durata) }),
+      canone_annuo: parseNumeroIt(f.canone), tipo_importo_canone: f.tipo_canone,
+      canone_concordato: f.tipo_immobile === "abitativo" ? f.canone_concordato : false,
+      soggetto_iva: f.tipo_immobile === "strumentale" ? f.soggetto_iva : false, pagamento: f.pagamento,
+    }),
+    // Righe nell'ordine del sito.
+    risultato: (r) => {
+      const mesi: number = r.durata_mesi ?? 0;
+      const anniD = Math.floor(mesi / 12), mesiD = mesi % 12;
+      const durata = [anniD ? `${anniD} ${anniD === 1 ? "anno" : "anni"}` : "", mesiD ? `${mesiD} ${mesiD === 1 ? "mese" : "mesi"}` : ""].filter(Boolean).join(" e ");
+      const out: [string, string][] = [
+        ["Durata del contratto", durata],
+        ["Canone complessivo", formatEuro(r.canone_complessivo)],
+        ["Canone annuale", formatEuro(r.canone_annuo)],
+        ...(mesi > 1 ? ([["Canone mensile", formatEuro(r.canone_mensile)]] as [string, string][]) : []),
+      ];
+      if (r.contratto_transitorio && r.tipo_immobile === "abitativo") out.push(["Contratto", "Transitorio"]);
+      else if (r.tipo_immobile === "abitativo") out.push(["Tipologia del canone", String(r.tipologia_contratto ?? "")]);
+      else if (r.contratto_transitorio) out.push(["Contratto", "Transitorio"]);
+      if (r.tipo_immobile === "strumentale") out.push(["Locatore soggetto Iva", r.locatore_soggetto_iva ? "Sì" : "No"]);
+      const unica = (r.pagamento_effettivo ?? r.pagamento) === "unica_soluzione";
+      out.push(["Modalità di pagamento dell'imposta", unica ? "Unica soluzione" : "Rateale (anno per anno)"]);
+      if (unica) {
+        out.push(["Imposta calcolata", formatEuro(r.imposta_calcolata)]);
+        if (r.sconto_pct > 0) out.push([`Sconto applicato (${String(r.sconto_pct).replace(".", ",")}%)`, formatEuro(r.sconto)]);
+        out.push(["Imposta da versare", formatEuro(r.imposta_da_versare)]);
+      } else {
+        const n: number = r.numero_annualita ?? 1;
+        out.push(["Prima rata da versare", formatEuro(r.prima_rata)]);
+        if (n === 2) out.push(["Rata successiva (*)", formatEuro(r.rata_successiva)]);
+        else if (n > 2) out.push([`Ciascuna delle successive ${n - 1} rate (*)`, formatEuro(r.rata_successiva)]);
+        out.push(["Imposta complessiva (*)", formatEuro(r.imposta_complessiva)]);
+        out.push(["Nota", "(*) Le rate successive e l'imposta complessiva non tengono conto della eventuale rivalutazione del canone."]);
+      }
+      return out;
+    },
   },
   "danno-biologico-lieve-entita": {
     campi: [
@@ -2711,9 +2768,15 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.applica_spese_generali },
       { tipo: "numero", key: "pct_cassa", label: "Percentuale cassa previdenziale (4% ENPAP, altre casse diverse)", default: "4" },
       { tipo: "bool", key: "regime_semplificato", label: "Regime fiscale semplificato (no IVA)", default: false },
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo regime", default: "forfettario_2014", mostraSe: (f) => !!f.regime_semplificato, opzioni: [
+        { value: "forfettario_2014", label: "Regime forfettario agevolato 2014" }, { value: "vantaggio_2011", label: "Regime di vantaggio 2011" }, { value: "minimi_2008", label: "Regime dei minimi 2008" },
+      ] },
+      { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo", default: false, mostraSe: (f) => !!f.regime_semplificato },
       { tipo: "numero", key: "pct_iva", label: "Percentuale IVA", default: "22", mostraSe: (f) => !f.regime_semplificato },
       { tipo: "bool", key: "applica_ritenuta", label: "Applica ritenuta d'acconto", default: true },
       { tipo: "numero", key: "pct_ritenuta", label: "Percentuale ritenuta d'acconto", default: "20", mostraSe: (f) => !!f.applica_ritenuta },
+      { tipo: "bool", key: "iva_per_cassa", label: "Iva per Cassa", default: false },
+      { tipo: "bool", key: "split_payment", label: "Split Payment", default: false },
     ],
     endpoint: "/calc/scorporo-importi",
     buildBody: (f) => ({
@@ -2722,16 +2785,25 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       pct_cassa: parseNumeroIt(f.pct_cassa) || 4,
       regime_semplificato: f.regime_semplificato, pct_iva: f.regime_semplificato ? 22 : (parseNumeroIt(f.pct_iva) || 22),
       applica_ritenuta: f.applica_ritenuta, pct_ritenuta: parseNumeroIt(f.pct_ritenuta),
+      iva_per_cassa: !!f.iva_per_cassa, split_payment: !!f.split_payment,
+      // Tipo regime e bollo solo con il regime semplificato (sempre inviato il valore scelto).
+      ...(f.regime_semplificato ? { tipo_regime: f.tipo_regime, addebito_bollo: !!f.addebito_bollo } : {}),
     }),
+    // Righe nell'ordine del sito; il totale imponibile manca con forfettario e vantaggio.
     risultato: (r) => [
       ["Compenso netto", formatEuro(r.compenso_netto)],
-      ["Spese generali", formatEuro(r.spese_generali)],
-      ["Cassa", formatEuro(r.cassa)],
-      ["Totale imponibile", formatEuro(r.totale_imponibile)],
-      ...(r.iva > 0 ? ([["IVA", formatEuro(r.iva)]] as [string, string][]) : []),
+      ["Spese generali ex art. 13", formatEuro(r.spese_generali)],
+      ...(r.spese_non_esenti > 0 ? ([["Spese imponibili", formatEuro(r.spese_non_esenti)]] as [string, string][]) : []),
+      ...(r.imposta_bollo > 0 ? ([["Imposta di bollo", formatEuro(r.imposta_bollo)]] as [string, string][]) : []),
+      ["Cassa Avvocati", formatEuro(r.cassa)],
+      ...(["forfettario_2014", "vantaggio_2011"].includes(r.tipo_regime) ? [] : ([["Totale imponibile", formatEuro(r.totale_imponibile)]] as [string, string][])),
+      ...(r.iva > 0 ? ([["IVA su imponibile", formatEuro(r.iva)]] as [string, string][]) : []),
+      ...(r.spese_esenti > 0 ? ([["Spese esenti ex art. 15, DPR 633/72", formatEuro(r.spese_esenti)]] as [string, string][]) : []),
       ["Totale documento", formatEuro(r.totale_documento)],
-      ...(r.ritenuta_acconto > 0 ? ([["Ritenuta d'acconto", formatEuro(r.ritenuta_acconto)]] as [string, string][]) : []),
+      ...(r.iva_versata_dal_cliente > 0 ? ([["Importo IVA versato direttamente dal Cliente all'Erario (scissione dei pagamenti)", formatEuro(r.iva_versata_dal_cliente)]] as [string, string][]) : []),
+      ...(r.ritenuta_acconto > 0 ? ([["A dedurre ritenuta d'acconto (su compenso e spese)", formatEuro(r.ritenuta_acconto)]] as [string, string][]) : []),
       ["Netto a pagare", formatEuro(r.netto_a_pagare)],
+      ...(Array.isArray(r.note_documento) ? r.note_documento.map((n: string) => ["Nota", String(n)] as [string, string]) : []),
     ],
   },
   "imu": {
