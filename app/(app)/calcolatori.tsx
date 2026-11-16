@@ -1131,16 +1131,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "capitale", label: "Capitale €", default: "" },
       { tipo: "data", key: "data_inizio", label: "Data iniziale" },
       { tipo: "data", key: "data_fine", label: "Data finale" },
-      { tipo: "scelta", key: "tasso_riferimento", label: "Seleziona il tasso di riferimento", default: "istat", opzioni: [
+      { tipo: "scelta", key: "tasso_riferimento", label: "Seleziona il tasso di riferimento", default: "bot_3_6_12", opzioni: [
         { value: "bot_3_6_12", label: "rendimento medio dei BOT a 3, 6 e 12 mesi (Cass. n.19499/2008)" },
         { value: "bot_annuali", label: "rendimento medio dei soli BOT annuali" },
         { value: "rendistato", label: "rendistato (rendimento medio titoli con scadenza > 12 mesi)" },
         { value: "istat", label: "tasso d'inflazione Istat (indice FOI)" },
       ] },
-      { tipo: "scelta", key: "rendimenti", label: "Rendimenti", default: "netti", mostraSe: (f) => f.tasso_riferimento !== "istat", opzioni: [
+      { tipo: "scelta", key: "rendimenti", label: "Rendimenti:", default: "netti", mostraSe: (f) => f.tasso_riferimento !== "istat", opzioni: [
         { value: "netti", label: "netti" }, { value: "lordi", label: "lordi" },
       ] },
-      { tipo: "scelta", key: "sviluppo", label: "Sviluppo del calcolo", default: "annuale", opzioni: [
+      { tipo: "scelta", key: "sviluppo", label: "Sviluppo del calcolo:", default: "annuale", opzioni: [
         { value: "annuale", label: "annuale (confronta con i tassi medi annuali)" }, { value: "mensile", label: "mensile (confronta con i tassi rilevati mensilmente)" },
       ] },
     ],
@@ -1150,9 +1150,16 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       tasso_riferimento: f.tasso_riferimento, sviluppo: f.sviluppo,
       ...(f.tasso_riferimento !== "istat" ? { rendimenti: f.rendimenti } : {}),
     }),
+    // Il dettaglio per riga è quello del sito di riferimento: tasso legale, tasso di riferimento ("-" se il
+    // rendimento non supera il legale, cioè tasso_riferimento_pct nullo) e maggior danno ("-" se zero).
     risultato: (r) => [
       ...(r.descrizione_tasso_riferimento ? ([["Tasso di riferimento", String(r.descrizione_tasso_riferimento)]] as [string, string][]) : []),
       ...(r.descrizione_sviluppo ? ([["Sviluppo del calcolo", String(r.descrizione_sviluppo)]] as [string, string][]) : []),
+      ...((Array.isArray(r.dettaglio) ? r.dettaglio : []) as any[]).map((d): [string, string] => [
+        `${isoToDataIt(d.dal)} → ${isoToDataIt(d.al)} · ${d.giorni} gg · legale ${fmtPct(d.tasso_legale_pct)}% · rif. ${d.tasso_riferimento_pct == null ? "-" : `${fmtPct(Math.round(d.tasso_riferimento_pct * 10000) / 10000)}%`}`,
+        `interessi ${formatEuro(d.interessi_legali)} · maggior danno ${d.maggior_danno ? formatEuro(d.maggior_danno) : "-"}`,
+      ]),
+      ...(r.totale_giorni != null ? ([["Totale giorni", String(r.totale_giorni)]] as [string, string][]) : []),
       ["Totale interessi legali", formatEuro(r.totale_interessi_legali)],
       ["Totale maggior danno", formatEuro(r.totale_maggior_danno)],
       ["Totale", formatEuro(r.totale)],
