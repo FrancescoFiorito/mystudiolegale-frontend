@@ -25,6 +25,7 @@ import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItali
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
 import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
+import { CAMPI_DANNO_NON_PATRIMONIALE, alCambioDannoNonPatrimoniale, validaDannoNonPatrimoniale, corpoDannoNonPatrimoniale, righeDannoNonPatrimoniale } from "@/src/utils/dannoNonPatrimoniale";
 import { codiceFiscaleValido, partitaIvaValida } from "@/src/documenti/formati";
 
 type CalcId =
@@ -42,7 +43,7 @@ type CalcId =
   | "interessi-acconti" | "interessi-corso-causa" | "interessi-mora-appalti" | "maggior-danno" | "pignoramento-stipendio-pensione"
   | "equo-indennizzo" | "compenso-curatore-fallimentare" | "compenso-delegati-vendite" | "compenso-mediatore-familiare" | "parametri-stragiudiziali"
   | "quote-ereditarie" | "usufrutto" | "valore-catastale" | "imposte-compravendita-immobiliare" | "tassa-registro-locazione"
-  | "danno-biologico-lieve-entita" | "danno-biologico-macropermanenti" | "menomazioni-plurime"
+  | "danno-biologico-lieve-entita" | "danno-biologico-macropermanenti" | "danno-non-patrimoniale" | "menomazioni-plurime"
   | "danno-perdita-parentale-milano" | "danno-perdita-parentale-roma" | "risarcimento-inail"
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
@@ -55,8 +56,8 @@ type CalcId =
 // tutti un piccolo form -> un POST -> un risultato da mostrare (ed
 // eventualmente da salvare come scadenza), senza logica particolare propria
 // che giustifichi una schermata dedicata come quelle storiche sopra.
-type CampoGenericoBase = { key: string; label: string; mostraSe?: (form: Record<string, any>) => boolean; nota?: (form: Record<string, any>) => string | null };
-type CampoGenerico =
+export type CampoGenericoBase = { key: string; label: string; etichettaAcc?: string; mostraSe?: (form: Record<string, any>) => boolean; nota?: (form: Record<string, any>) => string | null };
+export type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data" })
   | (CampoGenericoBase & { tipo: "data_opzionale" })
   // Come "data" ma fa scegliere solo mese e anno, per i campi in cui il
@@ -82,6 +83,9 @@ type ConfigGenerico = {
   endpoint: string | ((form: Record<string, any>) => string);
   buildBody?: (form: Record<string, any>) => any;
   validate?: (form: Record<string, any>) => string | null;
+  // Chiamata dopo ogni modifica di un campo "scelta" o "bool": restituisce il
+  // form eventualmente aggiornato (es. valori che dipendono da un'altra scelta).
+  alCambio?: (chiave: string, form: Record<string, any>) => Record<string, any>;
   risultato: (r: any) => [string, string][];
   scadenze?: (r: any) => { titolo: string; data: string }[];
   // Documento di testo (preventivo, ricevuta) generato nell'app dai dati del form
@@ -2232,6 +2236,14 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ["Totale", formatEuro(r.totale)],
     ],
   },
+  "danno-non-patrimoniale": {
+    campi: CAMPI_DANNO_NON_PATRIMONIALE,
+    endpoint: "/calc/danno-non-patrimoniale",
+    validate: validaDannoNonPatrimoniale,
+    alCambio: alCambioDannoNonPatrimoniale,
+    buildBody: corpoDannoNonPatrimoniale,
+    risultato: righeDannoNonPatrimoniale,
+  },
   "danno-biologico-macropermanenti": {
     campi: [
       { tipo: "numero", key: "punti", label: "Punti di invalidità permanente (10-100)", default: "" },
@@ -3665,6 +3677,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "imposte-compravendita-immobiliare", titolo: "Imposte Compravendita Immobiliare", sottotitolo: "IVA, registro, ipotecaria, catastale", icona: "home" },
   { id: "tassa-registro-locazione", titolo: "Tassa Registro Locazioni", sottotitolo: "Rateale o in unica soluzione", icona: "home" },
   { id: "danno-biologico-lieve-entita", titolo: "Danno Biologico (lieve entità)", sottotitolo: "Micropermanenti 1-9 punti, art. 139 Cod. Ass.", icona: "activity" },
+  { id: "danno-non-patrimoniale", titolo: "Danno non Patrimoniale", sottotitolo: "Tabelle del Tribunale di Milano: danno biologico, invalidità temporanea, spese", icona: "activity" },
   { id: "danno-biologico-macropermanenti", titolo: "Danno Biologico (macropermanenti)", sottotitolo: "10-100 punti, Tabella Unica Nazionale", icona: "activity" },
   { id: "menomazioni-plurime", titolo: "Calcolo Menomazioni Plurime", sottotitolo: "Balthazard o Salomonica", icona: "activity" },
   { id: "danno-perdita-parentale-milano", titolo: "Danno Parentale Milano", sottotitolo: "Tabelle del Tribunale di Milano 2024", icona: "heart" },
@@ -4075,7 +4088,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     voci: [
       { nome: "Calcolo Danno Biologico (lieve entità)", tipo: "calcolatore", calcId: "danno-biologico-lieve-entita" },
       { nome: "Calcolo Risarcimento Danno Tabella Unica", tipo: "calcolatore", calcId: "danno-biologico-macropermanenti" },
-      { nome: "Danno non Patrimoniale", tipo: "in_arrivo" },
+      { nome: "Danno non Patrimoniale", tipo: "calcolatore", calcId: "danno-non-patrimoniale" },
       { nome: "Danno Parentale Roma", tipo: "calcolatore", calcId: "danno-perdita-parentale-roma" },
       { nome: "Danno Parentale Milano", tipo: "calcolatore", calcId: "danno-perdita-parentale-milano" },
       { nome: "Calcolo Menomazioni Plurime", tipo: "calcolatore", calcId: "menomazioni-plurime" },
@@ -4345,13 +4358,14 @@ function datiInseritiGenerici(campi: CampoGenerico[], form: Record<string, any>)
       });
       continue;
     }
-    if (c.tipo === "bool") { out.push([c.label, siNo(!!v)]); continue; }
+    const etichetta = c.etichettaAcc ?? c.label;
+    if (c.tipo === "bool") { out.push([etichetta, siNo(!!v)]); continue; }
     if (!pieno(v)) continue;
     const sv = String(v);
-    if (c.tipo === "data" || c.tipo === "data_opzionale") out.push([c.label, isoToDataIt(sv)]);
-    else if (c.tipo === "mese_anno") out.push([c.label, meseAnnoIt(sv)]);
-    else if (c.tipo === "scelta") out.push([c.label, etichettaOpz(typeof c.opzioni === "function" ? c.opzioni(form) : c.opzioni, sv)]);
-    else out.push([c.label, sv]);
+    if (c.tipo === "data" || c.tipo === "data_opzionale") out.push([etichetta, isoToDataIt(sv)]);
+    else if (c.tipo === "mese_anno") out.push([etichetta, meseAnnoIt(sv)]);
+    else if (c.tipo === "scelta") out.push([etichetta, etichettaOpz(typeof c.opzioni === "function" ? c.opzioni(form) : c.opzioni, sv)]);
+    else out.push([etichetta, sv]);
   }
   return out;
 }
@@ -5064,6 +5078,15 @@ export default function Calcolatori() {
     setRisSucc(null); setSuccPrimaCasa(""); setSuccAltriImmobili(""); setSuccBeniMobili(""); setSuccGrado("discendenti_retta"); setSuccDisabile(false);
     setRisCtu(null); setCtuDataInizioPerizia(""); setCtuDataFinePerizia(""); setCtuNumeroVacazioni(""); setCtuCaricoVacazioni("100"); setCtuCaricoUrgenza("0"); setCtuCaricoComplessita("0"); setCtuSpeseDocumentate("0"); setCtuRimborsoKmUnitario("0"); setCtuNumeroKm("0"); setCtuArticoloTabellare(""); setCtuValoreStimato(""); setCtuTariffaPredefinita("media"); setCtuCaricoOnorari("100"); setTitoloCtu("Compenso CTU");
     setGenForm(defaultGenForm(idc)); setGenRisultato(null); setGenSalvata(false);
+  };
+
+  // Aggiorna un campo del form generico applicando l'eventuale `alCambio` del calcolatore.
+  const impostaGen = (chiave: string, valore: any) => {
+    const cfg = CONFIG_GENERICI[calcAperto as string];
+    setGenForm((prev) => {
+      const nuovo = { ...prev, [chiave]: valore };
+      return cfg?.alCambio ? cfg.alCambio(chiave, nuovo) : nuovo;
+    });
   };
 
   const calcolaGenerico = async () => {
@@ -6819,16 +6842,25 @@ export default function Calcolatori() {
                       );
                     }
                     if (c.tipo === "numero") {
+                      const notaNum = c.nota?.(genForm);
+                      const inputNum = (
+                        <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.etichettaAcc ?? c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }, notaNum ? { flex: 1 } : null]} />
+                      );
                       return (
                         <View key={c.key}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
-                          <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }]} />
+                          {notaNum ? (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+                              {inputNum}
+                              <Text testID={`gen-${c.key}-nota`} style={{ color: t.onSurfaceTertiary, fontSize: 11, fontStyle: "italic" }}>{notaNum}</Text>
+                            </View>
+                          ) : inputNum}
                         </View>
                       );
                     }
                     if (c.tipo === "bool") {
                       return (
-                        <Pressable key={c.key} testID={`gen-${c.key}`} accessibilityLabel={c.label} onPress={() => setGenForm({ ...genForm, [c.key]: !genForm[c.key] })} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}>
+                        <Pressable key={c.key} testID={`gen-${c.key}`} accessibilityLabel={c.label} onPress={() => impostaGen(c.key, !genForm[c.key])} style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: SPACING.md, marginBottom: SPACING.sm }}>
                           <View style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: t.brand, backgroundColor: genForm[c.key] ? t.brand : "transparent", alignItems: "center", justifyContent: "center" }}>
                             {genForm[c.key] ? <Feather name="check" size={14} color={t.onBrand} /> : null}
                           </View>
@@ -6844,7 +6876,7 @@ export default function Calcolatori() {
                           <SelectInput
                             testID={`gen-${c.key}`} accessibilityLabel={c.label}
                             value={genForm[c.key] || ""}
-                            onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
+                            onChange={(v) => impostaGen(c.key, v)}
                             opzioni={typeof c.opzioni === "function" ? c.opzioni(genForm) : c.opzioni}
                             cercabile={c.cercabile}
                           />
