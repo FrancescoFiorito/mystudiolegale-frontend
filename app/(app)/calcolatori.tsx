@@ -1137,10 +1137,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "rendistato", label: "rendistato (rendimento medio titoli con scadenza > 12 mesi)" },
         { value: "istat", label: "tasso d'inflazione Istat (indice FOI)" },
       ] },
-      { tipo: "scelta", key: "rendimenti", label: "Rendimenti:", default: "netti", mostraSe: (f) => f.tasso_riferimento !== "istat", opzioni: [
+      { tipo: "scelta", key: "rendimenti", label: "Rendimenti", default: "netti", mostraSe: (f) => f.tasso_riferimento !== "istat", opzioni: [
         { value: "netti", label: "netti" }, { value: "lordi", label: "lordi" },
       ] },
-      { tipo: "scelta", key: "sviluppo", label: "Sviluppo del calcolo:", default: "annuale", opzioni: [
+      { tipo: "scelta", key: "sviluppo", label: "Sviluppo del calcolo", default: "annuale", opzioni: [
         { value: "annuale", label: "annuale (confronta con i tassi medi annuali)" }, { value: "mensile", label: "mensile (confronta con i tassi rilevati mensilmente)" },
       ] },
     ],
@@ -2300,8 +2300,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "prima_casa", label: "Prima casa e/o pertinenze" }, { value: "abitazione_secondaria", label: "Abitazione secondaria e/o pertinenze" }, { value: "lusso", label: "Abitazione di lusso (cat. A/1, A/8, A/9)" },
       ] },
       { tipo: "scelta", key: "venditore", label: "Venditore", default: "privato", opzioni: [
-        { value: "privato", label: "Privato" }, { value: "costruttrice_entro_5_anni", label: "Impresa costruttrice, entro 5 anni dal fine lavori" },
-        { value: "costruttrice_oltre_5_anni", label: "Impresa costruttrice, oltre 5 anni dal fine lavori" }, { value: "non_costruttrice", label: "Impresa non costruttrice" },
+        { value: "privato", label: "Privato" }, { value: "costruttrice_entro_5_anni", label: "Impresa costruttrice entro 5 anni fine lavori" },
+        { value: "costruttrice_oltre_5_anni", label: "Impresa costruttrice oltre 5 anni fine lavori" }, { value: "non_costruttrice", label: "Impresa non costruttrice" },
       ] },
       { tipo: "bool", key: "prezzo_valore", label: "Prezzo-Valore", default: true, mostraSe: (f) => f.venditore !== "costruttrice_entro_5_anni" },
       { tipo: "bool", key: "calcola_da_rendita", label: "Calcola valore catastale dalla rendita", default: true, mostraSe: prezzoValoreAttivo },
@@ -2340,10 +2340,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "unita_durata", label: "Durata espressa in", default: "anni", opzioni: [
         { value: "anni", label: "anni" }, { value: "mesi", label: "mesi" },
       ] },
-      { tipo: "scelta", key: "tipo_canone", label: "L'importo del canone è riferito a", default: "annuale", opzioni: [
-        { value: "annuale", label: "Un intero anno" }, { value: "mensile", label: "Un solo mese" }, { value: "intera_durata", label: "Tutta la durata del contratto" },
+      { tipo: "numero", key: "canone", label: "Importo Canone €", default: "" },
+      { tipo: "scelta", key: "tipo_canone", label: "Importo canone riferito a", default: "annuale", opzioni: [
+        { value: "annuale", label: "annuale" }, { value: "mensile", label: "mensile" }, { value: "intera_durata", label: "intera durata" },
       ] },
-      { tipo: "numero", key: "canone", label: "Importo del canone €", default: "" },
       { tipo: "bool", key: "canone_concordato", label: "Canone concordato (-30%)", default: false, mostraSe: (f) => f.tipo_immobile === "abitativo" },
       { tipo: "bool", key: "soggetto_iva", label: "Locatore soggetto IVA", default: false, mostraSe: (f) => f.tipo_immobile === "strumentale" },
       { tipo: "scelta", key: "pagamento", label: "Modalità di pagamento", default: "rateale", opzioni: [
@@ -2861,7 +2861,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.applica_spese_generali },
       { tipo: "numero", key: "pct_cassa", label: "Percentuale cassa previdenziale (4% ENPAP, altre casse diverse)", default: "4" },
       { tipo: "bool", key: "regime_semplificato", label: "Regime fiscale semplificato (no IVA)", default: false },
-      { tipo: "scelta", key: "tipo_regime", label: "Tipo regime", default: "forfettario_2014", mostraSe: (f) => !!f.regime_semplificato, opzioni: [
+      { tipo: "scelta", key: "tipo_regime", label: "Tipo Regime", default: "forfettario_2014", mostraSe: (f) => !!f.regime_semplificato, opzioni: [
         { value: "forfettario_2014", label: "Regime forfettario agevolato 2014" }, { value: "vantaggio_2011", label: "Regime di vantaggio 2011" }, { value: "minimi_2008", label: "Regime dei minimi 2008" },
       ] },
       { tipo: "bool", key: "addebito_bollo", label: "Addebito bollo", default: false, mostraSe: (f) => !!f.regime_semplificato },
