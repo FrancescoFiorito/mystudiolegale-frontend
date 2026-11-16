@@ -56,7 +56,7 @@ type CalcId =
 // tutti un piccolo form -> un POST -> un risultato da mostrare (ed
 // eventualmente da salvare come scadenza), senza logica particolare propria
 // che giustifichi una schermata dedicata come quelle storiche sopra.
-export type CampoGenericoBase = { key: string; label: string; etichettaAcc?: string; mostraSe?: (form: Record<string, any>) => boolean; nota?: (form: Record<string, any>) => string | null };
+export type CampoGenericoBase = { key: string; label: string; etichettaAcc?: string; nonModificabile?: (form: Record<string, any>) => boolean; mostraSe?: (form: Record<string, any>) => boolean; nota?: (form: Record<string, any>) => string | null };
 export type CampoGenerico =
   | (CampoGenericoBase & { tipo: "data" })
   | (CampoGenericoBase & { tipo: "data_opzionale" })
@@ -3687,7 +3687,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "imposte-compravendita-immobiliare", titolo: "Imposte Compravendita Immobiliare", sottotitolo: "IVA, registro, ipotecaria, catastale", icona: "home" },
   { id: "tassa-registro-locazione", titolo: "Tassa Registro Locazioni", sottotitolo: "Rateale o in unica soluzione", icona: "home" },
   { id: "danno-biologico-lieve-entita", titolo: "Danno Biologico (lieve entità)", sottotitolo: "Micropermanenti 1-9 punti, art. 139 Cod. Ass.", icona: "activity" },
-  { id: "danno-non-patrimoniale", titolo: "Danno non Patrimoniale", sottotitolo: "Tabelle del Tribunale di Milano: danno biologico, invalidità temporanea, spese", icona: "activity" },
+  { id: "danno-non-patrimoniale", titolo: "Danno non Patrimoniale", sottotitolo: "Tabelle dei Tribunali di Milano e Roma: danno biologico, invalidità temporanea, spese", icona: "activity" },
   { id: "danno-biologico-macropermanenti", titolo: "Danno Biologico (macropermanenti)", sottotitolo: "10-100 punti, Tabella Unica Nazionale", icona: "activity" },
   { id: "menomazioni-plurime", titolo: "Calcolo Menomazioni Plurime", sottotitolo: "Balthazard o Salomonica", icona: "activity" },
   { id: "danno-perdita-parentale-milano", titolo: "Danno Parentale Milano", sottotitolo: "Tabelle del Tribunale di Milano 2024", icona: "heart" },
@@ -6857,7 +6857,7 @@ export default function Calcolatori() {
                     if (c.tipo === "numero") {
                       const notaNum = c.nota?.(genForm);
                       const inputNum = (
-                        <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.etichettaAcc ?? c.label} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }, notaNum ? { flex: 1 } : null]} />
+                        <TextInput testID={`gen-${c.key}`} accessibilityLabel={c.etichettaAcc ?? c.label} accessibilityState={{ disabled: !!c.nonModificabile?.(genForm) }} editable={!c.nonModificabile?.(genForm)} value={genForm[c.key] ?? ""} onChangeText={(v) => setGenForm({ ...genForm, [c.key]: v })} keyboardType="numeric" style={[st.input, { backgroundColor: t.surfaceSecondary, color: t.onSurface, borderColor: t.border }, notaNum ? { flex: 1 } : null, c.nonModificabile?.(genForm) ? { opacity: 0.6 } : null]} />
                       );
                       return (
                         <View key={c.key}>
