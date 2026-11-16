@@ -86,6 +86,23 @@ const CATEGORIE_ABITAZIONE_PRINCIPALE = ["A/1", "A/2", "A/3", "A/4", "A/5", "A/6
 // Imposte compravendita: «Prezzo-Valore» non si applica con l'impresa costruttrice entro 5 anni (atto con IVA).
 const prezzoValoreAttivo = (f: Record<string, any>) => f.venditore !== "costruttrice_entro_5_anni" && !!f.prezzo_valore;
 
+// Ammortamento e TAEG: periodicità e durata (in anni oppure come numero totale di rate, da 2 a 360).
+const PERIODICITA_RATE = [
+  { value: "12", label: "Mensile = 12 rate all'anno" }, { value: "6", label: "Bimestrale = 6 rate all'anno" },
+  { value: "4", label: "Trimestrale = 4 rate all'anno" }, { value: "3", label: "Quadrimestrale = 3 rate all'anno" },
+  { value: "2", label: "Semestrale = 2 rate all'anno" }, { value: "1", label: "Annuale = 1 rata" },
+];
+const UNITA_DURATA_FINANZIAMENTO = [{ value: "anni", label: "anni" }, { value: "rate", label: "numero totale di rate" }];
+const numeroRateFinanziamento = (f: Record<string, any>) =>
+  f.unita_durata === "rate" ? Math.round(parseNumeroIt(f.durata)) : Math.round(parseNumeroIt(f.periodicita) * parseNumeroIt(f.durata));
+const validaDurataFinanziamento = (f: Record<string, any>) => {
+  if (f.unita_durata === "rate") {
+    const n = parseNumeroIt(f.durata);
+    if (!Number.isInteger(n) || n < 2 || n > 360) return "Il numero totale di rate deve essere un intero da 2 a 360.";
+  } else if (!(numeroRateFinanziamento(f) >= 1)) return "Indicare la durata.";
+  return null;
+};
+
 // Percentuali di partenza della cassa del mediatore familiare.
 const PCT_CASSA_MEDIATORE: Record<string, string> = { enpap: "2", enpam: "2", inps_gestione_separata: "4" };
 
@@ -97,7 +114,8 @@ type ConfigGenerico = {
   // Chiamata dopo ogni modifica di un campo "scelta" o "bool": restituisce il
   // form eventualmente aggiornato (es. valori che dipendono da un'altra scelta).
   alCambio?: (chiave: string, form: Record<string, any>) => Record<string, any>;
-  risultato: (r: any) => [string, string][];
+  // Il secondo argomento è il form usato per il calcolo (serve alle righe che dipendono da una scelta, es. «Riepilogo annuale»).
+  risultato: (r: any, form?: Record<string, any>) => [string, string][];
   scadenze?: (r: any) => { titolo: string; data: string }[];
   // Documento di testo (preventivo, ricevuta) generato nell'app dai dati del form
   // e dai numeri del calcolo, da mostrare sotto il risultato con Copia / Condividi.
@@ -2615,28 +2633,47 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
       { tipo: "numero", key: "capitale", label: "Capitale finanziato €", default: "" },
       { tipo: "numero", key: "tasso_annuo_pct", label: "Tasso annuale %", default: "" },
-      { tipo: "scelta", key: "periodicita", label: "Periodicità rate", default: "12", opzioni: [
-        { value: "12", label: "Mensile = 12 rate all'anno" }, { value: "6", label: "Bimestrale = 6 rate all'anno" },
-        { value: "4", label: "Trimestrale = 4 rate all'anno" }, { value: "3", label: "Quadrimestrale = 3 rate all'anno" },
-        { value: "2", label: "Semestrale = 2 rate all'anno" }, { value: "1", label: "Annuale = 1 rata" },
-      ] },
-      { tipo: "numero", key: "durata_anni", label: "Durata in anni", default: "" },
+      { tipo: "scelta", key: "periodicita", label: "Periodicità rate", default: "12", opzioni: PERIODICITA_RATE },
+      { tipo: "scelta", key: "unita_durata", label: "Durata espressa in", default: "anni", opzioni: UNITA_DURATA_FINANZIAMENTO },
+      { tipo: "numero", key: "durata", label: "Durata", default: "" },
+      { tipo: "bool", key: "mostra_rate", label: "Mostra le Singole Rate", default: true },
+      { tipo: "bool", key: "riepilogo_annuale", label: "Riepilogo Annuale", default: true },
     ],
     endpoint: "/calc/ammortamento-mutuo",
+    validate: validaDurataFinanziamento,
     buildBody: (f) => ({
       metodo: f.metodo, capitale: parseNumeroIt(f.capitale), tasso_annuo_pct: parseNumeroIt(f.tasso_annuo_pct),
-      periodicita: parseNumeroIt(f.periodicita), numero_rate: Math.round(parseNumeroIt(f.periodicita) * parseNumeroIt(f.durata_anni)),
-      dettaglio_rate: false,
+      periodicita: parseNumeroIt(f.periodicita), numero_rate: numeroRateFinanziamento(f),
+      dettaglio_rate: !!f.mostra_rate,
     }),
-    risultato: (r) => [
-      ...(r.metodo === "francese" ? ([["Importo rata", formatEuro(r.importo_rata)]] as [string, string][]) : ([
-        ["Prima rata", formatEuro(r.prima_rata)],
-        ["Ultima rata", formatEuro(r.ultima_rata)],
-      ] as [string, string][])),
-      ["Totale interessi", formatEuro(r.totale_interessi)],
-      ["Totale da restituire", formatEuro(r.totale_versato)],
-      ["Incidenza interessi sul capitale", `${r.incidenza_interessi_pct}%`],
-    ],
+    risultato: (r, f) => {
+      const e = (n: unknown) => formatEuro(n as number);
+      const out: [string, string][] = [
+        ...(r.durata_testo ? ([["Durata del Finanziamento", String(r.durata_testo)]] as [string, string][]) : []),
+        ...(r.modalita_restituzione ? ([["Modalità di Restituzione", String(r.modalita_restituzione)]] as [string, string][]) : []),
+        ...(r.metodo === "francese" ? ([["Importo rata", e(r.importo_rata)]] as [string, string][]) : ([
+          ["Prima rata", e(r.prima_rata)],
+          ["Ultima rata", e(r.ultima_rata)],
+        ] as [string, string][])),
+        ["Totale interessi", e(r.totale_interessi)],
+        ["Totale da restituire", e(r.totale_versato)],
+        ["Incidenza interessi sul capitale", `${r.incidenza_interessi_pct}%`],
+      ];
+      // Come sul sito: riepilogo annuale e singole rate solo se le due caselle sono spuntate (senza form si mostrano se presenti).
+      if (f?.riepilogo_annuale !== false) {
+        for (const a of Array.isArray(r.riepilogo_annuale) ? r.riepilogo_annuale : []) {
+          out.push([`Tot. ${a.anno}° anno:`, `rate ${e(a.totale_rate)} · interessi ${e(a.totale_interessi)} · capitale ${e(a.totale_capitale)}`]);
+          if (a.rimanente_rate != null) out.push(["Rimanente:", `rate ${e(a.rimanente_rate)} · interessi ${e(a.interessi_residui)} · capitale ${e(a.capitale_residuo)}`]);
+          out.push(["Dall'inizio:", `rate ${e(a.dall_inizio_rate)} · interessi ${e(a.dall_inizio_interessi)} · capitale ${e(a.dall_inizio_capitale)}`]);
+        }
+      }
+      if (f?.mostra_rate !== false) {
+        for (const x of Array.isArray(r.rate) ? r.rate : []) {
+          out.push([`Rata ${x.numero}`, `${e(x.rata)} · interessi ${e(x.quota_interessi)} · capitale ${e(x.quota_capitale)} · interessi residui ${x.interessi_residui != null ? e(x.interessi_residui) : "—"} · capitale residuo ${e(x.capitale_residuo)}`]);
+        }
+      }
+      return out;
+    },
   },
   "surroga-mutuo": {
     campi: [
@@ -2678,12 +2715,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "numero", key: "capitale", label: "Capitale finanziato €", default: "" },
       { tipo: "numero", key: "tasso_annuo_nominale_pct", label: "Tasso annuale nominale (TAN) %", default: "" },
-      { tipo: "scelta", key: "periodicita", label: "Periodicità rate", default: "12", opzioni: [
-        { value: "12", label: "Mensile = 12 rate all'anno" }, { value: "6", label: "Bimestrale = 6 rate all'anno" },
-        { value: "4", label: "Trimestrale = 4 rate all'anno" }, { value: "3", label: "Quadrimestrale = 3 rate all'anno" },
-        { value: "2", label: "Semestrale = 2 rate all'anno" }, { value: "1", label: "Annuale = 1 rata" },
-      ] },
-      { tipo: "numero", key: "durata_anni", label: "Durata in anni", default: "" },
+      { tipo: "scelta", key: "periodicita", label: "Periodicità rate", default: "12", opzioni: PERIODICITA_RATE },
+      { tipo: "scelta", key: "unita_durata", label: "Durata espressa in", default: "anni", opzioni: UNITA_DURATA_FINANZIAMENTO },
+      { tipo: "numero", key: "durata", label: "Durata", default: "" },
       { tipo: "titolo", key: "tit_spese_iniziali", label: "Spese iniziali (una tantum):" },
       { tipo: "numero", key: "spese_istruttoria", label: "Spese di istruttoria €", default: "0" },
       { tipo: "numero", key: "costo_mediazione", label: "Costo di mediazione €", default: "0" },
@@ -2695,9 +2729,10 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "spese_gestione_annuale", label: "Spese di gestione annuali €", default: "0" },
     ],
     endpoint: "/calc/taeg",
+    validate: validaDurataFinanziamento,
     buildBody: (f) => ({
       capitale: parseNumeroIt(f.capitale), tasso_annuo_nominale_pct: parseNumeroIt(f.tasso_annuo_nominale_pct),
-      periodicita: parseNumeroIt(f.periodicita), numero_rate: Math.round(parseNumeroIt(f.periodicita) * parseNumeroIt(f.durata_anni)),
+      periodicita: parseNumeroIt(f.periodicita), numero_rate: numeroRateFinanziamento(f),
       spese_istruttoria: parseNumeroIt(f.spese_istruttoria), costo_mediazione: parseNumeroIt(f.costo_mediazione),
       spese_notarili: parseNumeroIt(f.spese_notarili), spese_iniziali_altre: parseNumeroIt(f.spese_iniziali_altre),
       spese_incasso_rata: parseNumeroIt(f.spese_incasso_rata), spese_assicurazione: parseNumeroIt(f.spese_assicurazione),
@@ -7091,7 +7126,7 @@ export default function Calcolatori() {
                   </Pressable>
                   {genRisultato ? (
                     <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
-                      {CONFIG_GENERICI[calcAperto].risultato(genRisultato).map(([l, v], i) => (
+                      {CONFIG_GENERICI[calcAperto].risultato(genRisultato, genFormCalcolato).map(([l, v], i) => (
                         <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 4, gap: 8 }}>
                           <Text style={{ color: t.onBrandSecondary, fontSize: 12, flex: 1 }}>{l}</Text>
                           <Text testID={i === 0 ? "gen-result" : undefined} style={{ color: t.onBrandSecondary, fontSize: 13, fontWeight: "800" }}>{v}</Text>
@@ -7105,7 +7140,7 @@ export default function Calcolatori() {
                             testIDPrefix="gen"
                             titolo={CALCOLATORI.find((c) => c.id === calcAperto)?.titolo || "Calcolo"}
                             datiInseriti={datiInseritiGenerici(cfgEsp.campi, genFormCalcolato)}
-                            risultato={cfgEsp.risultato(genRisultato)}
+                            risultato={cfgEsp.risultato(genRisultato, genFormCalcolato)}
                             testoDocumento={docEsp && "testo" in docEsp ? docEsp.testo : null}
                           />
                         );
