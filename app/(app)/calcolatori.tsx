@@ -2804,7 +2804,8 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     // Righe nell'ordine del sito di riferimento; le tre sulle spese ricorrenti sono nuove (backend PR #196).
     risultato: (r) => {
       const out: [string, string][] = [["Importo della Rata", formatEuro(r.importo_rata)]];
-      if (r.importo_rata_con_spese_ricorrenti != null) out.push(["Importo della rata comprese le spese ricorrenti", formatEuro(r.importo_rata_con_spese_ricorrenti)]);
+      // Solo con spese di incasso rata o assicurazione per rata (flag del backend; senza flag, comportamento precedente).
+      if ((r.mostra_rata_con_spese_ricorrenti ?? true) && r.importo_rata_con_spese_ricorrenti != null) out.push(["Importo della rata comprese le spese ricorrenti", formatEuro(r.importo_rata_con_spese_ricorrenti)]);
       out.push([`Interessi totali calcolati all\u2019${fmtPct(r.tasso_annuo_nominale_pct)}%`, formatEuro(r.interessi_totali_tan)]);
       out.push(["Importo totale da restituire (senza spese)", formatEuro(r.importo_totale_da_restituire)]);
       if (r.spese_ricorrenti_complessive != null) out.push(["Importo complessivo delle spese ricorrenti", formatEuro(r.spese_ricorrenti_complessive)]);
