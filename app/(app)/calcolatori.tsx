@@ -2354,7 +2354,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "annuale", label: "annuale" }, { value: "mensile", label: "mensile" }, { value: "intera_durata", label: "intera durata" },
       ] },
       { tipo: "bool", key: "canone_concordato", label: "Canone concordato (-30%)", default: false, mostraSe: (f) => f.tipo_immobile === "abitativo" },
-      { tipo: "bool", key: "soggetto_iva", label: "Locatore soggetto IVA", default: false, mostraSe: (f) => f.tipo_immobile === "strumentale" },
+      { tipo: "bool", key: "soggetto_iva", label: "Locatore soggetto IVA", default: true, mostraSe: (f) => f.tipo_immobile === "strumentale" },
       { tipo: "scelta", key: "pagamento", label: "Modalità di pagamento", default: "rateale", opzioni: [
         { value: "rateale", label: "Rateale (anno per anno)" }, { value: "unica_soluzione", label: "Unica soluzione (per l'intera durata)" },
       ] },
