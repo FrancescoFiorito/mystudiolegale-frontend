@@ -1296,9 +1296,18 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       applica_ritenuta: !!f.applica_ritenuta,
     }),
     risultato: (r) => [
-      ["Compenso tabellare", formatEuro(r.compenso_tabellare)],
-      // Con la limitazione attiva il backend riporta il compenso limitato in `compenso_totale`.
-      ...(r.flag_limitazione ? ([["Compenso con limitazione", formatEuro(r.compenso_totale)]] as [string, string][]) : []),
+      // «Totale compenso» e' il valore PRIMA della limitazione (art. 2, c. 5); con la limitazione attiva
+      // seguono «Compenso con limitazione» (compenso_totale) e l'importo massimo consentito.
+      [
+        r.variazione_pct ? `Totale compenso ${r.variazione_pct > 0 ? "aumentato" : "ridotto"} del ${String(Math.abs(r.variazione_pct)).replace(".", ",")}%` : "Totale compenso",
+        formatEuro(r.compenso_prima_limitazione ?? r.compenso_tabellare),
+      ],
+      ...(r.flag_limitazione
+        ? ([
+            ["Compenso con limitazione", formatEuro(r.compenso_con_limitazione ?? r.compenso_totale)],
+            ...(r.limite_massimo != null ? ([[`Importo limitato al ${String(r.pct_limitazione).replace(".", ",")}% del valore`, formatEuro(r.limite_massimo)]] as [string, string][]) : []),
+          ] as [string, string][])
+        : []),
       ["Totale imponibile", formatEuro(r.totale_imponibile)],
       ["IVA", formatEuro(r.iva)],
       ["Quota a carico dell'aggiudicatario", formatEuro(r.carico_aggiudicatario)],
