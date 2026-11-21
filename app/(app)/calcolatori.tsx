@@ -5076,7 +5076,7 @@ export default function Calcolatori() {
     try {
       const errFasi = validaFasiPreventivo(fasiPrev);
       if (errFasi) { Alert.alert("Non disponibile", errFasi); setSaving(false); return; }
-      const body: any = { tipo: "parcella", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa), ...corpoScaglioneEFasi() };
+      const body: any = { tipo: "preventivo", pratica_id: praticaId, titolo: titoloPar.trim(), ...parDati, valore_causa: parseNumeroIt(parDati.valore_causa), ...corpoScaglioneEFasi() };
       delete body.scaglione_sel;
       Object.entries(par).forEach(([k, v]) => body[k] = parseNumeroIt(v as string));
       body.voci_spese = buildVociSpeseBody();
