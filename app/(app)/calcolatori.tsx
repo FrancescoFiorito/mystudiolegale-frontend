@@ -960,10 +960,11 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       interruzioni: (f.interruzioni || []).map((i: Record<string, string>) => ({ dal: i.dal, al: i.al })),
     }),
     // Righe come sul sito: senza semestri maturati restano solo il totale dei periodi e la fine pena senza detrazioni.
-    risultato: (r) => [
+    // Con la liberazione anticipata spenta il backend invia l'etichetta «Data fine pena» e il sito mostra solo quella riga.
+    risultato: (r) => r.etichetta_fine_pena === "Data fine pena" ? [["Data fine pena", isoToDataIt(r.fine_pena_senza_detrazioni)]] : [
       ...((r.totale_periodi_scontati_mesi || r.totale_periodi_scontati_giorni)
         ? ([["Totale periodi già scontati", `${r.totale_periodi_scontati_mesi ?? 0} mesi e ${r.totale_periodi_scontati_giorni ?? 0} giorni`]] as [string, string][]) : []),
-      ["Fine pena senza detrazioni", isoToDataIt(r.fine_pena_senza_detrazioni)],
+      [r.etichetta_fine_pena ?? "Fine pena senza detrazioni", isoToDataIt(r.fine_pena_senza_detrazioni)],
       ...(r.fine_pena_con_liberazione_anticipata && r.giorni_detrazione_spettanti > 0 ? ([
         ["Giorni di detrazione spettanti", String(r.giorni_detrazione_spettanti)],
         ["Fine pena con liberazione anticipata", isoToDataIt(r.fine_pena_con_liberazione_anticipata)],
