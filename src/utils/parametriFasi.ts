@@ -194,7 +194,18 @@ function alCambioTabella(c: Ctx, predefinita: string) {
     return out;
   };
 }
-export const alCambioParametriCivili2014 = alCambioTabella(ctxCivile, "110");
+const alCambioTabellaCivile = alCambioTabella(ctxCivile, "110");
+// Importo proposto per la conciliazione quando la competenza non ha la fase decisionale (come fa il sito): dipende dall'anno.
+const IMP_CONCILIAZIONE_PREDEFINITO: Record<string, string> = { "2022": "1701", "2014": "1620" };
+export const alCambioParametriCivili2014 = (chiave: string, f: Form): Form => {
+  const out = alCambioTabellaCivile(chiave, f);
+  if (!out.conciliazione) return out;
+  // Si sovrascrive solo un campo vuoto o ancora al valore proposto: un importo scritto dall'utente non si tocca.
+  const attuale = String(out.imp_conciliazione ?? "").trim();
+  if (attuale && !Object.values(IMP_CONCILIAZIONE_PREDEFINITO).includes(attuale)) return out;
+  const proposto = haFase(ctxCivile, out, FASE_COLLEGATA.conciliazione) ? "" : (IMP_CONCILIAZIONE_PREDEFINITO[String(out.anno)] ?? "");
+  return proposto === attuale ? out : { ...out, imp_conciliazione: proposto };
+};
 
 function bodyFasi(c: Ctx, codici: number[], f: Form) {
   return codici.filter((cod) => haFase(c, f, cod)).map((cod) => ({
@@ -238,7 +249,8 @@ export function validaParametriCivili2014(f: Form): string | null {
   const n = num(f.numero_parti_stessa_posizione) || 1;
   if (!Number.isInteger(n) || n < 1 || n > 30) return "Il numero di parti deve essere un intero da 1 a 30.";
   const richiedeImporto: [string, boolean][] = [
-    ["conciliazione", true], ["motivi_aggiunti", DISP.motivi(f)], ["ricorso_incidentale", DISP.ricorsoInc(f)], ["memoria_378", DISP.memoria(f)],
+    // La conciliazione non richiede l'importo: senza fase collegata il backend usa quello predefinito dell'anno.
+    ["motivi_aggiunti", DISP.motivi(f)], ["ricorso_incidentale", DISP.ricorsoInc(f)], ["memoria_378", DISP.memoria(f)],
   ];
   for (const [nome, disponibile] of richiedeImporto) {
     if (!disponibile || !f[nome]) continue;
