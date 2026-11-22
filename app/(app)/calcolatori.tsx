@@ -2811,9 +2811,12 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       if ((r.mostra_rata_con_spese_ricorrenti ?? true) && r.importo_rata_con_spese_ricorrenti != null) out.push(["Importo della rata comprese le spese ricorrenti", formatEuro(r.importo_rata_con_spese_ricorrenti)]);
       out.push([`Interessi totali calcolati all\u2019${fmtPct(r.tasso_annuo_nominale_pct)}%`, formatEuro(r.interessi_totali_tan)]);
       out.push(["Importo totale da restituire (senza spese)", formatEuro(r.importo_totale_da_restituire)]);
-      if (r.spese_ricorrenti_complessive != null) out.push(["Importo complessivo delle spese ricorrenti", formatEuro(r.spese_ricorrenti_complessive)]);
-      if (r.importo_totale_con_spese_ricorrenti != null) out.push(["Importo totale da restituire comprese le spese ricorrenti", formatEuro(r.importo_totale_con_spese_ricorrenti)]);
-      out.push(["Importo complessivo delle spese iniziali", formatEuro(r.spese_iniziali_complessive)]);
+      // Le due righe con le spese ricorrenti compaiono solo se il backend le indica (flag assente = come prima).
+      const mostraTotaleRicorrenti = r.mostra_totale_con_spese_ricorrenti ?? true;
+      if (mostraTotaleRicorrenti && r.spese_ricorrenti_complessive != null) out.push(["Importo complessivo delle spese ricorrenti", formatEuro(r.spese_ricorrenti_complessive)]);
+      if (mostraTotaleRicorrenti && r.importo_totale_con_spese_ricorrenti != null) out.push(["Importo totale da restituire comprese le spese ricorrenti", formatEuro(r.importo_totale_con_spese_ricorrenti)]);
+      // Come le righe sulle spese ricorrenti: nascosta se il backend non la indica (flag assente = come prima).
+      if (r.mostra_spese_iniziali ?? true) out.push(["Importo complessivo delle spese iniziali", formatEuro(r.spese_iniziali_complessive)]);
       out.push(["TAEG su base annua", `${fmtPct(r.taeg_pct)}%`]);
       return out;
     },
