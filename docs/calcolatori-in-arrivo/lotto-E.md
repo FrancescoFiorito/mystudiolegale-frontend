@@ -154,7 +154,8 @@ L'utente ha deciso di correggere tutti i 16 punti della sezione "Da decidere con
 | #206 | Calcolatrice Online, punti 1-9 | `f115e3b` |
 | #207 | Tariffe Forensi 2004, punti 10-12 | `50cac10` |
 | #208 | Impronta Hash, punti 14-16 | `52014f5` |
-| questa | resoconto (punto 13 non eseguibile) | (vedi la PR) |
+| #209 | resoconto (punto 13 non eseguibile al momento) | `9aa15a2` |
+| questa | punto 13: confronto con il testo ufficiale | (vedi la PR) |
 
 ### Calcolatrice Online
 
@@ -188,7 +189,47 @@ Invariati (prova prima = dopo): `"5.000,50"` 5000,5; `"1.234.567"`; `"€ 5000"`
 
 ### Punto 13 — conformità con il D.M. 127/2004
 
-**Non eseguito: la rete blocca il sito della Gazzetta Ufficiale.** Con Chromium headless (Playwright preinstallato), sia senza opzioni sia con il proxy di `$HTTPS_PROXY` indicato esplicitamente, `https://www.gazzettaufficiale.it/` risponde `net::ERR_TUNNEL_CONNECTION_FAILED`. Come da mandato non ho cercato altre strade: nessun confronto, nessuna differenza da riportare, nessun valore cambiato. I valori restano quelli del sito di riferimento. Il confronto va fatto da una rete che raggiunga la Gazzetta (voci e scaglioni diversi, campione di almeno 40 voci).
+**Eseguito il 22/11/2026, dopo che la rete ha consentito la Gazzetta Ufficiale** (nel primo tentativo era bloccata: `net::ERR_TUNNEL_CONNECTION_FAILED`). Nessun valore dell'app è stato cambiato.
+
+**Fonte.** D.M. 8 aprile 2004, n. 127, pubblicato nella Gazzetta Ufficiale n. 115 del 18-5-2004, **Supplemento ordinario n. 95/L** (PDF ufficiale, 64 pagine). Il testo del decreto è leggibile (pagine 1-5), ma **le tabelle degli allegati (Tabella A onorari, Tabella B diritti, Tabella D stragiudiziale, pagine 11-25 e 36) sono immagini scansionate senza strato di testo**: il PDF non è estraibile in modo automatico e sul sistema non c'è un riconoscimento ottico (OCR). Le ho quindi lette **a vista** sulle immagini a 150 dpi, trascritte in una tabella di prova e confrontate per codice con i valori del backend (`NOTA_SPESE_TARIFFE`, il dato da cui l'app legge; commit `ee6abef` del backend). Il rischio di errore di trascrizione c'è: le 6 differenze sono state ricontrollate sulle immagini.
+
+**Campione.** Circa **134 voci ufficiali** (più di 40, come richiesto) e **2.214 confronti** voce × fascia (una voce ufficiale può corrispondere a più righe dell'app, es. "4. Ispezione… Ricerca dei documenti" → 4.1 e 4.2), così distribuiti:
+
+| Tariffario / competenza | Voci ufficiali | Fasce confrontate |
+|---|---|---|
+| Onorari — Giudice di Pace (n. 1-11) | 11 | fino a 600; 600-1.600; 1.600-2.600 |
+| Onorari — Tribunale (12-21) | 10 | tutte da "fino a 5.200" a 1.549.400, indeterminabile e di particolare importanza |
+| Onorari — T.A.R. (22-31) | 10 | idem |
+| Onorari — Corte d'Appello e Comm. Trib. Reg. (32-41) | 10 | idem |
+| Onorari — Cassazione (42-45) e Consiglio di Stato | 4 | fino a 103.300 |
+| Onorari — Corte Costituzionale, CEDU, Corte di Giustizia CEE (46-49) | 4 | fino a 103.300 |
+| Onorari — Procedimenti speciali e Procedure esecutive (50-56) | 8 | fino a 103.300 |
+| Diritti — Processo di cognizione (1-45, con la notifica a più persone) | 46 | tutte, da "fino a 600" a 1.549.400, e indeterminabile |
+| Diritti — Processo di esecuzione (46-65) | 21 | da "fino a 600" a 103.300 |
+| Stragiudiziale (consulenza, assistenza, diffide, conferenze, archivio, lettere) | 10 | tutte le 8 fasce, da "fino a 600" a 516.500 |
+
+Non confrontati: Diritti — Procedimenti speciali (competenza 3) e le voci 66-80 della Tabella B (vacazione, domiciliazione, trasferta, collazione); onorari e diritti delle fasce oltre 103.300 per Cassazione, Corti europee e Procedimenti speciali; stragiudiziale: percentuali sul valore (contratti, statuti, ecc.), arbitrati, onorario a tempo; i coefficienti "oltre 5.164.600" e le fasce 2.582.300-5.164.600 (vedi sotto).
+
+**Risultato: 6 differenze** di valore su 2.214 confronti (tutte le altre celle coincidono col decreto):
+
+| # | Voce | Fascia | Decreto | App | Dove |
+|---|---|---|---|---|---|
+| 1 | Onorari G.d.P. n. 4 "Ispezione dei luoghi… Ricerca dei documenti" (riga app 4.2 "Ricerca dei documenti") | da 1.600,01 a 2.600 (e fino a 5.200, che l'app tratta come la stessa fascia) | min **25**, max 40 | min **30**, max 40 | `NOTA_SPESE_TARIFFE.onorari["11"]`, riga 4.2, fasce 2-3 |
+| 2 | Onorari Tribunale n. 14 "Ispezione… Ricerca dei documenti" (riga 14.2) | da 5.200,01 a 25.900 | min **35**, max 105 | min **40**, max 105 | `onorari["1"]`, riga 14.2, fascia 4 |
+| 3 | Onorari T.A.R. n. 28 "Atto di intervento" | da 258.300,01 a 516.500 | min **275**, max **810** | min 1.425, max 4.260 (valori della riga 27, motivi aggiuntivi) | `onorari["15"]`, riga 28, fascia 8 |
+| 4 | Onorari T.A.R. n. 28 "Atto di intervento" | da 516.500,01 a 1.549.400 | min **410**, max **1.080** | min 2.135, max 5.680 (valori della riga 27) | `onorari["15"]`, riga 28, fascia 9 |
+| 5 | Onorari T.A.R. n. 25 "Redazione del ricorso introduttivo o della memoria di costituzione" (riga 25.2) | di particolare importanza o indeterminabile | min **360**, max 4.260 | min **369**, max 4.260 | `onorari["15"]`, riga 25.2, fascia i2 |
+| 6 | Diritti, processo di cognizione, n. 25 "Collaborazione prestata per la conciliazione" | da 25.900,01 a 51.700 | **89** | **59** | `diritti["1"]`, riga 25, fascia 5 |
+
+Le differenze 5 e 6 sono evidenti errori di battitura nei dati; la 6 si vede anche confrontando con la stessa voce nel processo di esecuzione (n. 51), che nell'app vale 89. Le 3-4 sembrano righe copiate dalla voce vicina (27). Le 1-2 sono una divisione in due righe (4.1/4.2, 14.1/14.2) che nel decreto è una riga sola con un unico minimo: il minimo di "Ricerca dei documenti" dovrebbe essere quello di "Ispezione" (25 e 35).
+
+**Differenze di struttura (non di valore), da decidere:**
+- **Fasce oltre 1.549.400 €**: il decreto ha tre fasce ulteriori (1.549.400,01-2.582.300; 2.582.300,01-5.164.600; oltre 5.164.600, per quest'ultima con coefficienti percentuali per onorari e importi fissi per diritti). L'app ha una sola fascia "oltre 1.549.400", i cui valori sono quelli della fascia 1.549.400,01-2.582.300 (verificato su Tribunale, riga 12, e su tutti i diritti di cognizione): **per valori della causa sopra 2.582.300 € l'app mostra i valori della fascia sbagliata**. Lo stesso vale per il sito di riferimento, da cui i dati sono stati presi.
+- **Giudice di Pace**: il decreto prevede solo tre fasce (fino a 600; 600-1.600; 1.600-2.600). Sopra 2.600 € l'app ripete la terza fascia fino a 5.200 e poi non mostra voci.
+- **Importo "medio"**: il decreto dà solo minimo e massimo; la colonna "Medio" dell'app è la media aritmetica (confermata su 1.173 voci a tre valori) e non è nel decreto.
+- Nel decreto le voci hanno numerazione propria (es. "4." ↔ 4.1 e 4.2 dell'app): il confronto è stato fatto per nome e posizione.
+
+Nessuno dei valori è stato modificato: le correzioni (i sei valori e le fasce oltre 1.549.400 €) le decide l'utente.
 
 ### Impronta Hash
 
