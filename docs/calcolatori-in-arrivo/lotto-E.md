@@ -142,3 +142,64 @@ Il comportamento del sito è stato implementato così com'è. Per ciascun punto:
 1. **Importare dai PDF ufficiali ogni anno** (parser una tantum + tabella nel backend con anno, marca, modello, alimentazione, €/km; endpoint di ricerca e di calcolo). *Pro:* fonte ufficiale e verificabile, indipendente dal sito di riferimento, aggiornabile a gennaio. *Contro:* i PDF hanno impaginazione variabile e vanno controllati a mano a ogni uscita; lavoro iniziale maggiore (parser, ricerca testuale, modello di dati).
 2. **Copiare la banca dati dal sito di riferimento** (ricerca con 60 risultati, calcolo per codice). *Pro:* identica al sito e rapida da fare. *Contro:* è esattamente ciò che il mandato esclude (dati e servizio di un terzo, codici che cambiano ogni anno, possibili problemi di condizioni d'uso, dipendenza da un servizio senza garanzie).
 3. **Solo calcolo con tariffa inserita dall'utente** (più, eventualmente, un piccolo elenco di veicoli frequenti caricato a mano dai PDF). *Pro:* immediato, nessun dato da mantenere, sempre corretto se l'utente copia la tariffa dalla tabella ufficiale. *Contro:* non è "uguale al sito": manca la ricerca del veicolo; l'utente deve aprire il PDF.
+
+---
+
+## Correzioni decise dall'utente (22/11/2026)
+
+L'utente ha deciso di correggere tutti i 16 punti della sezione "Da decidere con l'utente", scostandosi dal sito di riferimento. Le prove sono casi eseguiti con node sulla logica (funzioni pure in `src/utils/`), con il valore **prima** (codice di `main` prima della PR) e **dopo**. Nessuno script di prova è nel repository.
+
+| PR | Contenuto | Sha merge |
+|---|---|---|
+| #206 | Calcolatrice Online, punti 1-9 | `f115e3b` |
+| #207 | Tariffe Forensi 2004, punti 10-12 | `50cac10` |
+| #208 | Impronta Hash, punti 14-16 | `52014f5` |
+| questa | resoconto (punto 13 non eseguibile) | (vedi la PR) |
+
+### Calcolatrice Online
+
+Nel motore: stato con due campi nuovi (`errore`, `dopoMemoria`); la divisione per zero lancia internamente e il tasto mostra "Errore".
+
+| # | Comportamento nuovo | Prova (sequenza di tasti) | Prima → dopo |
+|---|---|---|---|
+| 1 | Divisione per zero (`/`, `pct`, `Δ%`, `idiv`, `mod`) → "Errore"; tutti i tasti bloccati (cifre, operazioni, memoria, incolla…) finché non si preme CE o C; la memoria resta | `5 / 0 =`; `5 pct 0 =`; `0 Δ% 5 =`; `7 idiv 0 =`; `3 mod 0 =` | 0 → Errore (per tutti); dopo l'errore `7` non scrive, `C 7` → 7; `CE 8 + 1 =` → 9 |
+| 2 | Δ% = (y − x) / x × 100 | `100 Δ% 80 =`; `80 Δ% 100 =` | 25 → **−20**; −20 → **25** |
+| 3 | `%` con × e ÷ usa y/100; + e − invariati | `200 x 10 % =`; `200 / 10 % =`; `200 + 10 % =`; `200 - 10 % =` | 4000 → **20**; 10 → **2000**; 220 → 220; 180 → 180 |
+| 4 | mod: resto vero con i decimali (esatto, su interi scalati; segno del dividendo come prima) | `7,5 mod 2 =`; `0,5 mod 0,4 =` | 0 → **1,5**; NaN → **0,1** |
+| 5 | idiv: per difetto (floor) e decimali esatti | `−23 idiv 5 =`; `0,3 idiv 0,1 =` | −4 → **−5**; 2 → **3** |
+| 6 | Impostazione vuota o non valida non salvata: resta il valore precedente, con un messaggio (Alert) | IVA vuota, decimali 2; IVA 22, decimali vuoti; entrambi vuoti; IVA 10 e decimali 3 (valide) | `pctIva` null → **22** (messaggio "Aliquota IVA non valida: resta 22."); `cifreDecimali` null → **2**; `100 iva` con IVA vuota: 0 → 81,9672131147541 (aliquota 22 mantenuta); con valori validi nessun messaggio, invariato |
+| 7 | Dopo M+ e M− la cifra successiva inizia un numero nuovo (senza perdere l'operazione in corso) | `5 M+ 3`; `5 M- 3`; `5 M+ + 3 =`; `2 + 5 M+ =` | 53 → **3**; 53 → **3**; 8 → 8; 7 → 7 |
+| 8 | Cancella-ultima-cifra su un negativo di una cifra → 0 | `5 ± «` | "-" → **0** |
+| 9 | Radice di un negativo → "Errore" | `2 ± sqrt` | −2 → **Errore** |
+
+Testi di aiuto (suggerimenti VoiceOver dei tasti `Δ%`, `%`, `idiv`, `mod`, `sqrt`, `/`, `«`, `M+`, `M−` e dei campi delle impostazioni) aggiornati al comportamento nuovo.
+
+**Confronto con il motore precedente:** 20.000 sequenze casuali (≈162.000 tasti, tutti i tasti) eseguite in parallelo su vecchio e nuovo motore, confrontando display e memoria dopo ogni tasto: 5.661 sequenze con una differenza, **tutte spiegate da uno dei 9 punti** (errore 3.379, M+/M− 1.107, Δ% 456, % con × e ÷ 295, mod 283, idiv 89, indietro 52), **0 non spiegate**. Le prove del lotto E sul sito (536 sequenze con click veri) non sono ripetibili senza la rete verso il sito; il confronto tra vecchio e nuovo motore, che era uguale al sito, ne tiene il posto. Un punto aperto: il segno di `mod` con negativi resta quello del dividendo (−23 mod 5 = −3), mentre `idiv` ora è per difetto (−5); se si vuole il resto coerente con il floor (2) è una modifica a parte.
+
+### Tariffe Forensi 2004
+
+| # | Comportamento nuovo | Prova | Prima → dopo |
+|---|---|---|---|
+| 10 | Il punto è sempre separatore delle migliaia, la virgola il decimale. Il campo è usato solo da questa schermata (la funzione `leggiValoreCausa` non è condivisa con altri calcolatori). Punto iniziale, finale o doppio, o punto dopo la virgola → "Valore non numerico" | `"1.234"`; `"5.5"`; `"5,5"`; `"5000.50"`; `"1.2345"` | 1234 → 1234; 5,5 → **55**; 5,5 → 5,5; 5000,5 → **500050**; 12345 → 12345 |
+| 11 | Un solo messaggio per valore vuoto, "0" o "0,00": "Inserisci il valore della causa" | `""`; `"0"`; `"0,00"`; `"  "` | "Digita il valore della causa" / "Specifica il valore della causa" → **"Inserisci il valore della causa"** |
+| 12 | Refuso corretto | costante del messaggio di nessun risultato | "…questo critero di ricerca" → "…questo **criterio** di ricerca" |
+
+Invariati (prova prima = dopo): `"5.000,50"` 5000,5; `"1.234.567"`; `"€ 5000"`; `"1,005"` → 1,01; `"12,345"` → 12,35; `"600"`; `"0,01"`; `"-5"` → "Digita un valore corretto"; `"abc"` e `"1,2,3"` e `"1,23.4"` → "Valore non numerico"; `"1.549.400"`; `"1549400,01"`; `"5,"` → 5. Il punto 10 cambia solo i casi con un punto seguito da 1-2 cifre senza altri punti.
+
+### Punto 13 — conformità con il D.M. 127/2004
+
+**Non eseguito: la rete blocca il sito della Gazzetta Ufficiale.** Con Chromium headless (Playwright preinstallato), sia senza opzioni sia con il proxy di `$HTTPS_PROXY` indicato esplicitamente, `https://www.gazzettaufficiale.it/` risponde `net::ERR_TUNNEL_CONNECTION_FAILED`. Come da mandato non ho cercato altre strade: nessun confronto, nessuna differenza da riportare, nessun valore cambiato. I valori restano quelli del sito di riferimento. Il confronto va fatto da una rete che raggiunga la Gazzetta (voci e scaglioni diversi, campione di almeno 40 voci).
+
+### Impronta Hash
+
+| # | Comportamento nuovo | Prova | Prima → dopo |
+|---|---|---|---|
+| 14 | La verifica ignora maiuscole e minuscole | file con impronta `00…ca97`, testo con la stessa impronta in maiuscolo | "File x: nessuna corrispondenza!" → **"Perfetto! Il file corrisponde."** (minuscolo: invariato) |
+| 15 | Due file identici nella stessa selezione: il secondo non entra, con il messaggio dei doppioni (con il suffisso "( è il n. K dall'alto )" quando l'elenco ha almeno 3 file) | `testo.txt` + `copia.txt` (stessa impronta); tre file con il primo e il terzo uguali | "L'elenco contiene 2 file." → **1 file, "Il file copia.txt è già presente."**; 3 file → **2 file, "Il file 3 è già presente."** Invariati: doppione contro una lista da 13 file, contro una lista da 1 |
+| 16 | Dal testo si estraggono solo le sequenze di esattamente 64 caratteri esadecimali (delimitate da non esadecimali), minuscole e senza ripetizioni, e si confrontano quelle. Nessuna sequenza: testo non vuoto → "Nessuna impronta valida da confrontare: nel testo non c'è nessuna sequenza di 64 caratteri esadecimali."; testo vuoto → "Nessuna impronta da confrontare!" (invariato) | impronta preceduta da `abc` (67 caratteri esadecimali); impronta seguita da `0`; testo corto; testo lungo senza impronte | "Perfetto!" → **messaggio nuovo** (per i primi due); "Nessuna impronta da confrontare!" → **messaggio nuovo**; "nessuna corrispondenza" → **messaggio nuovo**. Invariato: `sha256:` + impronta, testo vuoto |
+
+Scenari del lotto E non toccati dai punti, ripetuti prima/dopo e risultati **identici**: verifica con 1, 2 e 3 file, uno su due, testo prima dei file, calcolo di 13 file, 66 file (limite di 64), nuovo calcolo.
+
+### Controlli
+
+`npx tsc --noEmit -p .` (11 righe) e `npx expo lint` (10 problemi: 6 errori, 4 warning) al baseline dopo ciascuna delle tre PR, con `.expo/types` assente.
