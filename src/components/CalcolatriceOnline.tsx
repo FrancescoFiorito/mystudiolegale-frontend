@@ -26,23 +26,23 @@ const RIGHE: (Tasto | "memoria")[][] = [
     "memoria",
     { testID: "calcolatrice-tasto-ce", testo: "CE", etichetta: "Cancella il numero presente sul display", tipo: "ctrl", azione: cancellaVoce },
     { testID: "calcolatrice-tasto-c", testo: "C", etichetta: "Cancella tutto e resetta il calcolatore", tipo: "ctrl", azione: cancellaTutto },
-    { testID: "calcolatrice-tasto-indietro", testo: "«", etichetta: "Cancella l'ultima cifra", tipo: "ctrl", azione: indietro },
+    { testID: "calcolatrice-tasto-indietro", testo: "«", etichetta: "Cancella l'ultima cifra", suggerimento: "Su un negativo di una cifra torna a zero", tipo: "ctrl", azione: indietro },
     { testID: "calcolatrice-tasto-arr", testo: "arr", etichetta: "Arrotonda il valore presente sul display", suggerimento: "Il numero di cifre decimali si cambia dalle impostazioni", tipo: "fun", azione: arrotonda },
     { testID: "calcolatrice-tasto-iva", testo: "iva", etichetta: "Scorpora l'IVA dal valore presente sul display", suggerimento: "L'aliquota IVA si cambia dalle impostazioni", tipo: "fun", azione: scorporoIva },
     { testID: "calcolatrice-tasto-sc", testo: "sc", etichetta: "Sconto: applica al valore x lo sconto y in percentuale", suggerimento: "Digita x, premi sc, digita y e premi uguale", tipo: "fun", azione: op("s") },
   ],
   [
-    { testID: "calcolatrice-tasto-m-piu", testo: "M +", etichetta: "Aggiunge alla memoria il valore corrente", tipo: "mem", azione: mem("+") },
+    { testID: "calcolatrice-tasto-m-piu", testo: "M +", etichetta: "Aggiunge alla memoria il valore corrente", suggerimento: "La cifra successiva inizia un numero nuovo", tipo: "mem", azione: mem("+") },
     num(7), num(8), num(9),
-    { testID: "calcolatrice-tasto-divisione", testo: "/", etichetta: "Divisione", tipo: "op", azione: op("/") },
-    { testID: "calcolatrice-tasto-radice", testo: "sqrt", etichetta: "Radice quadrata", tipo: "fun", azione: radice },
-    { testID: "calcolatrice-tasto-variazione", testo: "Δ%", etichetta: "Variazione in percentuale tra x e y", suggerimento: "Digita x, premi Δ%, digita y e premi uguale", tipo: "fun", azione: op("d") },
+    { testID: "calcolatrice-tasto-divisione", testo: "/", etichetta: "Divisione", suggerimento: "La divisione per zero mostra Errore: premi CE o C per ripartire", tipo: "op", azione: op("/") },
+    { testID: "calcolatrice-tasto-radice", testo: "sqrt", etichetta: "Radice quadrata", suggerimento: "Su un numero negativo mostra Errore", tipo: "fun", azione: radice },
+    { testID: "calcolatrice-tasto-variazione", testo: "Δ%", etichetta: "Variazione percentuale dal primo al secondo numero", suggerimento: "Digita x, premi Δ%, digita y e premi uguale: ottieni la variazione da x a y, cioè (y − x) / x × 100", tipo: "fun", azione: op("d") },
   ],
   [
-    { testID: "calcolatrice-tasto-m-meno", testo: "M -", etichetta: "Sottrae dalla memoria il valore corrente", tipo: "mem", azione: mem("-") },
+    { testID: "calcolatrice-tasto-m-meno", testo: "M -", etichetta: "Sottrae dalla memoria il valore corrente", suggerimento: "La cifra successiva inizia un numero nuovo", tipo: "mem", azione: mem("-") },
     num(4), num(5), num(6),
     { testID: "calcolatrice-tasto-moltiplicazione", testo: "x", etichetta: "Moltiplicazione", tipo: "op", azione: op("*") },
-    { testID: "calcolatrice-tasto-percentuale", testo: "%", etichetta: "Percentuale", tipo: "fun", azione: percentuale },
+    { testID: "calcolatrice-tasto-percentuale", testo: "%", etichetta: "Percentuale", suggerimento: "Con più e meno calcola la percentuale del primo numero (200 + 10 % = 220); con per e diviso usa il valore percentuale (200 x 10 % = 20)", tipo: "fun", azione: percentuale },
     { testID: "calcolatrice-tasto-incidenza", testo: "pct", etichetta: "Rapporto tra x e y in percentuale", suggerimento: "Digita x, premi pct, digita y e premi uguale", tipo: "fun", azione: op("p") },
   ],
   [
@@ -50,7 +50,7 @@ const RIGHE: (Tasto | "memoria")[][] = [
     num(1), num(2), num(3),
     { testID: "calcolatrice-tasto-sottrazione", testo: "-", etichetta: "Sottrazione", tipo: "op", azione: op("-") },
     { testID: "calcolatrice-tasto-inverso", testo: "1/n", etichetta: "Inverso", tipo: "fun", azione: inverso },
-    { testID: "calcolatrice-tasto-idiv", testo: "idiv", etichetta: "Divisione intera", tipo: "fun", azione: op("i") },
+    { testID: "calcolatrice-tasto-idiv", testo: "idiv", etichetta: "Divisione intera", suggerimento: "Quoziente intero per difetto, anche con i decimali (−23 idiv 5 = −5)", tipo: "fun", azione: op("i") },
   ],
   [
     { testID: "calcolatrice-tasto-mc", testo: "MC", etichetta: "Cancella la memoria", tipo: "mem", azione: mem("C") },
@@ -59,7 +59,7 @@ const RIGHE: (Tasto | "memoria")[][] = [
     { testID: "calcolatrice-tasto-virgola", testo: ",", etichetta: "Virgola", tipo: "num", azione: virgola },
     { testID: "calcolatrice-tasto-addizione", testo: "+", etichetta: "Addizione", tipo: "op", azione: op("+") },
     { testID: "calcolatrice-tasto-uguale", testo: "=", etichetta: "Uguale", tipo: "op", azione: op("=") },
-    { testID: "calcolatrice-tasto-mod", testo: "mod", etichetta: "Resto della divisione intera (modulo)", tipo: "fun", azione: op("m") },
+    { testID: "calcolatrice-tasto-mod", testo: "mod", etichetta: "Resto della divisione (modulo)", suggerimento: "Resto vero, anche con i decimali (7,5 mod 2 = 1,5)", tipo: "fun", azione: op("m") },
   ],
 ];
 
@@ -83,8 +83,8 @@ export default function CalcolatriceOnline() {
         setStato((s) => ({
           ...s,
           impostazioni: {
-            pctIva: typeof p.pctIva === "number" ? p.pctIva : IMPOSTAZIONI_PREDEFINITE.pctIva,
-            cifreDecimali: typeof p.cifreDecimali === "number" ? p.cifreDecimali : IMPOSTAZIONI_PREDEFINITE.cifreDecimali,
+            pctIva: typeof p.pctIva === "number" && Number.isFinite(p.pctIva) ? p.pctIva : IMPOSTAZIONI_PREDEFINITE.pctIva,
+            cifreDecimali: typeof p.cifreDecimali === "number" && Number.isFinite(p.cifreDecimali) ? p.cifreDecimali : IMPOSTAZIONI_PREDEFINITE.cifreDecimali,
             raggruppa: !!p.raggruppa,
           },
         }));
@@ -104,12 +104,13 @@ export default function CalcolatriceOnline() {
 
   const chiudiImpostazioni = async (applica: boolean, salva: boolean) => {
     if (applica) {
-      const nuovo = applicaImpostazioni(stato, campoIva, campoDecimali, campoRaggruppa);
+      const { stato: nuovo, messaggio } = applicaImpostazioni(stato, campoIva, campoDecimali, campoRaggruppa);
       setStato(nuovo);
       if (salva) {
         const ok = await storage.setItem(CHIAVE_IMPOSTAZIONI, JSON.stringify(nuovo.impostazioni));
         if (!ok) { Alert.alert("Calcolatrice", "Impossibile salvare le impostazioni."); return; }
       }
+      if (messaggio) Alert.alert("Calcolatrice", `${messaggio} Il valore precedente è stato mantenuto.`);
     }
     setImpostazioniAperte(false);
   };
@@ -201,14 +202,14 @@ export default function CalcolatriceOnline() {
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.sm }}>
               <Text style={{ color: t.onSurfaceSecondary }}>Aliquota IVA:</Text>
               <TextInput
-                testID="calcolatrice-impostazioni-iva" accessibilityLabel="Aliquota IVA" accessibilityHint="Specifica l'aliquota IVA"
+                testID="calcolatrice-impostazioni-iva" accessibilityLabel="Aliquota IVA" accessibilityHint="Specifica l'aliquota IVA: un campo vuoto non viene salvato e resta il valore precedente"
                 value={campoIva} onChangeText={(v) => setCampoIva(v.replace(/[^0-9]/g, "").slice(0, 2))} keyboardType="number-pad" maxLength={2} selectTextOnFocus style={campoImp}
               />
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.sm }}>
               <Text style={{ color: t.onSurfaceSecondary }}>Cifre decimali:</Text>
               <TextInput
-                testID="calcolatrice-impostazioni-decimali" accessibilityLabel="Cifre decimali" accessibilityHint="Numero di cifre decimali per l'operazione di arrotondamento"
+                testID="calcolatrice-impostazioni-decimali" accessibilityLabel="Cifre decimali" accessibilityHint="Numero di cifre decimali per l'operazione di arrotondamento: un campo vuoto non viene salvato e resta il valore precedente"
                 value={campoDecimali} onChangeText={(v) => setCampoDecimali(v.replace(/[^0-9]/g, "").slice(0, 1))} keyboardType="number-pad" maxLength={1} selectTextOnFocus style={campoImp}
               />
             </View>
