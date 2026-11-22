@@ -89,6 +89,11 @@ const CATEGORIE_ABITAZIONE_PRINCIPALE = ["A/1", "A/2", "A/3", "A/4", "A/5", "A/6
 // Imposte compravendita: «Prezzo-Valore» non si applica con l'impresa costruttrice entro 5 anni (atto con IVA).
 const prezzoValoreAttivo = (f: Record<string, any>) => f.venditore !== "costruttrice_entro_5_anni" && !!f.prezzo_valore;
 
+// Maggior Danno: ultima data accettata (ultimo mese coperto dai tassi del backend).
+// VA AGGIORNATA OGNI MESE insieme ai tassi del backend (MAGGIOR_DANNO_DATI_FINO_A in server.py),
+// altrimenti l'app accetta date per cui il calcolo di riferimento non ha dati. Vedi docs/punti-aperti.md.
+const MAGGIOR_DANNO_DATA_MASSIMA = "2026-10-31";
+
 // Ammortamento e TAEG: periodicità e durata (in anni oppure come numero totale di rate, da 2 a 360).
 const PERIODICITA_RATE = [
   { value: "12", label: "Mensile = 12 rate all'anno" }, { value: "6", label: "Bimestrale = 6 rate all'anno" },
@@ -1148,6 +1153,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "annuale", label: "annuale (confronta con i tassi medi annuali)" }, { value: "mensile", label: "mensile (confronta con i tassi rilevati mensilmente)" },
       ] },
     ],
+    // Il calcolatore di riferimento non accetta date oltre l'ultimo mese con i tassi: stesso limite qui.
+    validate: (f) => ((f.data_inizio && f.data_inizio > MAGGIOR_DANNO_DATA_MASSIMA) || (f.data_fine && f.data_fine > MAGGIOR_DANNO_DATA_MASSIMA)
+      ? `La data massima impostabile è ${isoToDataIt(MAGGIOR_DANNO_DATA_MASSIMA)}` : null),
     endpoint: "/calc/maggior-danno",
     buildBody: (f) => ({
       capitale: parseNumeroIt(f.capitale), data_inizio: f.data_inizio, data_fine: f.data_fine,
