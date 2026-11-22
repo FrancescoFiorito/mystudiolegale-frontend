@@ -12,6 +12,14 @@ App Store Connect ha accettato la build 111 con un avviso (ITMS-90725): l'app è
 - Cosa servirà: scegliere nel workflow una macchina con Xcode 27 e, con ogni probabilità, aggiornare Expo (oggi 54) e React Native (oggi 0.81) a versioni compatibili.
 - Quando: inizio 2027, quando Xcode 27 è stabile e Expo lo supporta. È un lavoro a sé: aggiornamento, prova dell'app, una build di verifica prima della scadenza.
 
+### Aggiornamento mensile dei tassi del Maggior Danno
+
+Il calcolatore usa serie mensili (Istat FOI, BOT, Rendistato) che il sito di riferimento aggiorna una volta al mese, dopo la metà del mese. Se non si aggiornano anche da noi, per l'anno in corso l'ultimo mese vale zero e la media annuale è un po' sbagliata (gli anni passati non cambiano).
+
+- Dati aggiornati fino a ottobre 2026 (letti il 22/11/2026): costanti `MAGGIOR_DANNO_DATI_FINO_A` e `MAGGIOR_DANNO_DATI_LETTI_IL` in `server.py` del backend.
+- Procedura: `docs/maggior-danno-taeg.md` nel backend, sezione "Ogni quanto il sito aggiorna". Un calcolo per riferimento sul sito, un commit, un test, un deploy. Indicativamente dal 20 di ogni mese.
+- Possibile miglioria nell'app: limitare la data massima all'ultimo mese coperto, come fa il sito.
+
 ## Decisioni dell'utente
 
 - **Campi che l'app ha e il sito di riferimento no** (vedi `danno-non-patrimoniale-e-differenze-frontend.md`): Scorporo Importi "Percentuale cassa previdenziale" (proposta: valore di partenza 0), Giorni Lavorativi "Chiusura estiva", Calcolo Eredità "Quota di legittima", Prescrizione e decadenza "Data ultimo atto interruttivo" (proposta: tenere gli ultimi tre).
