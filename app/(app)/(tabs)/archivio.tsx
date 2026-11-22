@@ -12,6 +12,7 @@ import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import NuovaPraticaForm from "@/src/components/NuovaPraticaForm";
 import SwipeToDelete from "@/src/components/SwipeToDelete";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
+import { useApriAtto } from "@/src/utils/apriAtto";
 import { useDebouncedValue } from "@/src/hooks/use-debounced-value";
 
 const STATI = ["Tutte", "Aperta", "Chiusa", "Archiviata"];
@@ -499,9 +500,7 @@ function SezioneAtti() {
   const load = React.useCallback(async () => setItems(await api.get("/atti")), []);
   useFocusEffect(React.useCallback(() => { load(); }, [load]));
 
-  const apriAtto = (a: any) => {
-    scegliAperturaDocumento(`/atti/${a.id}/docx`, `/atti/${a.id}/docx/view-link`, `${a.tipo}.docx`);
-  };
+  const { scegli: apriAtto } = useApriAtto();
 
   const eliminaAtto = (a: any) => {
     Alert.alert("Elimina atto", `Eliminare "${a.titolo}"?`, [
@@ -520,7 +519,7 @@ function SezioneAtti() {
           </View>
         ) : items.map((a) => (
           <SwipeToDelete key={a.id} testID={`atto-${a.id}`} onDelete={() => eliminaAtto(a)}>
-            <Pressable accessibilityRole="button" onPress={() => apriAtto(a)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
+            <Pressable testID={`atto-apri-${a.id}`} accessibilityRole="button" accessibilityLabel={`Apri atto ${a.titolo}`} onPress={() => apriAtto(a)} style={[s.row, { backgroundColor: t.surface }, SHADOW.card]}>
               <View style={[s.rowIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={18} color={t.brand} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>

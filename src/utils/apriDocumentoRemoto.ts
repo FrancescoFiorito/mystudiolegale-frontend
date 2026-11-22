@@ -15,32 +15,76 @@ import { Alert, Linking, Platform } from "react-native";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { api } from "@/src/api";
+import { messaggioDaCorpo } from "@/src/utils/messaggioErrore";
 
 function sanitizeFileName(nome: string) {
   return (nome || "documento").replace(/[\\/]/g, "_");
 }
 
+// Su web `Alert.alert` di React Native non mostra nulla: si usa `window.alert`.
+function avviso(titolo: string, messaggio: string) {
+  if (Platform.OS === "web") {
+    if (typeof window !== "undefined") window.alert(`${titolo}\n${messaggio}`);
+    return;
+  }
+  Alert.alert(titolo, messaggio);
+}
+
+// Messaggio del server (`detail`) letto dal corpo della risposta di errore.
+async function messaggioDaRisposta(res: Response): Promise<string> {
+  let testo = "";
+  try { testo = await res.text(); } catch {}
+  return messaggioDaCorpo(res.status, testo);
+}
+
+// Errori di rete del motore `fetch` (nessuna risposta del server): non hanno un
+// testo utile per l'utente, si mostra il messaggio generico.
+function messaggioDaEccezione(e: any, generico: string): string {
+  const m = typeof e?.message === "string" ? e.message : "";
+  if (!m || /network request failed|failed to fetch|load failed/i.test(m)) return generico;
+  return m;
+}
+
+function scaricaSuWeb(blob: Blob, nomeFile: string) {
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = nomeFile;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
 // `path` e' il percorso relativo all'API (es. `/documenti/${id}/download`),
 // SENZA alcun token in query string. `nomeFile` e' il nome suggerito per il
-// file scaricato (usato solo per il nome locale/di condivisione).
+// file scaricato (usato solo per il nome locale/di condivisione). Se il server
+// rifiuta (402, 403, ...) l'avviso mostra il `detail` della risposta.
 export async function apriDocumentoRemoto(path: string, nomeFile: string) {
   try {
     const headers = await api.authHeader();
     const url = `${api.base}/api${path}`;
     const res = await fetch(url, { headers: headers as HeadersInit });
     if (!res.ok) {
-      throw new Error(`Errore ${res.status}`);
+      avviso("Errore", await messaggioDaRisposta(res));
+      return;
+    }
+    const nome = sanitizeFileName(nomeFile);
+    if (Platform.OS === "web") {
+      scaricaSuWeb(await res.blob(), nome);
+      return;
     }
     const buffer = await res.arrayBuffer();
-    const dest = new File(Paths.cache, sanitizeFileName(nomeFile));
+    const dest = new File(Paths.cache, nome);
+    if (dest.exists) dest.delete();
     dest.write(new Uint8Array(buffer));
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(dest.uri);
     } else {
       Alert.alert("Scaricato", `File salvato in ${dest.uri}`);
     }
-  } catch {
-    Alert.alert("Errore", "Impossibile aprire il file");
+  } catch (e: any) {
+    avviso("Errore", messaggioDaEccezione(e, "Impossibile aprire il file"));
   }
 }
 
@@ -52,8 +96,9 @@ async function apriInBrowser(viewLinkPath: string) {
   try {
     const { url } = await api.post<{ url: string }>(viewLinkPath);
     await Linking.openURL(url);
-  } catch {
-    Alert.alert("Errore", "Impossibile aprire il file nel browser");
+  } catch (e: any) {
+    // `api.post` lancia gia' un Error con il `detail` del server.
+    avviso("Errore", messaggioDaEccezione(e, "Impossibile aprire il file nel browser"));
   }
 }
 
@@ -68,19 +113,6 @@ export function scegliAperturaDocumento(downloadPath: string, viewLinkPath: stri
     { text: "Visualizza", onPress: () => apriInBrowser(viewLinkPath) },
     { text: "Scarica o condividi", onPress: () => apriDocumentoRemoto(downloadPath, nomeFile) },
   ]);
-}
-
-// Estrae il messaggio leggibile (`detail`) da una risposta di errore del backend.
-async function messaggioDaRisposta(res: Response): Promise<string> {
-  try {
-    const j = await res.json();
-    if (typeof j?.detail === "string" && j.detail) return j.detail;
-    if (Array.isArray(j?.detail)) {
-      const msgs = j.detail.map((d: any) => d?.msg).filter(Boolean);
-      if (msgs.length) return msgs.join("; ");
-    }
-  } catch {}
-  return `Errore ${res.status}`;
 }
 
 // Nome del file dall'intestazione Content-Disposition (filename*= o filename=).
@@ -110,15 +142,7 @@ export async function apriDocumentoRemotoPost(path: string, body: unknown, nomeF
   const filigrana = xf === "1" ? true : xf === "0" ? false : null;
   const nomeFile = sanitizeFileName(nomeFileDaContentDisposition(res.headers.get("Content-Disposition")) || nomeFileFallback);
   if (Platform.OS === "web") {
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = nomeFile;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
+    scaricaSuWeb(await res.blob(), nomeFile);
     return { filigrana, nomeFile };
   }
   const buffer = await res.arrayBuffer();
