@@ -28,18 +28,26 @@ export function riferimentoTemporale(ms: number): string {
   return `${GIORNI[d.getUTCDay()]}, ${due(d.getUTCDate())} ${MESI[d.getUTCMonth()]} ${d.getUTCFullYear()} ${due(d.getUTCHours())}:${due(d.getUTCMinutes())}:${due(d.getUTCSeconds())} UTC`;
 }
 
-// Testo da confrontare: senza spazi ai bordi; sotto i 64 caratteri è come se fosse vuoto.
-export function testoDaConfrontare(testo: string): string {
-  const t = (testo || "").replace(/^\s+|\s+$/g, "");
-  return t.length < 64 ? "" : t;
+// Impronte presenti nel testo: solo le sequenze di esattamente 64 caratteri esadecimali
+// (delimitate da caratteri non esadecimali), in minuscolo e senza ripetizioni.
+export function impronteNelTesto(testo: string): string[] {
+  const trovate = (testo || "").match(/[0-9a-fA-F]+/g) || [];
+  const uniche = new Set<string>();
+  for (const t of trovate) if (t.length === 64) uniche.add(t.toLowerCase());
+  return Array.from(uniche);
 }
 
-// Ricerca esatta (maiuscole e minuscole contano) dell'impronta nel testo.
-export const hashCorrisponde = (hash: string, testo: string) => !!testo && testo.indexOf(hash) >= 0;
+// L'impronta del file (esadecimale minuscolo) corrisponde se è tra quelle del testo, a prescindere
+// da maiuscole e minuscole.
+export const hashCorrisponde = (hash: string, impronte: string[]) => impronte.indexOf(hash.toLowerCase()) >= 0;
+
+export const MSG_NESSUNA_IMPRONTA = "Nessuna impronta da confrontare!";
+export const MSG_NESSUNA_IMPRONTA_VALIDA = "Nessuna impronta valida da confrontare: nel testo non c'è nessuna sequenza di 64 caratteri esadecimali.";
 
 // Aggiunge i file scelti (già elaborati, nell'ordine di selezione). `selezionati` è il numero di
 // file scelti dall'utente (anche oltre il massimo). Replica selezione + coda + elenco del sito:
-// i doppioni si cercano solo tra i file già in elenco, non dentro la stessa selezione.
+// i doppioni (stessa impronta) si cercano tra i file già in elenco e dentro la stessa selezione:
+// il secondo non entra.
 export function aggiungiSelezione(s: StatoHash, elaborati: FileHash[], selezionati: number): StatoHash {
   const errori: string[] = [];
   let totale = selezionati;
@@ -50,9 +58,10 @@ export function aggiungiSelezione(s: StatoHash, elaborati: FileHash[], seleziona
   const lavorati = elaborati.slice(0, totale);
   const nuovi: FileHash[] = [];
   for (const f of lavorati) {
-    const idx = s.file.findIndex((x) => x.hash === f.hash);
+    const attuale = s.file.concat(nuovi);
+    const idx = attuale.findIndex((x) => x.hash === f.hash);
     if (idx >= 0) {
-      const suffisso = s.file.length >= 3 ? ` ( è il n. ${idx + 1} dall'alto )` : "";
+      const suffisso = attuale.length >= 3 ? ` ( è il n. ${idx + 1} dall'alto )` : "";
       errori.push(`Il file ${f.nome} è già presente${suffisso}.`);
     } else nuovi.push(f);
   }
@@ -99,12 +108,15 @@ export function vistaHash(s: StatoHash): VistaHash {
     messaggio = `Elaborazione terminata ( ${fatti}/${totale} file elaborat${fatti > 1 ? "i" : "o"} )`;
   }
   const n = s.file.length;
-  const testo = s.modo === "verifica" ? testoDaConfrontare(s.testoVerifica) : "";
-  if (s.modo === "verifica" && !testo && n) errori.push("Nessuna impronta da confrontare!");
+  const impronte = s.modo === "verifica" ? impronteNelTesto(s.testoVerifica) : [];
+  const confronta = impronte.length > 0;
+  if (s.modo === "verifica" && !confronta && n) {
+    errori.push(s.testoVerifica.trim() ? MSG_NESSUNA_IMPRONTA_VALIDA : MSG_NESSUNA_IMPRONTA);
+  }
   let ok = 0;
   const esiti = s.file.map((f) => {
-    if (s.modo !== "verifica" || !testo) return null;
-    if (hashCorrisponde(f.hash, testo)) { ok++; return true; }
+    if (s.modo !== "verifica" || !confronta) return null;
+    if (hashCorrisponde(f.hash, impronte)) { ok++; return true; }
     errori.push(`File ${f.nome}: nessuna corrispondenza!`);
     return false;
   });
@@ -113,7 +125,7 @@ export function vistaHash(s: StatoHash): VistaHash {
   } else {
     const nonOk = n - ok;
     if (nonOk) {
-      if (testo) errori.push(`${nonOk} file su ${n} non corrispond${nonOk > 1 ? "ono" : "e"}!`);
+      if (confronta) errori.push(`${nonOk} file su ${n} non corrispond${nonOk > 1 ? "ono" : "e"}!`);
     } else if (n) {
       messaggio = `Perfetto! ${ok > 1 ? "Tutti i file corrispondono alle impronte inserite." : "Il file corrisponde."}`;
     }
