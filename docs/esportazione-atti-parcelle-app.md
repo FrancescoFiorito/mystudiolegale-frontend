@@ -27,3 +27,7 @@ La #95 apre ancora solo `/atti/{id}/docx`: per Pro e Studio funziona come prima;
 ## Non provato (niente iPhone, niente backend)
 
 Chiamate reali agli endpoint, foglio di condivisione, apertura nel browser, download e `window.alert` su web, VoiceOver, aspetto grafico dei nuovi pulsanti, flusso "Vedi i piani".
+
+## PR e sha dei merge
+
+- PR #200 (funzionalità e resoconto), merge `8723b00`.
