@@ -23,7 +23,7 @@ import TariffeForensi2004 from "@/src/components/TariffeForensi2004";
 import ImprontaHash from "@/src/components/ImprontaHash";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
-import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
+import { useApriAtto } from "@/src/utils/apriAtto";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
@@ -4859,6 +4859,7 @@ export default function Calcolatori() {
   const [procuraParti, setProcuraParti] = React.useState<{ nome: string; persona_giuridica: boolean; legale_rappresentante: string; cf_piva: string; indirizzo: string }[]>([]);
   const [procuraAvvocati, setProcuraAvvocati] = React.useState<{ nome: string; cf: string; ordine: string; eletto_domicilio: boolean; indirizzo_studio: string; autentica_firme: boolean }[]>([]);
   const [attoGenerato, setAttoGenerato] = React.useState<any>(null);
+  const esportaAtto = useApriAtto();
   const [attoGenerando, setAttoGenerando] = React.useState(false);
 
   // Con lo Stack nativo, tenere attivo lo swipe-indietro di questa
@@ -6312,14 +6313,27 @@ export default function Calcolatori() {
                 <View style={[st.result, { backgroundColor: t.brandSecondary, borderColor: t.brand }]}>
                   <Text style={{ color: t.onBrandSecondary, fontSize: 12, fontWeight: "700" }}>BOZZA GENERATA</Text>
                   <Text style={{ color: t.onBrandSecondary, marginTop: 4 }}>{attoGenerato.titolo}</Text>
-                  <Pressable
-                    testID="apri-atto-docx" accessibilityRole="button"
-                    onPress={() => scegliAperturaDocumento(`/atti/${attoGenerato.id}/docx`, `/atti/${attoGenerato.id}/docx/view-link`, `${attoGenerato.tipo}.docx`)}
-                    style={{ marginTop: SPACING.md, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md }}
-                  >
-                    <Feather name="download" size={14} color={t.onBrand} />
-                    <Text style={{ color: t.onBrand, fontWeight: "700" }}>Apri documento</Text>
-                  </Pressable>
+                  <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md }}>
+                    <Pressable
+                      testID="apri-atto-pdf" accessibilityRole="button" accessibilityLabel="Apri l'atto in PDF"
+                      onPress={() => esportaAtto.pdf(attoGenerato)}
+                      style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md }}
+                    >
+                      <Feather name="file-text" size={14} color={t.onBrand} />
+                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>PDF</Text>
+                    </Pressable>
+                    <Pressable
+                      testID="apri-atto-docx" accessibilityRole="button" accessibilityLabel="Apri l'atto in Word"
+                      onPress={() => esportaAtto.word(attoGenerato)}
+                      style={{ flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: t.brand, padding: 10, borderRadius: RADIUS.md }}
+                    >
+                      <Feather name="file" size={14} color={t.onBrand} />
+                      <Text style={{ color: t.onBrand, fontWeight: "700" }}>Word</Text>
+                    </Pressable>
+                  </View>
+                  {esportaAtto.gratuito ? (
+                    <Text testID="apri-atto-filigrana" style={{ color: t.onBrandSecondary, fontSize: 11, marginTop: SPACING.xs }}>Il PDF del piano gratuito ha la filigrana</Text>
+                  ) : null}
                 </View>
               ) : null}
             </ScrollView>

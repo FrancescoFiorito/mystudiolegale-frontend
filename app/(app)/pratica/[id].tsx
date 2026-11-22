@@ -11,6 +11,7 @@ import { SPACING, RADIUS, SHADOW } from "@/src/theme";
 import Header from "@/src/components/Header";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
+import { useApriAtto } from "@/src/utils/apriAtto";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { formatOra } from "@/src/utils/orario";
 import { formatEuro } from "@/src/utils/formatoItaliano";
@@ -205,9 +206,7 @@ export default function PraticaDetail() {
     ]);
   };
 
-  const apriAtto = (a: any) => {
-    scegliAperturaDocumento(`/atti/${a.id}/docx`, `/atti/${a.id}/docx/view-link`, `${a.tipo}.docx`);
-  };
+  const { scegli: apriAtto } = useApriAtto();
 
   const eliminaAtto = (a: any) => {
     Alert.alert("Elimina atto", `Eliminare "${a.titolo}"?`, [
@@ -376,7 +375,7 @@ export default function PraticaDetail() {
             <>
               {atti.length === 0 ? <Text style={{ color: t.onSurfaceTertiary, fontStyle: "italic" }}>Nessun atto generato</Text> :
                 atti.map((a) => (
-                  <Pressable key={a.id} accessibilityRole="button" onPress={() => apriAtto(a)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
+                  <Pressable key={a.id} testID={`atto-apri-${a.id}`} accessibilityRole="button" accessibilityLabel={`Apri atto ${a.titolo}`} onPress={() => apriAtto(a)} style={[{ flexDirection: "row", alignItems: "center", gap: SPACING.md, padding: SPACING.md, borderRadius: RADIUS.lg, backgroundColor: t.surface, marginBottom: SPACING.sm }, SHADOW.card]}>
                     <View style={[s.docIcon, { backgroundColor: t.brandSecondary }]}><Feather name="file-text" size={16} color={t.brand} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: t.onSurface, fontWeight: "600" }} numberOfLines={1}>{a.titolo}</Text>
