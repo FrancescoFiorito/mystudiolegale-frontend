@@ -26,7 +26,7 @@ export const COMPETENZE_ONORARI = [
 ];
 
 export const MSG_CAMPO_ERRATO = "Un campo risulta errato o non compilato.";
-export const MSG_NESSUNA_VOCE = "ATTENZIONE: Nessuna voce trovata con questo critero di ricerca";
+export const MSG_NESSUNA_VOCE = "ATTENZIONE: Nessuna voce trovata con questo criterio di ricerca";
 
 export type EsitoValore = { ok: true; valore: number } | { ok: false; errore: string };
 
@@ -39,12 +39,14 @@ function arrotondaCentesimi(intero: string, decimali: string): number {
   return cent / 100;
 }
 
-// Legge il valore scritto nel campo come la maschera del sito: spazi e "€"
-// ignorati, punto come migliaia o come decimale (un solo punto seguito da non
-// più di 2 cifre è un decimale), virgola decimale, arrotondamento a 2 decimali.
+// Legge il valore scritto nel campo: spazi e "€" ignorati, il punto è sempre il separatore
+// delle migliaia ("1.234" = 1.234; "5.5" = 55), la virgola è il decimale ("5,5" = 5,50),
+// arrotondamento a 2 decimali.
+export const MSG_VALORE_MANCANTE = "Inserisci il valore della causa";
+
 export function leggiValoreCausa(testo: string): EsitoValore {
   const s = (testo || "").replace(/[\s€]/g, "");
-  if (s === "" || s === "0") return { ok: false, errore: "Digita il valore della causa" };
+  if (s === "") return { ok: false, errore: MSG_VALORE_MANCANTE };
   const negativo = s.startsWith("-");
   const corpo = negativo ? s.slice(1) : s;
   const nonNumerico = { ok: false as const, errore: "Valore non numerico" };
@@ -52,27 +54,15 @@ export function leggiValoreCausa(testo: string): EsitoValore {
   const virgole = corpo.split(",");
   if (virgole.length > 2) return nonNumerico;
   const sinistra = virgole[0];
-  const destra = virgole.length === 2 ? virgole[1] : "";
-  if (!/^[0-9]*$/.test(destra)) return nonNumerico;
-  let intero: string;
-  let decimali = destra;
+  const decimali = virgole.length === 2 ? virgole[1] : "";
+  if (!/^[0-9]*$/.test(decimali)) return nonNumerico; // niente punti dopo la virgola
   const gruppi = sinistra.split(".");
-  if (gruppi.length === 1) {
-    intero = sinistra;
-  } else if (gruppi.length === 2 && virgole.length === 1 && gruppi[1].length <= 2) {
-    intero = gruppi[0];
-    decimali = gruppi[1];
-  } else if (gruppi.length === 2 && gruppi[0] !== "" && gruppi[1] !== "" && /^[0-9]+$/.test(gruppi[1]) && (virgole.length === 2 || gruppi[1].length >= 3)) {
-    intero = gruppi[0] + gruppi[1]; // un solo punto prima di 3 o più cifre: migliaia
-  } else if (gruppi.length > 2 && gruppi.slice(1).every((g) => /^[0-9]{3}$/.test(g)) && /^[0-9]+$/.test(gruppi[0])) {
-    intero = gruppi.join("");
-  } else {
-    return nonNumerico;
-  }
+  if (gruppi.length > 1 && gruppi.some((g) => g === "")) return nonNumerico; // punto iniziale, finale o doppio
+  const intero = gruppi.join("");
   if (intero === "" && decimali === "") return nonNumerico;
   if (negativo) return { ok: false, errore: "Digita un valore corretto" };
   const valore = arrotondaCentesimi(intero, decimali);
-  if (valore === 0) return { ok: false, errore: "Specifica il valore della causa" };
+  if (valore === 0) return { ok: false, errore: MSG_VALORE_MANCANTE };
   return { ok: true, valore };
 }
 
