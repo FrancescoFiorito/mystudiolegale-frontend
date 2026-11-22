@@ -24,6 +24,7 @@ import ImprontaHash from "@/src/components/ImprontaHash";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
+import { cercaVociCalcolatori } from "@/src/utils/ricercaCalcolatori";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
@@ -4659,6 +4660,7 @@ export default function Calcolatori() {
   const isEditingPar = !!params.editId;
   const [calcAperto, setCalcAperto] = React.useState<CalcId | null>(locked ? "parcelle" : null);
   const [categoriaCalc, setCategoriaCalc] = React.useState<string | null>(null);
+  const [ricercaCalc, setRicercaCalc] = React.useState("");
   const scrollRef = React.useRef<ScrollView>(null);
 
   // La schermata resta montata da una visita all'altra: se si arriva qui di
@@ -6008,11 +6010,78 @@ export default function Calcolatori() {
 
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
+  const sottotitoloVoce = (v: VoceMenuCalcolatori) =>
+    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : undefined;
+  const ricercaAttiva = ricercaCalc.trim().length > 0;
+  const risultatiRicerca = ricercaAttiva
+    ? cercaVociCalcolatori(CATEGORIE_CALC.map((c) => ({ id: c.id, titolo: c.titolo, voci: vociCategoria(c.id) })), ricercaCalc, sottotitoloVoce)
+    : [];
+
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: t.surfaceSecondary }}>
       <Header variant="hero" title="Calcolatori" onBack={() => router.back()} />
-      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }}>
-        {CATEGORIE_CALC.map((cat) => {
+      <View style={{ backgroundColor: t.surface, paddingTop: SPACING.sm, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: t.border, marginTop: SPACING.xs }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: SPACING.lg, paddingHorizontal: SPACING.md, paddingVertical: 10, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
+          <Feather name="search" size={16} color={t.onSurfaceTertiary} />
+          <TextInput
+            testID="calcolatori-search" accessibilityLabel="Cerca calcolatore"
+            value={ricercaCalc} onChangeText={setRicercaCalc}
+            placeholder="Cerca calcolatore..." placeholderTextColor={t.onSurfaceTertiary}
+            autoCorrect={false} autoCapitalize="none" returnKeyType="search"
+            style={{ flex: 1, color: t.onSurface, fontSize: 14 }}
+          />
+          {ricercaAttiva ? (
+            <Pressable testID="calcolatori-search-clear" accessibilityRole="button" accessibilityLabel="Cancella testo di ricerca" hitSlop={10} onPress={() => setRicercaCalc("")}>
+              <Feather name="x-circle" size={16} color={t.onSurfaceTertiary} />
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl + 80 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        {ricercaAttiva ? (
+          risultatiRicerca.length === 0 ? (
+            <View testID="calcolatori-search-vuoto" accessibilityLabel="Nessun calcolatore trovato" style={{ alignItems: "center", paddingVertical: SPACING.xxl }}>
+              <Feather name="search" size={40} color={t.onSurfaceTertiary} />
+              <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun calcolatore trovato</Text>
+            </View>
+          ) : risultatiRicerca.map(({ voce: v, categoriaId, categoriaTitolo, sottotitolo }, i) => {
+            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
+            if (v.tipo === "in_arrivo") {
+              return (
+                <View key={`${categoriaId}-${i}`} accessible accessibilityLabel={`${v.nome}, ${categoriaTitolo}, in arrivo`} accessibilityState={{ disabled: true }} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
+                  <View style={[st.calcIcon, { backgroundColor: t.border }]}>
+                    <Feather name={icona as any} size={18} color={t.onSurfaceTertiary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: t.onSurfaceSecondary, fontWeight: "700", fontSize: 14 }}>{v.nome}</Text>
+                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>{categoriaTitolo}</Text>
+                    <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 }}>In arrivo</Text>
+                  </View>
+                </View>
+              );
+            }
+            return (
+              <Pressable
+                key={`${categoriaId}-${i}`}
+                testID={`ricerca-${v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`}`} accessibilityRole="button"
+                accessibilityLabel={`${v.nome}, ${categoriaTitolo}`}
+                onPress={() => { Keyboard.dismiss(); if (v.tipo === "atto") apriAtto(v.attoId); else apriCalcolatore(v.calcId); }}
+                style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
+              >
+                <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
+                  <Feather name={icona as any} size={18} color={t.brand} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.onSurface, fontWeight: "700", fontSize: 14 }}>{v.nome}</Text>
+                  <Text style={{ color: t.onSurfaceTertiary, fontSize: 11, marginTop: 2 }}>{categoriaTitolo}</Text>
+                  {sottotitolo ? <Text style={{ color: t.onSurfaceTertiary, fontSize: 12, marginTop: 2 }}>{sottotitolo}</Text> : null}
+                </View>
+                <Feather name="chevron-right" size={18} color={t.onSurfaceTertiary} />
+              </Pressable>
+            );
+          })
+        ) : null}
+        {!ricercaAttiva && CATEGORIE_CALC.map((cat) => {
           const voci = vociCategoria(cat.id);
           const disponibili = voci.filter((v) => v.tipo !== "in_arrivo").length;
           return (
