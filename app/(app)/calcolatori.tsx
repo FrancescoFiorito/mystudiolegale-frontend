@@ -19,6 +19,7 @@ import ListaInput, { CampoRigaLista } from "@/src/components/ListaInput";
 import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import CalcolatriceOnline from "@/src/components/CalcolatriceOnline";
+import TariffeForensi2004 from "@/src/components/TariffeForensi2004";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { scegliAperturaDocumento } from "@/src/utils/apriDocumentoRemoto";
@@ -51,7 +52,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca" | "pensione-reversibilita" | "calcolatrice-online";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca" | "pensione-reversibilita" | "calcolatrice-online" | "tariffe-forensi-2004";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -3957,6 +3958,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "superficie-commerciale", titolo: "Superficie Commerciale", sottotitolo: "Vani e pertinenze, criteri D.P.R. 138/1998", icona: "home" },
   { id: "cedolare-secca", titolo: "Calcolo Cedolare Secca", sottotitolo: "Convenienza rispetto all'IRPEF, primi 4 anni", icona: "percent" },
   { id: "pensione-reversibilita", titolo: "Pensione di Reversibilità", sottotitolo: "Quote ai superstiti e riduzione per il reddito del coniuge", icona: "users" },
+  { id: "tariffe-forensi-2004", titolo: "Tariffe Forensi 2004", sottotitolo: "Diritti, onorari e stragiudiziale per competenza e valore", icona: "list" },
   { id: "calcolatrice-online", titolo: "Calcolatrice Online", sottotitolo: "Con memoria, scorporo IVA, sconti e percentuali", icona: "hash" },
 ];
 
@@ -4301,7 +4303,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Tabelle Parametri", tipo: "in_arrivo" },
       { nome: "Parametri 2012 Civile", tipo: "calcolatore", calcId: "parametri-civili-2012" },
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
-      { nome: "Tariffe Forensi 2004", tipo: "in_arrivo" },
+      { nome: "Tariffe Forensi 2004", tipo: "calcolatore", calcId: "tariffe-forensi-2004" },
       { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "nota-spese-tariffe-2004" },
       { nome: "Modelli di Notula", tipo: "in_arrivo" },
       { nome: "Calcolo Notula Penale", tipo: "calcolatore", calcId: "notula-penale-tariffario-2004" },
@@ -6331,6 +6333,7 @@ export default function Calcolatori() {
               {calcAperto === "scadenze" ? contenutoScadenze : null}
               {calcAperto === "parcelle" ? contenutoParcelle : null}
               {calcAperto === "calcolatrice-online" ? <CalcolatriceOnline /> : null}
+              {calcAperto === "tariffe-forensi-2004" ? <TariffeForensi2004 /> : null}
 
               {calcAperto === "termini-memorie" ? (
                 <View>
