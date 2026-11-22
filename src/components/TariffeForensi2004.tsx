@@ -74,7 +74,7 @@ export default function TariffeForensi2004() {
     const titolo = r.competenza_nome ? `Tariffe ${r.tariffario === "diritti" ? "diritti" : "onorari"}: ${r.competenza_nome}` : "Tariffe stragiudiziale";
     const righeDati: [string, string][] = [];
     if (r.competenza_nome) righeDati.push(["Competenza", r.competenza_nome]);
-    righeDati.push(["Valore della Causa", testoValoreCausa(r.tipo_valore, r.valore)]);
+    righeDati.push(["Valore della Causa", testoValoreCausa(r.tipo_valore, r.valore, r.tariffario)]);
     return (
       <View testID="tariffe-risultato">
         <Pressable testID="tariffe-torna" accessibilityRole="button" accessibilityLabel="Torna alla maschera di impostazione dei parametri" onPress={() => setRisultato(null)} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: SPACING.md }}>
@@ -83,7 +83,7 @@ export default function TariffeForensi2004() {
         </Pressable>
         <View style={{ marginBottom: SPACING.sm }}>
           {r.competenza_nome ? <Text style={{ color: t.onSurface }}>Competenza: <Text style={{ fontWeight: "800" }}>{r.competenza_nome}</Text></Text> : null}
-          <Text style={{ color: t.onSurface }}>Valore della Causa: <Text style={{ fontWeight: "800" }}>{testoValoreCausa(r.tipo_valore, r.valore)}</Text></Text>
+          <Text style={{ color: t.onSurface }}>Valore della Causa: <Text style={{ fontWeight: "800" }}>{testoValoreCausa(r.tipo_valore, r.valore, r.tariffario)}</Text></Text>
         </View>
         <View style={{ backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: RADIUS.lg, overflow: "hidden" }}>
           <View style={{ flexDirection: "row", backgroundColor: t.brand, paddingVertical: 8, paddingHorizontal: 8, alignItems: "center" }}>
