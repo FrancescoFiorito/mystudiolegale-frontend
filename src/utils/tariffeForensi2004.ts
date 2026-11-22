@@ -80,8 +80,9 @@ const IT = { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: tr
 // "€ 5.000,00" (raggruppa sempre le migliaia, anche sotto le 5 cifre).
 export const euro = (n: number) => `€ ${Number(n).toLocaleString("it-IT", IT)}`;
 
-export function testoValoreCausa(tipo: TipoValoreForense, valore: number | null): string {
-  if (tipo === "indeterminabile") return "Indeterminabile";
+// Nello stragiudiziale il sito scrive "Indeterminabile" anche per "di particolare importanza".
+export function testoValoreCausa(tipo: TipoValoreForense, valore: number | null, tariffario?: TariffarioForense): string {
+  if (tipo === "indeterminabile" || (tipo === "indeterminabile_importanza" && tariffario === "stragiudiziale")) return "Indeterminabile";
   if (tipo === "indeterminabile_importanza") return "Indeterminabile di particolare importanza";
   return euro(valore || 0);
 }
