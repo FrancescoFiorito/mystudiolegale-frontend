@@ -8,7 +8,7 @@ import SelectInput from "@/src/components/SelectInput";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
 import {
   TARIFFARI, COMPETENZE_DIRITTI, COMPETENZE_ONORARI, MSG_CAMPO_ERRATO, MSG_NESSUNA_VOCE,
-  TariffarioForense, TipoValoreForense, RisultatoTariffe, leggiValoreCausa, euro, testoValoreCausa, valoriRiga,
+  TariffarioForense, TipoValoreForense, RisultatoTariffe, leggiValoreCausa, euro, testoValoreCausa, valoriRiga, colonneVisibili, intestazioniColonne,
 } from "@/src/utils/tariffeForensi2004";
 
 const TIPI_VALORE: { id: TipoValoreForense; etichetta: string }[] = [
@@ -68,9 +68,9 @@ export default function TariffeForensi2004() {
 
   if (risultato) {
     const r = risultato;
-    const colonne = r.colonne;
-    const intestazioni = colonne === 3 ? ["Minimo", "Medio", "Massimo"] : ["Tariffa"];
-    const larghezzaImporto = colonne === 3 ? 66 : 92;
+    const colonne = colonneVisibili(r);
+    const intestazioni = intestazioniColonne(colonne);
+    const larghezzaImporto = colonne === 2 ? 90 : 92;
     const titolo = r.competenza_nome ? `Tariffe ${r.tariffario === "diritti" ? "diritti" : "onorari"}: ${r.competenza_nome}` : "Tariffe stragiudiziale";
     const righeDati: [string, string][] = [];
     if (r.competenza_nome) righeDati.push(["Competenza", r.competenza_nome]);
@@ -123,13 +123,16 @@ export default function TariffeForensi2004() {
             );
           })}
         </View>
+        {r.avviso ? (
+          <Text testID="tariffe-avviso-regola" accessibilityRole="text" style={{ color: t.onSurfaceSecondary, fontSize: 12, marginTop: SPACING.sm }}>{r.avviso}</Text>
+        ) : null}
         <EsportaDocumento
           testIDPrefix="tariffe"
           titolo={titolo}
           datiInseriti={righeDati}
           risultato={r.righe.map((x): [string, string] => [
             `${x.codice} ${x.nome}`,
-            valoriRiga(x, colonne).map((v, k) => (colonne === 3 ? `${["min", "medio", "max"][k]} ${euro(v)}` : euro(v))).join(" · "),
+            valoriRiga(x, colonne).map((v, k) => (colonne === 2 ? `${["min", "max"][k]} ${euro(v)}` : euro(v))).join(" · "),
           ])}
           titoloRisultato="Tariffe"
         />

@@ -77,19 +77,42 @@ export function testoValoreCausa(tipo: TipoValoreForense, valore: number | null,
   return euro(valore || 0);
 }
 
-export type RigaTariffa = { codice: string; nome: string; tariffe: number[]; nota: string | null };
+export type RigaTariffa = {
+  codice: string; nome: string; tariffe: number[]; nota: string | null;
+  // Il decreto dà solo minimo e massimo: null per le voci a importo unico o da specificare.
+  minimo?: number | null; massimo?: number | null;
+  // Oltre 5.164.600 € (onorari): [coefficiente minimo, coefficiente massimo].
+  coefficienti?: [number, number] | null;
+};
 export type RisultatoTariffe = {
   tariffario: TariffarioForense;
   competenza: number | null;
   competenza_nome: string | null;
   tipo_valore: TipoValoreForense;
   valore: number | null;
+  scaglione?: string;
   colonne: 1 | 3;
+  // 2 = Minimo e Massimo, 1 = «Tariffa» unica. Mancante (server vecchio): si ricava da `colonne`.
+  colonne_visibili?: 1 | 2;
   righe: RigaTariffa[];
+  // Regola del 3% oltre 5.164.600 € (onorari), da mostrare sotto la tabella.
+  avviso?: string | null;
 };
 
-// Le tre colonne (minimo, medio, massimo): una voce con una sola tariffa la ripete nelle tre.
-export function valoriRiga(r: RigaTariffa, colonne: 1 | 3): number[] {
+// Numero di colonne da mostrare: niente colonna «Medio», che nel decreto non esiste.
+export function colonneVisibili(r: Pick<RisultatoTariffe, "colonne" | "colonne_visibili">): 1 | 2 {
+  return r.colonne_visibili ?? (r.colonne === 3 ? 2 : 1);
+}
+
+export function intestazioniColonne(n: 1 | 2): string[] {
+  return n === 2 ? ["Minimo", "Massimo"] : ["Tariffa"];
+}
+
+// I valori da mostrare: [minimo, massimo] oppure [tariffa]. Una voce con una sola tariffa la ripete nelle due colonne.
+export function valoriRiga(r: RigaTariffa, colonne: 1 | 2): number[] {
   if (colonne === 1) return [r.tariffe[0]];
-  return r.tariffe.length === 3 ? r.tariffe : [r.tariffe[0], r.tariffe[0], r.tariffe[0]];
+  const tre = r.tariffe.length === 3;
+  const minimo = r.minimo ?? (tre ? r.tariffe[0] : r.tariffe[0]);
+  const massimo = r.massimo ?? (tre ? r.tariffe[2] : r.tariffe[0]);
+  return [minimo, massimo];
 }
