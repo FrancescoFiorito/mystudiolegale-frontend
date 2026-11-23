@@ -37,7 +37,9 @@ Non lanciare mai una build in automatico. Solo quando l'utente scrive esplicitam
 
 ## Deploy backend su Render
 
-Dopo ogni merge sul repo backend, lancia **sempre** il deploy su Render in automatico (connettore Render, servizio `mystudiolegale-backend`), senza chiedere conferma — a differenza delle build iOS, che vanno sempre chieste esplicitamente.
+Il deploy parte **da solo** a ogni merge su `main`: il workflow `.github/workflows/render-deploy.yml` del repo backend chiama il Deploy Hook di Render (segreto `RENDER_DEPLOY_HOOK`; in alternativa `RENDER_API_KEY`). L'Auto-Deploy di Render è spento perché Render non riceve più gli eventi da GitHub. **Non lanciare un secondo deploy** con il connettore Render dopo un merge: controlla solo con `list_deploys` che il deploy del commit giusto vada `live` (circa 1-2 minuti), poi verifica in produzione. Usa il connettore per un deploy manuale solo se il workflow fallisce.
+
+Siccome ogni merge va in produzione, le sessioni automatiche (manutenzione mensile, sessioni senza l'utente presente) **non mergiano** modifiche al backend: aprono la PR e la lasciano all'utente.
 
 ## Pattern UI stabiliti
 
