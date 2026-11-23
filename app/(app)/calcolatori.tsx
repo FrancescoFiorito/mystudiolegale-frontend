@@ -26,7 +26,8 @@ import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
 import { cercaVociCalcolatori } from "@/src/utils/ricercaCalcolatori";
-import { INTERVALLI_VUOTI, richiesteIntervalli, intervalliDaRisposta, type IntervalliNotaSpese } from "@/src/utils/intervalliNotaSpese";
+import { TARIFFA_MINIMA_MASSIMA, TARIFFA_SCELTE, TARIFFA_SCELTE_RIGA, DEROGHE_NOTA_SPESE, DEROGHE_NOTULA_PENALE, tariffaEffettiva, limitiConDeroga, testoIntervallo, erroreImporto, type Limiti } from "@/src/utils/tariffaSpecificata";
+import { INTERVALLI_VUOTI, richiesteIntervalli, intervalliDaRisposta, type IntervalliNotaSpese, type SezioneNotaSpese } from "@/src/utils/intervalliNotaSpese";
 import type { RisultatoTariffe } from "@/src/utils/tariffeForensi2004";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
@@ -240,7 +241,7 @@ const NOTULA_PENALE_ORDINE = ["11", "12", "13", "1", "3", "2", "5", "6", "7", "8
 function opzioniAttivitaNotula(f: Record<string, any>): { value: string; label: string }[] {
   const comp = NOTULA_PENALE_2004[f.competenza];
   if (!comp) return [];
-  return comp.att.map((a, i) => ({ value: String(i), label: `${a[0]} ${a[1]}${a[2] === 0 ? " (tariffa da specificare)" : ` — ${formatEuro(a[2])} / ${formatEuro(a[3])} / ${formatEuro(a[4])}`}` }));
+  return comp.att.map((a, i) => ({ value: String(i), label: `${a[0]} ${a[1]}${a[2] === 0 ? " (tariffa da specificare)" : ` — da ${formatEuro(a[2])} a ${formatEuro(a[4])}`}` }));
 }
 
 // Tariffe forensi civili 2004 (diritti, onorari, stragiudiziale) per il calcolatore "Calcolo Nota Spese": solo codici e nomi delle attività, le tariffe le calcola il backend.
@@ -257,6 +258,41 @@ const NS_COMP_ONORARI = [
 function opzioniNotaSpese(righe: [string, string][] | undefined): { value: string; label: string }[] {
   return (righe || []).map((r, i) => ({ value: String(i), label: `${r[0]} ${r[1]}` }));
 }
+
+// Notula Penale: limiti dell'importo specificato per la voce della riga (null = voce a importo libero o non scelta).
+function limitiNotula(f: Record<string, any>, riga: Record<string, string>): Limiti | null {
+  const voce = NOTULA_PENALE_2004[f.competenza]?.att[parseInt(riga.indice, 10)];
+  if (!voce || voce[2] === 0) return null;
+  return limitiConDeroga(voce[2], voce[4], f.deroga_limiti || "", "penale");
+}
+const notulaHaSpecificate = (f: Record<string, any>) => (f.attivita || []).some((r: Record<string, string>) => tariffaEffettiva(r.tariffa, f.tariffa_predefinita) === "manuale");
+
+// Nota Spese: righe con importo specificato; i limiti vengono dal backend (f._intervalli, vedi intervalliNotaSpese).
+const NS_TABELLE_VOCI = (f: Record<string, any>, sez: SezioneNotaSpese): [string, string][] =>
+  (sez === "diritti" ? NS_DIRITTI[f.competenza_diritti] : sez === "onorari" ? NS_ONORARI[f.competenza_onorari] : NS_STRAG) || [];
+function limitiNotaSpese(f: Record<string, any>, sez: SezioneNotaSpese, riga: Record<string, string>): Limiti | null {
+  const iv = f._intervalli?.voci?.[sez]?.[parseInt(riga.indice, 10)];
+  if (!iv) return null;
+  return limitiConDeroga(iv.min, iv.max, sez === "diritti" ? "" : f.deroga_limiti || "", "civile"); // i diritti non hanno deroghe
+}
+const righeNotaSpese = (f: Record<string, any>): [SezioneNotaSpese, Record<string, string>[]][] =>
+  f.tariffario === "stragiudiziale" ? [["stragiudiziale", f.stragiudiziale || []]] : [["diritti", f.diritti || []], ["onorari", f.onorari || []]];
+const notaSpeseDerogaApplicabile = (f: Record<string, any>) =>
+  righeNotaSpese(f).some(([sez, righe]) => sez !== "diritti" && righe.some((r) => tariffaEffettiva(r.tariffa, f.tariffa_predefinita) === "manuale"));
+const campiRigaNotaSpese = (sez: SezioneNotaSpese, opzioniAttivita: (f: Record<string, any>) => { value: string; label: string }[], conSpese: boolean): CampoRigaLista[] => [
+  { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: opzioniAttivita },
+  { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
+  { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: TARIFFA_SCELTE_RIGA },
+  {
+    tipo: "numero", key: "valore", label: "Importo specificato €",
+    mostraSe: (r, f) => tariffaEffettiva(r.tariffa, f.tariffa_predefinita) === "manuale",
+    nota: (r, f) => { const l = limitiNotaSpese(f, sez, r); return l ? testoIntervallo(l) : null; },
+  },
+  ...(conSpese ? [
+    { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" } as CampoRigaLista,
+    { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" } as CampoRigaLista,
+  ] : []),
+];
 
 const PV_SCAGLIONI_ASSISTENZA = [
   { value: "10", label: "Fino a € 1.100" }, { value: "20", label: "Da € 1.101 a € 5.200" }, { value: "30", label: "Da € 5.201 a € 26.000" },
@@ -1824,22 +1860,23 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   "notula-penale-tariffario-2004": {
     campi: [
       { tipo: "scelta", key: "competenza", label: "Competenza", default: "1", opzioni: NOTULA_PENALE_ORDINE.map((k) => ({ value: k, label: NOTULA_PENALE_2004[k].nome })) },
-      { tipo: "scelta", key: "tariffa_predefinita", label: "Tariffa predefinita", default: "media", opzioni: [
-        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
-      ] },
+      { tipo: "scelta", key: "tariffa_predefinita", label: "Tariffa predefinita", default: "minima", opzioni: TARIFFA_SCELTE },
       {
         tipo: "lista", key: "attivita", label: "Attività", etichettaAggiungi: "Aggiungi un'attività",
         campiRiga: [
           { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: opzioniAttivitaNotula },
           { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
-          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
-            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
-          ] },
-          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
+          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: TARIFFA_SCELTE_RIGA },
+          {
+            tipo: "numero", key: "valore", label: "Importo specificato €",
+            mostraSe: (r, f) => tariffaEffettiva(r.tariffa, f.tariffa_predefinita) === "manuale",
+            nota: (r, f) => { const l = limitiNotula(f, r); return l ? testoIntervallo(l) : null; },
+          },
           { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" },
           { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" },
         ],
       },
+      { tipo: "scelta", key: "deroga_limiti", label: "Deroga ai limiti (solo per gli importi specificati)", default: "", mostraSe: notulaHaSpecificate, opzioni: DEROGHE_NOTULA_PENALE },
       { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
       { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto", default: true },
@@ -1860,9 +1897,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "rip_tipo", label: "Operazione", default: "", opzioni: [
         { value: "", label: "Nessuna" }, { value: "tariffa", label: "Ricalcola tutto a una tariffa" }, { value: "variazione", label: "Aumenta o riduci le tariffe di una percentuale" }, { value: "forza_totale", label: "Forza il totale" },
       ] },
-      { tipo: "scelta", key: "rip_tariffa", label: "Tariffa", default: "media", mostraSe: (f) => f.rip_tipo === "tariffa", opzioni: [
-        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
-      ] },
+      { tipo: "scelta", key: "rip_tariffa", label: "Tariffa", default: "minima", mostraSe: (f) => f.rip_tipo === "tariffa", opzioni: TARIFFA_MINIMA_MASSIMA },
       { tipo: "bool", key: "rip_incl", label: "Comprese le tariffe personalizzate", default: false, mostraSe: (f) => f.rip_tipo === "tariffa" },
       { tipo: "scelta", key: "rip_dir", label: "Variazione", default: "aumenta", mostraSe: (f) => f.rip_tipo === "variazione", opzioni: [{ value: "aumenta", label: "Aumenta" }, { value: "riduci", label: "Riduci" }] },
       { tipo: "numero", key: "rip_pct", label: "Percentuale", default: "", mostraSe: (f) => f.rip_tipo === "variazione" },
@@ -1875,9 +1910,15 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       for (const r of righe) {
         if (r.indice === "" || r.indice == null) return "Scegli l'attività in ogni riga.";
         if (!(Math.floor(parseNumeroIt(r.quantita)) >= 1)) return "La quantità deve essere almeno 1.";
-        if (r.tariffa === "manuale" && !(parseNumeroIt(r.valore) > 0)) return "Indica la tariffa specificata.";
+        const tar = tariffaEffettiva(r.tariffa, f.tariffa_predefinita);
+        if (tar === "manuale" && !(parseNumeroIt(r.valore) > 0)) return "Indica l'importo specificato.";
         const voce = NOTULA_PENALE_2004[f.competenza]?.att[parseInt(r.indice, 10)];
-        if (voce && voce[2] === 0 && r.tariffa !== "manuale") return `Per l'attività ${voce[0]} la tariffa va specificata.`;
+        if (voce && voce[2] === 0 && tar !== "manuale") return `Per l'attività ${voce[0]} la tariffa va specificata.`;
+        if (voce && tar === "manuale") {
+          const lim = limitiNotula(f, r);
+          const err = lim && erroreImporto(voce[0], voce[1], parseNumeroIt(r.valore), lim, !!f.deroga_limiti);
+          if (err) return err;
+        }
       }
       if (f.rip_tipo === "variazione" && !(parseNumeroIt(f.rip_pct) > 0)) return "Indica la percentuale di variazione.";
       if (f.rip_tipo === "forza_totale" && !(parseNumeroIt(f.rip_totale) > 0)) return "Indica il totale da ottenere.";
@@ -1886,13 +1927,14 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     buildBody: (f) => ({
       competenza: f.competenza,
       attivita: (f.attivita || []).map((r: Record<string, string>) => {
-        const tar = r.tariffa === "predefinita" ? f.tariffa_predefinita : r.tariffa;
+        const tar = tariffaEffettiva(r.tariffa, f.tariffa_predefinita);
         return {
           indice: parseInt(r.indice, 10), quantita: Math.floor(parseNumeroIt(r.quantita)) || 1, tariffa: tar,
           valore_manuale: tar === "manuale" ? parseNumeroIt(r.valore) : null,
           spese_esenti: parseNumeroIt(r.spese_esenti), spese_imponibili: parseNumeroIt(r.spese_imponibili),
         };
       }),
+      deroga_limiti: notulaHaSpecificate(f) ? f.deroga_limiti || "" : "",
       applica_spese_generali: !!f.spese_generali, spese_generali_pct: parseNumeroIt(f.pct_spese_generali),
       applica_ritenuta: !!f.ritenuta, regime: parseInt(f.regime, 10) || 0, applica_bollo: f.regime !== "0" && !!f.bollo,
       anticipi: (f.anticipi || []).map((a: Record<string, string>) => ({
@@ -1949,48 +1991,22 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "specificato", label: "Specificato" }, { value: "indeterminabile", label: "Indeterminabile" }, { value: "indeterminabile_importanza", label: "Indeterminabile e di particolare importanza" },
       ] },
       { tipo: "numero", key: "valore_causa", label: "Valore della causa €", default: "", mostraSe: (f) => f.valore_tipo === "specificato" },
-      { tipo: "scelta", key: "tariffa_predefinita", label: "Tariffa predefinita", default: "media", opzioni: [
-        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
-      ] },
+      { tipo: "scelta", key: "tariffa_predefinita", label: "Tariffa predefinita", default: "minima", opzioni: TARIFFA_SCELTE },
       { tipo: "scelta", key: "competenza_diritti", label: "Competenza (diritti)", default: "1", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_DIRITTI },
       {
         tipo: "lista", key: "diritti", label: "Diritti", etichettaAggiungi: "Aggiungi un diritto", mostraSe: (f) => f.tariffario === "civile", nota: (f) => f._intervalli?.errori.diritti ?? null,
-        campiRiga: [
-          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_DIRITTI[f.competenza_diritti]) },
-          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
-          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
-            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
-          ] },
-          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
-          { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" },
-          { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" },
-        ],
+        campiRiga: campiRigaNotaSpese("diritti", (f) => opzioniNotaSpese(NS_DIRITTI[f.competenza_diritti]), true),
       },
       { tipo: "scelta", key: "competenza_onorari", label: "Competenza (onorari)", default: "11", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_ONORARI },
       {
         tipo: "lista", key: "onorari", label: "Onorari", etichettaAggiungi: "Aggiungi un onorario", mostraSe: (f) => f.tariffario === "civile", nota: (f) => f._intervalli?.errori.onorari ?? null,
-        campiRiga: [
-          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_ONORARI[f.competenza_onorari]) },
-          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
-          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
-            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
-          ] },
-          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
-        ],
+        campiRiga: campiRigaNotaSpese("onorari", (f) => opzioniNotaSpese(NS_ONORARI[f.competenza_onorari]), false),
       },
       {
         tipo: "lista", key: "stragiudiziale", label: "Attività stragiudiziali", etichettaAggiungi: "Aggiungi un'attività", mostraSe: (f) => f.tariffario === "stragiudiziale", nota: (f) => f._intervalli?.errori.stragiudiziale ?? null,
-        campiRiga: [
-          { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: () => opzioniNotaSpese(NS_STRAG) },
-          { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
-          { tipo: "scelta", key: "tariffa", label: "Tariffa", default: "predefinita", opzioni: [
-            { value: "predefinita", label: "Predefinita" }, { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "manuale", label: "Specificata" },
-          ] },
-          { tipo: "numero", key: "valore", label: "Tariffa specificata € (solo se 'Specificata')" },
-          { tipo: "numero", key: "spese_esenti", label: "Spese esenti €" },
-          { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili €" },
-        ],
+        campiRiga: campiRigaNotaSpese("stragiudiziale", () => opzioniNotaSpese(NS_STRAG), true),
       },
+      { tipo: "scelta", key: "deroga_limiti", label: "Deroga ai limiti (solo per gli importi specificati di onorari e stragiudiziale)", default: "", mostraSe: notaSpeseDerogaApplicabile, opzioni: DEROGHE_NOTA_SPESE },
       { tipo: "bool", key: "spese_generali", label: "Spese generali", default: true },
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.spese_generali },
       { tipo: "bool", key: "ritenuta", label: "Ritenuta d'acconto", default: true },
@@ -2011,9 +2027,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "scelta", key: "rip_tipo", label: "Operazione", default: "", opzioni: [
         { value: "", label: "Nessuna" }, { value: "tariffa", label: "Ricalcola tutto a una tariffa" }, { value: "variazione", label: "Aumenta o riduci le tariffe di una percentuale" }, { value: "forza_totale", label: "Forza il totale" },
       ] },
-      { tipo: "scelta", key: "rip_tariffa", label: "Tariffa", default: "media", mostraSe: (f) => f.rip_tipo === "tariffa", opzioni: [
-        { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" },
-      ] },
+      { tipo: "scelta", key: "rip_tariffa", label: "Tariffa", default: "minima", mostraSe: (f) => f.rip_tipo === "tariffa", opzioni: TARIFFA_MINIMA_MASSIMA },
       { tipo: "bool", key: "rip_incl", label: "Comprese le tariffe personalizzate", default: false, mostraSe: (f) => f.rip_tipo === "tariffa" },
       { tipo: "scelta", key: "rip_dir", label: "Variazione", default: "aumenta", mostraSe: (f) => f.rip_tipo === "variazione", opzioni: [{ value: "aumenta", label: "Aumenta" }, { value: "riduci", label: "Riduci" }] },
       { tipo: "numero", key: "rip_pct", label: "Percentuale", default: "", mostraSe: (f) => f.rip_tipo === "variazione" },
@@ -2031,7 +2045,17 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       for (const r of righe) {
         if (r.indice === "" || r.indice == null) return "Scegli l'attività in ogni riga.";
         if (!(Math.floor(parseNumeroIt(r.quantita)) >= 1)) return "La quantità deve essere almeno 1.";
-        if (r.tariffa === "manuale" && !(parseNumeroIt(r.valore) > 0)) return "Indica la tariffa specificata.";
+      }
+      for (const [sez, lista] of righeNotaSpese(f)) {
+        for (const r of lista) {
+          if (tariffaEffettiva(r.tariffa, f.tariffa_predefinita) !== "manuale") continue;
+          const importo = parseNumeroIt(r.valore);
+          if (!(importo > 0)) return "Indica l'importo specificato.";
+          const lim = limitiNotaSpese(f, sez, r);
+          const voce = NS_TABELLE_VOCI(f, sez)[parseInt(r.indice, 10)];
+          const err = lim && voce && erroreImporto(voce[0], voce[1], importo, lim, sez !== "diritti" && !!f.deroga_limiti);
+          if (err) return err;
+        }
       }
       if (f.rip_tipo === "variazione" && !(parseNumeroIt(f.rip_pct) > 0)) return "Indica la percentuale di variazione.";
       if (f.rip_tipo === "forza_totale" && !(parseNumeroIt(f.rip_totale) > 0)) return "Indica il totale da ottenere.";
@@ -2039,7 +2063,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     },
     buildBody: (f) => {
       const righe = (lista: Record<string, string>[]) => (lista || []).map((r) => {
-        const tar = r.tariffa === "predefinita" ? f.tariffa_predefinita : r.tariffa;
+        const tar = tariffaEffettiva(r.tariffa, f.tariffa_predefinita);
         return {
           indice: parseInt(r.indice, 10), quantita: Math.floor(parseNumeroIt(r.quantita)) || 1, tariffa: tar,
           valore_manuale: tar === "manuale" ? parseNumeroIt(r.valore) : null,
@@ -2050,6 +2074,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       return {
         tariffario: f.tariffario, valore_tipo: f.valore_tipo, valore_causa: f.valore_tipo === "specificato" ? parseNumeroIt(f.valore_causa) : 0,
         competenza_diritti: parseInt(f.competenza_diritti, 10) || 1, competenza_onorari: parseInt(f.competenza_onorari, 10) || 11,
+        deroga_limiti: notaSpeseDerogaApplicabile(f) ? f.deroga_limiti || "" : "",
         diritti: strag ? [] : righe(f.diritti), onorari: strag ? [] : righe(f.onorari), stragiudiziale: strag ? righe(f.stragiudiziale) : [],
         applica_spese_generali: !!f.spese_generali, spese_generali_pct: parseNumeroIt(f.pct_spese_generali),
         applica_ritenuta: !!f.ritenuta, regime: parseInt(f.regime, 10) || 0, applica_bollo: f.regime !== "0" && !!f.bollo,
@@ -4627,7 +4652,7 @@ function datiInseritiGenerici(campi: CampoGenerico[], form: Record<string, any>)
       (Array.isArray(v) ? v : []).forEach((riga: Record<string, string>, i: number) => {
         const parti: string[] = [];
         for (const cr of c.campiRiga) {
-          if (cr.mostraSe && !cr.mostraSe(riga)) continue;
+          if (cr.mostraSe && !cr.mostraSe(riga, form)) continue;
           const rv = riga[cr.key];
           if (!pieno(rv)) continue;
           const val = cr.tipo === "data" ? isoToDataIt(rv) : cr.tipo === "scelta" ? etichettaOpz(typeof cr.opzioni === "function" ? cr.opzioni(form) : cr.opzioni, rv) : rv;

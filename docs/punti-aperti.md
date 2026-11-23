@@ -50,6 +50,8 @@ VoiceOver; esportazione PDF con piano gratuito (filigrana, nessuna intestazione)
 - Danno non Patrimoniale: tabella generica e Roma 2010 oltre 50 punti non disponibili.
 - Parametri civili e stragiudiziali: IVA, cassa e ritenuta non verificabili sul sito senza accesso.
 - Prescrizione Reati: il sito scrive "1" per il primo del mese; l'app mostra le date in formato numerico.
+- Tariffe 2004 (Tariffe Forensi e Nota Spese): i valori seguono il D.M. 127/2004 anche dove il sito di riferimento differisce (voci corrette del punto 13 e altre tre; fasce 2.582.300-5.164.600 e oltre 5.164.600 con coefficienti e tetto del 3%; Giudice di Pace: nessuna tariffa oltre 2.600 €). Dettaglio: `docs/tariffe-2004-decreto.md` del backend.
+- Tariffe 2004: niente tariffa Media (solo Minima, Massima, Specificata, partenza Minima); l'importo specificato deve stare nei limiti del decreto (superabili solo con le deroghe dell'art. 5 commi 2-3 e art. 4 comma 2 del Cap. I e dell'art. 1 commi 2, 3, 6 del Cap. II); consultazione senza colonna Medio. Il sito di riferimento mostra Media e non controlla i limiti.
 
 ## Lato utente
 
