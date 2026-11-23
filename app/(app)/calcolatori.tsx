@@ -609,7 +609,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       },
       { tipo: "bool", key: "accordo_raggiunto", label: "Accordo raggiunto", default: true },
       { tipo: "numero", key: "maggiorazione_discrezionale_pct", label: "Maggiorazione discrezionale dell'organismo sull'accordo (0-20%)", default: "0", mostraSe: (f) => !!f.accordo_raggiunto },
-      { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: false },
+      { tipo: "bool", key: "applica_iva", label: "Applica IVA (22%)", default: true },
     ],
     endpoint: "/calc/compenso-mediazione",
     risultato: (r) => [
@@ -710,7 +710,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         { value: "473bis28", label: "Comparse e repliche (udienza di discussione, art. 473-bis.28 c.p.c.)" },
       ] },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
-      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: true },
     ],
     endpoint: "/calc/termini-separazione-divorzio",
     risultato: (r) => [
@@ -726,7 +726,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
   },
   "termini-esecuzioni": {
     campi: [
-      { tipo: "scelta", key: "tipo", label: "Tipo di pignoramento", default: "immobiliare", opzioni: [
+      { tipo: "scelta", key: "tipo", label: "Tipo di pignoramento", default: "mobiliare", opzioni: [
         { value: "mobiliare", label: "Mobiliare" }, { value: "immobiliare", label: "Immobiliare" },
         { value: "presso_terzi", label: "Presso terzi" }, { value: "autoveicoli", label: "Autoveicoli" },
       ] },
@@ -754,7 +754,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "giorni_primo_termine", label: "Giorni per il primo termine", default: "" },
       { tipo: "numero", key: "giorni_secondo_termine", label: "Giorni per il secondo termine", default: "" },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
-      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: true },
       { tipo: "bool", key: "prudenziale", label: "Calcolo prudenziale (termine più favorevole)", default: false },
     ],
     endpoint: "/calc/termini-procedimento-semplificato",
@@ -776,7 +776,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     campi: [
       { tipo: "data", key: "data_udienza", label: "Data udienza di precisazione delle conclusioni" },
       { tipo: "bool", key: "escludi_feriale", label: "Applica sospensione feriale (1-31 agosto)", default: true },
-      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: false },
+      { tipo: "bool", key: "escludi_covid", label: "Applica sospensione Covid-19 (9/3-11/5/2020)", default: true },
     ],
     endpoint: "/calc/termini-deposito-appello",
     risultato: (r) => [
