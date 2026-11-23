@@ -26,6 +26,8 @@ import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
 import { cercaVociCalcolatori } from "@/src/utils/ricercaCalcolatori";
+import { INTERVALLI_VUOTI, richiesteIntervalli, intervalliDaRisposta, type IntervalliNotaSpese } from "@/src/utils/intervalliNotaSpese";
+import type { RisultatoTariffe } from "@/src/utils/tariffeForensi2004";
 import { formatEuro, parseNumeroIt, isoToDataIt } from "@/src/utils/formatoItaliano";
 import { generaPreventivoStragiudiziale } from "@/src/documenti/preventivoStragiudiziale";
 import { generaRicevutaOccasionale } from "@/src/documenti/ricevutaOccasionale";
@@ -1952,7 +1954,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       ] },
       { tipo: "scelta", key: "competenza_diritti", label: "Competenza (diritti)", default: "1", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_DIRITTI },
       {
-        tipo: "lista", key: "diritti", label: "Diritti", etichettaAggiungi: "Aggiungi un diritto", mostraSe: (f) => f.tariffario === "civile",
+        tipo: "lista", key: "diritti", label: "Diritti", etichettaAggiungi: "Aggiungi un diritto", mostraSe: (f) => f.tariffario === "civile", nota: (f) => f._intervalli?.errori.diritti ?? null,
         campiRiga: [
           { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_DIRITTI[f.competenza_diritti]) },
           { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
@@ -1966,7 +1968,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       },
       { tipo: "scelta", key: "competenza_onorari", label: "Competenza (onorari)", default: "11", mostraSe: (f) => f.tariffario === "civile", opzioni: NS_COMP_ONORARI },
       {
-        tipo: "lista", key: "onorari", label: "Onorari", etichettaAggiungi: "Aggiungi un onorario", mostraSe: (f) => f.tariffario === "civile",
+        tipo: "lista", key: "onorari", label: "Onorari", etichettaAggiungi: "Aggiungi un onorario", mostraSe: (f) => f.tariffario === "civile", nota: (f) => f._intervalli?.errori.onorari ?? null,
         campiRiga: [
           { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: (f) => opzioniNotaSpese(NS_ONORARI[f.competenza_onorari]) },
           { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
@@ -1977,7 +1979,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
         ],
       },
       {
-        tipo: "lista", key: "stragiudiziale", label: "Attività stragiudiziali", etichettaAggiungi: "Aggiungi un'attività", mostraSe: (f) => f.tariffario === "stragiudiziale",
+        tipo: "lista", key: "stragiudiziale", label: "Attività stragiudiziali", etichettaAggiungi: "Aggiungi un'attività", mostraSe: (f) => f.tariffario === "stragiudiziale", nota: (f) => f._intervalli?.errori.stragiudiziale ?? null,
         campiRiga: [
           { tipo: "scelta", key: "indice", label: "Attività", default: "", opzioni: () => opzioniNotaSpese(NS_STRAG) },
           { tipo: "numero", key: "quantita", label: "Quantità (1-99)", default: "1" },
@@ -2022,6 +2024,9 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       const strag = f.tariffario === "stragiudiziale";
       const righe: Record<string, string>[] = strag ? f.stragiudiziale || [] : [...(f.diritti || []), ...(f.onorari || [])];
       if (f.valore_tipo === "specificato" && !(parseNumeroIt(f.valore_causa) > 0)) return "Indica il valore della causa.";
+      // Rifiuto del backend per il valore scelto (es. Giudice di Pace oltre 2.600 €): niente calcolo, si mostra il suo messaggio.
+      const rifiuto = strag ? f._intervalli?.errori.stragiudiziale : f._intervalli?.errori.onorari || f._intervalli?.errori.diritti;
+      if (rifiuto) return rifiuto;
       if (!righe.length) return "Selezionare almeno un'attività.";
       for (const r of righe) {
         if (r.indice === "" || r.indice == null) return "Scegli l'attività in ogni riga.";
@@ -4850,6 +4855,8 @@ export default function Calcolatori() {
   const [savingCtu, setSavingCtu] = React.useState(false);
   // Calcolatori "generici" (termini di scadenza e parametri forensi, vedi CONFIG_GENERICI)
   const [genForm, setGenForm] = React.useState<Record<string, any>>({});
+  // Nota Spese: minimo e massimo di ogni voce (dal backend) e eventuale rifiuto del backend per il valore scelto.
+  const [intervalliNS, setIntervalliNS] = React.useState<IntervalliNotaSpese>(INTERVALLI_VUOTI);
   const [genRisultato, setGenRisultato] = React.useState<any>(null);
   const [genCalcolando, setGenCalcolando] = React.useState(false);
   const [genSaving, setGenSaving] = React.useState(false);
@@ -5385,10 +5392,36 @@ export default function Calcolatori() {
     });
   };
 
+  // Nota Spese: legge dal backend le tariffe delle voci per il valore e le competenze scelti (con una breve attesa
+  // mentre si scrive il valore). Un rifiuto del backend (es. Giudice di Pace oltre 2.600 €) resta come messaggio.
+  const notaSpeseAperta = calcAperto === "nota-spese-tariffe-2004";
+  const nsTariffario = genForm.tariffario, nsTipo = genForm.valore_tipo, nsValore = genForm.valore_causa;
+  const nsCompDiritti = genForm.competenza_diritti, nsCompOnorari = genForm.competenza_onorari;
+  React.useEffect(() => {
+    if (!notaSpeseAperta) return;
+    const richieste = richiesteIntervalli({ tariffario: nsTariffario, valore_tipo: nsTipo, competenza_diritti: nsCompDiritti, competenza_onorari: nsCompOnorari }, parseNumeroIt(nsValore));
+    if (!richieste.length) { setIntervalliNS(INTERVALLI_VUOTI); return; }
+    let annullata = false;
+    const timer = setTimeout(async () => {
+      const nuovo: IntervalliNotaSpese = { voci: { diritti: {}, onorari: {}, stragiudiziale: {} }, errori: {} };
+      for (const { sezione, qs } of richieste) {
+        try {
+          const r = await api.get<RisultatoTariffe>(`/tariffe-forensi-2004?${qs}`);
+          nuovo.voci[sezione] = intervalliDaRisposta(r);
+        } catch (e: any) {
+          if (!(e instanceof TypeError)) nuovo.errori[sezione] = e?.message || "Tariffe non disponibili.";
+        }
+      }
+      if (!annullata) setIntervalliNS(nuovo);
+    }, 400);
+    return () => { annullata = true; clearTimeout(timer); };
+  }, [notaSpeseAperta, nsTariffario, nsTipo, nsValore, nsCompDiritti, nsCompOnorari]);
+  const genFormEsteso = React.useMemo(() => ({ ...genForm, _intervalli: intervalliNS }), [genForm, intervalliNS]);
+
   const calcolaGenerico = async () => {
     const cfg = CONFIG_GENERICI[calcAperto as string];
     if (!cfg) return;
-    const errore = cfg.validate?.(genForm);
+    const errore = cfg.validate?.(genFormEsteso);
     if (errore) {
       Alert.alert("Non disponibile", errore);
       return;
@@ -7223,13 +7256,16 @@ export default function Calcolatori() {
                       return (
                         <View key={c.key} style={{ marginTop: SPACING.md }}>
                           <Text style={[st.lbl, { color: t.onSurfaceSecondary }]}>{c.label}</Text>
+                          {c.nota?.(genFormEsteso) ? (
+                            <Text testID={`gen-${c.key}-avviso`} accessibilityRole="alert" style={{ color: t.warning, fontWeight: "700", fontSize: 12, marginBottom: SPACING.sm }}>{c.nota(genFormEsteso)}</Text>
+                          ) : null}
                           <ListaInput
                             testID={`gen-${c.key}`}
                             value={genForm[c.key] || []}
                             onChange={(v) => setGenForm({ ...genForm, [c.key]: v })}
                             campiRiga={c.campiRiga}
                             etichettaAggiungi={c.etichettaAggiungi}
-                            form={genForm}
+                            form={genFormEsteso}
                           />
                         </View>
                       );
