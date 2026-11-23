@@ -2885,7 +2885,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
       { tipo: "numero", key: "spese_non_esenti", label: "Spese imponibili IVA €", default: "0" },
       { tipo: "bool", key: "applica_spese_generali", label: "Includi spese generali (art. 13 L. 247/2012)", default: true },
       { tipo: "numero", key: "pct_spese_generali", label: "Percentuale spese generali", default: "15", mostraSe: (f) => !!f.applica_spese_generali },
-      { tipo: "numero", key: "pct_cassa", label: "Percentuale cassa previdenziale (4% ENPAP, altre casse diverse)", default: "4" },
+      { tipo: "numero", key: "pct_cassa", label: "Percentuale cassa previdenziale (4% ENPAP, altre casse diverse)", default: "0" },
       { tipo: "bool", key: "regime_semplificato", label: "Regime fiscale semplificato (no IVA)", default: false },
       { tipo: "scelta", key: "tipo_regime", label: "Tipo Regime", default: "forfettario_2014", mostraSe: (f) => !!f.regime_semplificato, opzioni: [
         { value: "forfettario_2014", label: "Regime forfettario agevolato 2014" }, { value: "vantaggio_2011", label: "Regime di vantaggio 2011" }, { value: "minimi_2008", label: "Regime dei minimi 2008" },
@@ -2901,7 +2901,7 @@ const CONFIG_GENERICI: Record<string, ConfigGenerico> = {
     buildBody: (f) => ({
       importo: parseNumeroIt(f.importo), spese_esenti: parseNumeroIt(f.spese_esenti), spese_non_esenti: parseNumeroIt(f.spese_non_esenti),
       applica_spese_generali: f.applica_spese_generali, pct_spese_generali: parseNumeroIt(f.pct_spese_generali),
-      pct_cassa: parseNumeroIt(f.pct_cassa) || 4,
+      pct_cassa: String(f.pct_cassa ?? "").trim() === "" ? 4 : parseNumeroIt(f.pct_cassa),
       regime_semplificato: f.regime_semplificato, pct_iva: f.regime_semplificato ? 22 : (parseNumeroIt(f.pct_iva) || 22),
       applica_ritenuta: f.applica_ritenuta, pct_ritenuta: parseNumeroIt(f.pct_ritenuta),
       iva_per_cassa: !!f.iva_per_cassa, split_payment: !!f.split_payment,

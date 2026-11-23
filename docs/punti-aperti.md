@@ -22,11 +22,14 @@ Il calcolatore usa serie mensili (Istat FOI, BOT, Rendistato) che il sito di rif
 
 ## Decisioni dell'utente
 
-- **Campi che l'app ha e il sito di riferimento no** (vedi `danno-non-patrimoniale-e-differenze-frontend.md`): Scorporo Importi "Percentuale cassa previdenziale" (proposta: valore di partenza 0), Giorni Lavorativi "Chiusura estiva", Calcolo Eredità "Quota di legittima", Prescrizione e decadenza "Data ultimo atto interruttivo" (proposta: tenere gli ultimi tre).
 - **Valori di partenza diversi dal sito**: IVA spuntata in Spese di Mediazione; "Mobiliare" in Termini Esecuzioni; sospensione Covid 2020 nei termini (Procedimento Semplificato, Deposito Atti Appello, Separazione e Divorzio). Proposta: allinearli al sito.
 - **Informativa privacy** (`static/privacy.html` nel backend): mancano titolare del trattamento, indirizzo, eventuale partita IVA ed email di contatto. È il testo accettato alla registrazione.
 - **Abbonamenti**: la schermata dei piani non dice che l'abbonamento si rinnova né come si disdice; non esistono condizioni d'uso. Da sistemare prima di attivare i pagamenti reali.
 - Quote documenti provvisorie (500 MB Free e No-Ads, 10 GB Pro, 50 GB Studio); 45 voci di menù "in arrivo" che non sono calcolatori; pubblicità sul piano Free (servirà il consenso); testo della filigrana del PDF gratuito (provvisorio: "MyStudioLegale – versione gratuita").
+
+## Decisioni prese
+
+- **Campi che l'app ha e il sito di riferimento no** (23/11/2026, vedi `danno-non-patrimoniale-e-differenze-frontend.md`): Scorporo Importi "Percentuale cassa previdenziale" resta, con valore di partenza 0 (il risultato senza modifiche coincide con il sito); Giorni Lavorativi "Chiusura estiva", Calcolo Eredità "Quota di legittima" e Prescrizione e decadenza "Data ultimo atto interruttivo" restano come sono.
 
 ## Da provare su iPhone (build #95)
 
