@@ -13,7 +13,9 @@ export type CampoRigaLista = (
   | { tipo: "scelta"; key: string; label: string; opzioni: { value: string; label: string }[] | ((form: Record<string, any>) => { value: string; label: string }[]); default?: string }
 ) & {
   // Se presente, il campo compare solo quando la funzione (che riceve la riga) restituisce true.
-  mostraSe?: (riga: Record<string, string>) => boolean;
+  mostraSe?: (riga: Record<string, string>, form: Record<string, any>) => boolean;
+  // Se presente, sotto il campo compare questo testo (es. l'intervallo ammesso per un importo).
+  nota?: (riga: Record<string, string>, form: Record<string, any>) => string | null;
 };
 
 function rigaVuota(campiRiga: CampoRigaLista[]): Record<string, string> {
@@ -58,7 +60,7 @@ export default function ListaInput({
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
           </View>
-          {campiRiga.filter((c) => !c.mostraSe || c.mostraSe(riga)).map((c) => (
+          {campiRiga.filter((c) => !c.mostraSe || c.mostraSe(riga, form || {})).map((c) => (
             <View key={c.key} style={{ marginTop: SPACING.xs }}>
               <Text style={{ fontSize: 11, fontWeight: "600", color: t.onSurfaceSecondary, marginBottom: 4 }}>{c.label}</Text>
               {c.tipo === "data" ? (
@@ -78,6 +80,9 @@ export default function ListaInput({
                   }}
                 />
               )}
+              {c.nota?.(riga, form || {}) ? (
+                <Text testID={testID ? `${testID}-${indice}-${c.key}-nota` : undefined} style={{ fontSize: 11, color: t.onSurfaceSecondary, marginTop: 4 }}>{c.nota(riga, form || {})}</Text>
+              ) : null}
             </View>
           ))}
         </View>
