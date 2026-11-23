@@ -23,12 +23,6 @@ jobs:
 
       - run: eas build --platform ios --profile production --local --non-interactive --output build.ipa
 
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: mystudiolegale-ios
-          path: build.ipa
-
       - name: Prepare App Store Connect API Key
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
