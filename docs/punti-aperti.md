@@ -1,6 +1,6 @@
 # Punti aperti
 
-Elenco unico delle cose rimaste da fare o da decidere. Aggiornato al 22/11/2026, dopo la build iOS #95 (commit `6195bc0`) e il deploy del backend `4c9383d`.
+Elenco unico delle cose rimaste da fare o da decidere. Aggiornato al 23/11/2026, dopo la build iOS #97 (commit `88b4382`) e il deploy del backend `5b23b92`.
 
 ## Da pianificare
 
@@ -17,7 +17,8 @@ App Store Connect ha accettato la build 111 con un avviso (ITMS-90725): l'app è
 Il calcolatore usa serie mensili (Istat FOI, BOT, Rendistato) che il sito di riferimento aggiorna una volta al mese, dopo la metà del mese. Se non si aggiornano anche da noi, per l'anno in corso l'ultimo mese vale zero e la media annuale è un po' sbagliata (gli anni passati non cambiano).
 
 - Dati aggiornati fino a ottobre 2026 (letti il 22/11/2026): costanti `MAGGIOR_DANNO_DATI_FINO_A` e `MAGGIOR_DANNO_DATI_LETTI_IL` in `server.py` del backend.
-- Procedura: `docs/maggior-danno-taeg.md` nel backend, sezione "Ogni quanto il sito aggiorna". Un calcolo per riferimento sul sito, un commit, un test, un deploy. Indicativamente dal 20 di ogni mese.
+- Procedura: `docs/maggior-danno-taeg.md` nel backend, sezione "Ogni quanto il sito aggiorna". Un calcolo per riferimento sul sito, un commit, un test. Indicativamente dal 20 di ogni mese.
+- Lo fa da sola la sessione di manutenzione (giri del 21 e del 2 del mese): apre le PR ma non le unisce. Unendo la PR del backend il deploy parte da solo; con la PR del frontend serve poi una build.
 - Nell'app la data massima (sia inizio sia fine) è la costante `MAGGIOR_DANNO_DATA_MASSIMA` in `app/(app)/calcolatori.tsx`: va aggiornata ogni mese insieme a `MAGGIOR_DANNO_DATI_FINO_A` del backend. Se non si aggiorna, l'app accetta date per cui il calcolo non ha tassi.
 
 ### Aggiornamento annuale delle tabelle ACI (Rimborso Chilometrico)
@@ -26,7 +27,16 @@ Il comunicato dell'Agenzia delle Entrate con le tabelle nazionali dei costi chil
 
 - Procedura: `docs/rimborso-aci.md` nel backend (scaricare il PDF, `python3 -I tools/importa_tabelle_aci.py <anno> <pdf>`, controllare le righe, test, commit). L'app legge gli anni dal server: nessuna modifica al frontend.
 - Da provare su iPhone: ricerca con tastiera, cambio anno, chilometri con virgola e punto, PDF e Word, VoiceOver (elenco in `docs/rimborso-aci.md`, sezione "Da provare su iPhone").
-- Gli endpoint sono nel backend su `main` ma non ancora in produzione finché non si lancia il deploy su Render.
+- Gli endpoint sono in produzione dal 23/11/2026.
+
+### Fornitori: passi successivi
+
+Stato al 23/11/2026 dopo il controllo dei fornitori (dettaglio in `docs/revisione-sicurezza-novembre.md` del backend).
+
+- **Render in Europa, piano a pagamento**: oggi Oregon (USA), piano Free. La regione non si cambia: serve un servizio nuovo a Francoforte, le stesse variabili, il nuovo indirizzo nell'app (quindi una build). Con il piano a pagamento il server non si addormenta (niente cronjob "Sveglia") e ha indirizzi in uscita fissi.
+- **MongoDB Atlas, accesso dalla rete**: oggi `0.0.0.0/0`, necessario perché Render Free non ha indirizzi fissi. Con Render a pagamento si mettono solo gli indirizzi di Render.
+- **MongoDB Atlas, spazio**: piano M0, 144 MB usati su 512 MB (23/11/2026). A database pieno l'app non salva più: passare a un piano a pagamento prima (che include anche i backup di Atlas).
+- **Cloudflare R2, giurisdizione UE**: il bucket `lexflow-documenti` ha solo l'indicazione "Eastern Europe (EEUR)". Il vincolo "EU jurisdiction" si sceglie solo creando un bucket nuovo: bucket nuovo, copia dei file (4 MB), nuove variabili su Render. Da fare insieme allo spostamento di Render.
 
 ## Decisioni dell'utente
 
@@ -39,9 +49,9 @@ Il comunicato dell'Agenzia delle Entrate con le tabelle nazionali dei costi chil
 - **Campi che l'app ha e il sito di riferimento no** (23/11/2026, vedi `danno-non-patrimoniale-e-differenze-frontend.md`): Scorporo Importi "Percentuale cassa previdenziale" resta, con valore di partenza 0 (il risultato senza modifiche coincide con il sito); Giorni Lavorativi "Chiusura estiva", Calcolo Eredità "Quota di legittima" e Prescrizione e decadenza "Data ultimo atto interruttivo" restano come sono.
 - **Valori di partenza diversi dal sito** (23/11/2026, controllati sul sito senza inviare moduli): Spese di Mediazione con IVA spuntata; Termini Esecuzioni con tipo di pignoramento "Mobiliare"; sospensione Covid-19 spuntata in Procedimento Semplificato, Deposito Atti Appello e Separazione e Divorzio. Nessun valore del sito era diverso da quanto previsto.
 
-## Da provare su iPhone (build #95)
+## Da provare su iPhone (build #97)
 
-VoiceOver; esportazione PDF con piano gratuito (filigrana, nessuna intestazione) e con piano a pagamento (intestazione, anche Word); Preventivo Cause Civili (importo salvato uguale a quello mostrato); Danno non Patrimoniale (Milano e Roma); Ammortamento con un mutuo lungo (centinaia di righe di risultato).
+Barra di ricerca nel tab Calcolatori; Calcolatrice; Rimborso Chilometrico ACI; Hash; Tariffe 2004 (Minima/Massima/Specificata, tendina delle deroghe); VoiceOver; esportazione PDF con piano gratuito (filigrana, nessuna intestazione) e con piano a pagamento (intestazione, anche Word); Preventivo Cause Civili (importo salvato uguale a quello mostrato); Danno non Patrimoniale (Milano e Roma); Ammortamento con un mutuo lungo (centinaia di righe di risultato).
 
 ## Differenze note con il sito di riferimento
 
@@ -55,7 +65,8 @@ VoiceOver; esportazione PDF con piano gratuito (filigrana, nessuna intestazione)
 
 ## Lato utente
 
-- Render: ricollegare il repository per i deploy automatici; spostare il servizio in una regione europea.
-- MongoDB Atlas, Cloudflare R2, GitHub Actions: regione dei dati, accessi di rete, tetti di spesa.
+- Verifica in due passaggi (con i codici di recupero salvati) su Cloudflare, Render, MongoDB Atlas e GitHub.
+- Cloudflare R2: avviso di spesa a 1 $ (Billing Dashboard → Add Budget Alert).
+- Un account di prova con email già verificata, per le prove in produzione.
 - App Store Connect: modulo fiscale, prima di attivare gli abbonamenti.
 - Con un professionista: informativa, condizioni d'uso, procedura per le violazioni di dati, registro dei trattamenti, accordi con i fornitori.
