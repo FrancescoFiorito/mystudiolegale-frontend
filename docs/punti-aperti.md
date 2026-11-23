@@ -20,6 +20,14 @@ Il calcolatore usa serie mensili (Istat FOI, BOT, Rendistato) che il sito di rif
 - Procedura: `docs/maggior-danno-taeg.md` nel backend, sezione "Ogni quanto il sito aggiorna". Un calcolo per riferimento sul sito, un commit, un test, un deploy. Indicativamente dal 20 di ogni mese.
 - Nell'app la data massima (sia inizio sia fine) è la costante `MAGGIOR_DANNO_DATA_MASSIMA` in `app/(app)/calcolatori.tsx`: va aggiornata ogni mese insieme a `MAGGIOR_DANNO_DATI_FINO_A` del backend. Se non si aggiorna, l'app accetta date per cui il calcolo non ha tassi.
 
+### Aggiornamento annuale delle tabelle ACI (Rimborso Chilometrico)
+
+Il comunicato dell'Agenzia delle Entrate con le tabelle nazionali dei costi chilometrici elaborate dall'ACI esce in Gazzetta Ufficiale (supplemento ordinario) **entro il 31 dicembre** ed è valido dal 1° gennaio. Senza il nuovo file l'app offre solo gli anni già importati (oggi 2026 e 2025).
+
+- Procedura: `docs/rimborso-aci.md` nel backend (scaricare il PDF, `python3 -I tools/importa_tabelle_aci.py <anno> <pdf>`, controllare le righe, test, commit). L'app legge gli anni dal server: nessuna modifica al frontend.
+- Da provare su iPhone: ricerca con tastiera, cambio anno, chilometri con virgola e punto, PDF e Word, VoiceOver (elenco in `docs/rimborso-aci.md`, sezione "Da provare su iPhone").
+- Gli endpoint sono nel backend su `main` ma non ancora in produzione finché non si lancia il deploy su Render.
+
 ## Decisioni dell'utente
 
 - **Campi che l'app ha e il sito di riferimento no** (vedi `danno-non-patrimoniale-e-differenze-frontend.md`): Scorporo Importi "Percentuale cassa previdenziale" (proposta: valore di partenza 0), Giorni Lavorativi "Chiusura estiva", Calcolo Eredità "Quota di legittima", Prescrizione e decadenza "Data ultimo atto interruttivo" (proposta: tenere gli ultimi tre).

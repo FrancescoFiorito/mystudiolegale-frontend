@@ -21,6 +21,7 @@ import SwipeBackScreen from "@/src/components/SwipeBackScreen";
 import CalcolatriceOnline from "@/src/components/CalcolatriceOnline";
 import TariffeForensi2004 from "@/src/components/TariffeForensi2004";
 import ImprontaHash from "@/src/components/ImprontaHash";
+import RimborsoAci from "@/src/components/RimborsoAci";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
@@ -54,7 +55,7 @@ type CalcId =
   | "devalutazione" | "inflazione" | "rivalutazione-storica" | "rivalutazione-annuale-media" | "coefficiente-rivalutazione-tfr"
   | "ammortamento-mutuo" | "surroga-mutuo" | "taeg" | "compenso-ore" | "ritenuta-acconto" | "scorporo-importi" | "imu"
   | "interessi-tasso-fisso" | "tasso-usura" | "calcolo-scadenze" | "termini-183-190" | "diritti-copia" | "diritti-copia-tributario" | "gratuito-patrocinio" | "parametri-penali-2014" | "parametri-penali-2012" | "parametri-civili-2012" | "spese-trasferta-avvocati" | "notula-penale-tariffario-2004" | "nota-spese-tariffe-2004" | "preventivo-stragiudiziale"
-  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca" | "pensione-reversibilita" | "calcolatrice-online" | "tariffe-forensi-2004" | "impronta-hash";
+  | "fattura-avvocati" | "fattura-professionisti" | "fattura-enasarco" | "ricevuta-occasionale" | "tariffe-mediazione" | "calcolo-preventivo" | "aumenti-riduzioni-pena" | "grado-parentela" | "superficie-commerciale" | "cedolare-secca" | "pensione-reversibilita" | "calcolatrice-online" | "tariffe-forensi-2004" | "impronta-hash" | "rimborso-aci";
 
 // Campo di un calcolatore "generico": una lista di questi descrive un intero
 // form (date, numeri, booleani, scelte multiple) senza dover scrivere una
@@ -3973,6 +3974,7 @@ const CALCOLATORI: { id: CalcId; titolo: string; sottotitolo: string; icona: str
   { id: "pensione-reversibilita", titolo: "Pensione di Reversibilità", sottotitolo: "Quote ai superstiti e riduzione per il reddito del coniuge", icona: "users" },
   { id: "tariffe-forensi-2004", titolo: "Tariffe Forensi 2004", sottotitolo: "Diritti, onorari e stragiudiziale per competenza e valore", icona: "list" },
   { id: "impronta-hash", titolo: "Calcolo Impronta Hash", sottotitolo: "Impronta SHA256 di uno o più file e verifica, senza lasciare il telefono", icona: "hash" },
+  { id: "rimborso-aci", titolo: "Calcolo Rimborso Chilometrico ACI", sottotitolo: "Tariffa €/km del veicolo dalle tabelle ACI e rimborso per i chilometri percorsi", icona: "map-pin" },
   { id: "calcolatrice-online", titolo: "Calcolatrice Online", sottotitolo: "Con memoria, scorporo IVA, sconti e percentuali", icona: "hash" },
 ];
 
@@ -4338,7 +4340,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Spese di Mediazione", tipo: "calcolatore", calcId: "compenso-mediazione" },
       { nome: "Tariffe Mediazione", tipo: "calcolatore", calcId: "tariffe-mediazione" },
       { nome: "Calcolo Compenso a Ore", tipo: "calcolatore", calcId: "compenso-ore" },
-      { nome: "Calcolo Rimborso Chilometrico ACI", tipo: "in_arrivo" },
+      { nome: "Calcolo Rimborso Chilometrico ACI", tipo: "calcolatore", calcId: "rimborso-aci" },
       { nome: "Calcolo Ritenuta d'Acconto", tipo: "calcolatore", calcId: "ritenuta-acconto" },
       { nome: "Calcolo Preventivo", tipo: "calcolatore", calcId: "calcolo-preventivo" },
       { nome: "Calcolatrice Online", tipo: "calcolatore", calcId: "calcolatrice-online" },
@@ -6431,6 +6433,7 @@ export default function Calcolatori() {
               {calcAperto === "calcolatrice-online" ? <CalcolatriceOnline /> : null}
               {calcAperto === "tariffe-forensi-2004" ? <TariffeForensi2004 /> : null}
               {calcAperto === "impronta-hash" ? <ImprontaHash /> : null}
+              {calcAperto === "rimborso-aci" ? <RimborsoAci /> : null}
 
               {calcAperto === "termini-memorie" ? (
                 <View>
