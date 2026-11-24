@@ -29,6 +29,8 @@ export type DatiEsportazione = {
   titoloRisultato?: string;
   // Testo del documento (preventivo, ricevuta) dove il calcolatore lo prevede.
   testoDocumento?: string | null;
+  // Sezioni già pronte (tabelle di consultazione): si aggiungono dopo il risultato.
+  sezioni?: SezioneDocumento[];
   note?: string | null;
   // Sezioni già pronte (come le restituisce il server per i modelli di atti): se presenti si usano
   // così come sono, al posto di datiInseriti / risultato / testoDocumento.
@@ -77,6 +79,12 @@ export function costruisciCorpoEsportazione(formato: FormatoEsportazione, d: Dat
     sezioni.push({ titolo: "Dati inseriti", righe: dati.map(([e, v]) => ({ etichetta: pulisci(e), valore: pulisci(v) })), testo: null });
   }
   if (!d.sezioniPronte) sezioni.push(...sezioniDaRisultato(d.titoloRisultato || "Risultato", d.risultato || []));
+  for (const x of d.sezioniPronte ? [] : d.sezioni || []) {
+    const titolo = pulisci(x.titolo) || null;
+    const righe = x.righe.map((r) => ({ etichetta: pulisci(r.etichetta) || "-", valore: pulisci(r.valore) || "-" }));
+    const testo = pulisci(x.testo) || null;
+    if (righe.length || testo) sezioni.push({ titolo, righe, testo });
+  }
   if (!d.sezioniPronte && d.testoDocumento && pulisci(d.testoDocumento)) {
     sezioni.push({ titolo: "Documento", righe: [], testo: pulisci(d.testoDocumento) });
   }
