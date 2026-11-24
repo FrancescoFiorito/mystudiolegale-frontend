@@ -18,6 +18,8 @@ import MeseAnnoInput from "@/src/components/MeseAnnoInput";
 import ListaInput, { CampoRigaLista } from "@/src/components/ListaInput";
 import SelectInput from "@/src/components/SelectInput";
 import SwipeBackScreen from "@/src/components/SwipeBackScreen";
+import ModelloAtto from "@/src/components/ModelloAtto";
+import { MODELLI_ATTI } from "@/src/modelliAtti/modelli";
 import CalcolatriceOnline from "@/src/components/CalcolatriceOnline";
 import TariffeForensi2004 from "@/src/components/TariffeForensi2004";
 import ImprontaHash from "@/src/components/ImprontaHash";
@@ -4239,6 +4241,8 @@ Object.assign(CONFIG_GENERICI, CONFIG_LOTTO_A);
 type VoceMenuCalcolatori =
   | { nome: string; tipo: "calcolatore"; calcId: CalcId }
   | { nome: string; tipo: "atto"; attoId: AttoId }
+  // Modello di atto compilabile, descritto in src/modelliAtti/modelli.ts.
+  | { nome: string; tipo: "modello"; modelloId: string; sottotitolo: string; icona: string }
   | { nome: string; tipo: "in_arrivo" };
 
 type CategoriaMenuCalcolatori = { id: string; titolo: string; icona: string; voci: VoceMenuCalcolatori[] };
@@ -4251,7 +4255,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Rivalutazione Mensile", tipo: "calcolatore", calcId: "rivalutazione-mensile" },
       { nome: "Interessi Vari sul Capitale Rivalutato", tipo: "calcolatore", calcId: "interessi-vari-capitale-rivalutato" },
       { nome: "Adeguamento Canone", tipo: "calcolatore", calcId: "adeguamento-canone" },
-      { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
+      { nome: "Lettera Adeguamento Canone Locazione", tipo: "modello", modelloId: "lettera-adeguamento-canone", sottotitolo: "Lettera al conduttore con l'aumento ISTAT del canone", icona: "mail" },
       { nome: "Calcolo Devalutazione", tipo: "calcolatore", calcId: "devalutazione" },
       { nome: "Rivalutazione Storica", tipo: "calcolatore", calcId: "rivalutazione-storica" },
       { nome: "Variazioni Storiche Istat", tipo: "in_arrivo" },
@@ -4305,21 +4309,21 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Tabella Contributo Unificato", tipo: "in_arrivo" },
       { nome: "Calcolo Diritti di Copia", tipo: "calcolatore", calcId: "diritti-copia" },
       { nome: "Copie Processo Tributario", tipo: "calcolatore", calcId: "diritti-copia-tributario" },
-      { nome: "Fascicolo di Parte", tipo: "in_arrivo" },
+      { nome: "Fascicolo di Parte", tipo: "modello", modelloId: "fascicolo-di-parte", sottotitolo: "Copertina del fascicolo di parte", icona: "folder" },
       { nome: "Procura alle Liti", tipo: "atto", attoId: "procura_alle_liti" },
-      { nome: "Attestazione Conformità", tipo: "in_arrivo" },
-      { nome: "Relata Notifica PEC", tipo: "in_arrivo" },
+      { nome: "Attestazione Conformità", tipo: "modello", modelloId: "attestazione-conformita", sottotitolo: "Attestazione di conformità per deposito, notifica e PEC", icona: "check-square" },
+      { nome: "Relata Notifica PEC", tipo: "modello", modelloId: "relata-notifica-pec", sottotitolo: "Relata di notifica via PEC (L. 53/1994)", icona: "send" },
       { nome: "Deposito Telematico Documenti", tipo: "in_arrivo" },
       { nome: "Visibilità Fascicolo Telematico", tipo: "in_arrivo" },
-      { nome: "Note di Trattazione Scritta", tipo: "in_arrivo" },
+      { nome: "Note di Trattazione Scritta", tipo: "modello", modelloId: "note-trattazione-scritta", sottotitolo: "Note scritte per l'udienza a trattazione scritta", icona: "edit-3" },
       { nome: "Sollecito di Pagamento", tipo: "atto", attoId: "messa_in_mora" },
       { nome: "Decreto Ingiuntivo", tipo: "in_arrivo" },
       { nome: "Sfratto per Morosità", tipo: "in_arrivo" },
       { nome: "Atto di Precetto", tipo: "in_arrivo" },
-      { nome: "Nota di Precisazione del Credito", tipo: "in_arrivo" },
+      { nome: "Nota di Precisazione del Credito", tipo: "modello", modelloId: "nota-precisazione-credito", sottotitolo: "Credito, interessi e compensi dopo il precetto", icona: "file-text" },
       { nome: "Pignoramento stipendio o pensione", tipo: "calcolatore", calcId: "pignoramento-stipendio-pensione" },
       { nome: "Dichiarazione 553 cpc", tipo: "in_arrivo" },
-      { nome: "Indice Allegati", tipo: "in_arrivo" },
+      { nome: "Indice Allegati", tipo: "modello", modelloId: "indice-allegati", sottotitolo: "Elenco numerato degli allegati", icona: "list" },
       { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
       { nome: "Ricerca uffici UNEP", tipo: "in_arrivo" },
       { nome: "Note Iscrizione Ruolo", tipo: "in_arrivo" },
@@ -4351,7 +4355,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
       { nome: "Tariffe Forensi 2004", tipo: "calcolatore", calcId: "tariffe-forensi-2004" },
       { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "nota-spese-tariffe-2004" },
-      { nome: "Modelli di Notula", tipo: "in_arrivo" },
+      { nome: "Modelli di Notula", tipo: "modello", modelloId: "modelli-notula", sottotitolo: "Notula per il decreto ingiuntivo (tariffe 2004)", icona: "file-text" },
       { nome: "Calcolo Notula Penale", tipo: "calcolatore", calcId: "notula-penale-tariffario-2004" },
     ],
   },
@@ -4901,6 +4905,8 @@ export default function Calcolatori() {
   };
   // Atti (bozze di documenti)
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
+  // Modello di atto aperto (id in MODELLI_ATTI): il modulo è montato solo finché la schermata resta aperta.
+  const [modelloAperto, setModelloAperto] = React.useState<string | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
   const [attoCrediti, setAttoCrediti] = React.useState<{ descrizione: string; importo: string }[]>([]);
   const [procuraParti, setProcuraParti] = React.useState<{ nome: string; persona_giuridica: boolean; legale_rappresentante: string; cf_piva: string; indirizzo: string }[]>([]);
@@ -4917,8 +4923,8 @@ export default function Calcolatori() {
   // l'overlay (stesso problema e stessa soluzione di profilo.tsx).
   // Disattivato finche' un overlay e' visibile.
   React.useEffect(() => {
-    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto) });
-  }, [categoriaCalc, calcAperto, attoAperto, navigation]);
+    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto || modelloAperto) });
+  }, [categoriaCalc, calcAperto, attoAperto, modelloAperto, navigation]);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
@@ -6071,7 +6077,13 @@ export default function Calcolatori() {
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
   const sottotitoloVoce = (v: VoceMenuCalcolatori) =>
-    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : undefined;
+    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "modello" ? v.sottotitolo : undefined;
+  const testIDVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => (v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "modello" ? `modello-${v.modelloId}` : `calc-${v.calcId}`);
+  const apriVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => {
+    if (v.tipo === "atto") apriAtto(v.attoId);
+    else if (v.tipo === "modello") setModelloAperto(v.modelloId);
+    else apriCalcolatore(v.calcId);
+  };
   const ricercaAttiva = ricercaCalc.trim().length > 0;
   const risultatiRicerca = ricercaAttiva
     ? cercaVociCalcolatori(CATEGORIE_CALC.map((c) => ({ id: c.id, titolo: c.titolo, voci: vociCategoria(c.id) })), ricercaCalc, sottotitoloVoce)
@@ -6105,7 +6117,7 @@ export default function Calcolatori() {
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun calcolatore trovato</Text>
             </View>
           ) : risultatiRicerca.map(({ voce: v, categoriaId, categoriaTitolo, sottotitolo }, i) => {
-            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
+            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "modello" ? v.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
             if (v.tipo === "in_arrivo") {
               return (
                 <View key={`${categoriaId}-${i}`} accessible accessibilityLabel={`${v.nome}, ${categoriaTitolo}, in arrivo`} accessibilityState={{ disabled: true }} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
@@ -6123,9 +6135,9 @@ export default function Calcolatori() {
             return (
               <Pressable
                 key={`${categoriaId}-${i}`}
-                testID={`ricerca-${v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`}`} accessibilityRole="button"
+                testID={`ricerca-${testIDVoce(v)}`} accessibilityRole="button"
                 accessibilityLabel={`${v.nome}, ${categoriaTitolo}`}
-                onPress={() => { Keyboard.dismiss(); if (v.tipo === "atto") apriAtto(v.attoId); else apriCalcolatore(v.calcId); }}
+                onPress={() => { Keyboard.dismiss(); apriVoce(v); }}
                 style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
               >
                 <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
@@ -6167,7 +6179,7 @@ export default function Calcolatori() {
       </ScrollView>
 
       {categoriaCalc ? (
-        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto}>
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto || !!modelloAperto}>
           <Header variant="hero" title={categoriaCorrente?.titolo || "Calcolatori"} onBack={() => setCategoriaCalc(null)} />
           <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
             {vociCategoria(categoriaCalc).map((v, i) => {
@@ -6184,12 +6196,12 @@ export default function Calcolatori() {
                   </View>
                 );
               }
-              const sorgente = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : ATTI.find((a) => a.id === v.attoId);
+              const sorgente: { icona?: string; sottotitolo?: string } | undefined = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "modello" ? v : ATTI.find((a) => a.id === v.attoId);
               return (
                 <Pressable
                   key={i}
-                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`} accessibilityRole="button"
-                  onPress={() => (v.tipo === "atto" ? apriAtto(v.attoId) : apriCalcolatore(v.calcId))}
+                  testID={testIDVoce(v)} accessibilityRole="button"
+                  onPress={() => apriVoce(v)}
                   style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
                 >
                   <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
@@ -6206,6 +6218,15 @@ export default function Calcolatori() {
               );
             })}
           </ScrollView>
+        </SwipeBackScreen>
+      ) : null}
+
+      {modelloAperto && MODELLI_ATTI[modelloAperto] ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setModelloAperto(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+            <Header variant="hero" title={MODELLI_ATTI[modelloAperto].titolo} onBack={() => setModelloAperto(null)} />
+            <ModelloAtto key={modelloAperto} modello={MODELLI_ATTI[modelloAperto]} />
+          </KeyboardAvoidingView>
         </SwipeBackScreen>
       ) : null}
 

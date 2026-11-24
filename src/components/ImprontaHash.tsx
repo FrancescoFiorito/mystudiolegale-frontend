@@ -3,56 +3,14 @@ import { View, Text, Pressable, TextInput, ActivityIndicator, Platform, Alert } 
 import { Feather } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Clipboard from "expo-clipboard";
-import { File } from "expo-file-system";
 import { useTheme } from "@/src/ThemeContext";
 import { SPACING, RADIUS } from "@/src/theme";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
-import { Sha256 } from "@/src/utils/sha256";
+import { improntaFile as impronta } from "@/src/utils/improntaFile";
 import {
   StatoHash, FileHash, MAX_FILE, statoHashIniziale, aggiungiSelezione, impostaModo, impostaTesto, rimuoviFile, nuovoCalcolo,
   vistaHash, righeFile, testoDaCopiare, riferimentoTemporale,
 } from "@/src/utils/improntaHash";
-
-// Blocchi di lettura: abbastanza piccoli da non bloccare l'interfaccia e da non
-// tenere in memoria più di un blocco alla volta, anche per file molto grandi.
-const BLOCCO = 256 * 1024;
-const cedi = () => new Promise<void>((r) => setTimeout(r, 0));
-
-type Asset = DocumentPicker.DocumentPickerAsset;
-
-// Calcola l'impronta SHA256 leggendo il file a blocchi. Il file resta sul telefono: non viene
-// mai inviato da nessuna parte (nessuna richiesta di rete in questa funzione).
-async function impronta(asset: Asset): Promise<FileHash> {
-  const sha = new Sha256();
-  let dimensione = 0;
-  if (Platform.OS === "web" && asset.file) {
-    const blob: Blob = asset.file;
-    dimensione = blob.size;
-    for (let o = 0; o < blob.size; o += BLOCCO) {
-      sha.update(new Uint8Array(await blob.slice(o, o + BLOCCO).arrayBuffer()));
-      await cedi();
-    }
-  } else {
-    const f = new File(asset.uri);
-    const h = f.open();
-    try {
-      dimensione = h.size ?? asset.size ?? 0;
-      let letti = 0;
-      while (letti < dimensione) {
-        const pezzo = h.readBytes(Math.min(BLOCCO, dimensione - letti));
-        if (!pezzo.length) break;
-        sha.update(pezzo);
-        letti += pezzo.length;
-        await cedi();
-      }
-    } finally {
-      try { h.close(); } catch {}
-      // La copia temporanea fatta dal selettore dei documenti non serve più.
-      try { f.delete(); } catch {}
-    }
-  }
-  return { nome: asset.name, dimensione, modificato: asset.lastModified || Date.now(), hash: sha.digestHex() };
-}
 
 export default function ImprontaHash() {
   const { t } = useTheme();

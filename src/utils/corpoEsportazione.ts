@@ -30,6 +30,9 @@ export type DatiEsportazione = {
   // Testo del documento (preventivo, ricevuta) dove il calcolatore lo prevede.
   testoDocumento?: string | null;
   note?: string | null;
+  // Sezioni già pronte (come le restituisce il server per i modelli di atti): se presenti si usano
+  // così come sono, al posto di datiInseriti / risultato / testoDocumento.
+  sezioniPronte?: SezioneDocumento[];
 };
 
 const pulisci = (s: unknown) => (s == null ? "" : String(s)).replace(/\r\n/g, "\n").trim();
@@ -62,12 +65,19 @@ function lunghezza(s: SezioneDocumento) {
 
 export function costruisciCorpoEsportazione(formato: FormatoEsportazione, d: DatiEsportazione): CorpoEsportazione {
   let sezioni: SezioneDocumento[] = [];
-  const dati = (d.datiInseriti || []).filter(([e, v]) => pulisci(e) && pulisci(v));
+  if (d.sezioniPronte) {
+    sezioni = d.sezioniPronte.map((s) => ({
+      titolo: s.titolo ? pulisci(s.titolo) : null,
+      righe: (s.righe || []).map((r) => ({ etichetta: pulisci(r.etichetta), valore: pulisci(r.valore) })),
+      testo: s.testo ? String(s.testo).replace(/\r\n/g, "\n").trim() || null : null,
+    }));
+  }
+  const dati = d.sezioniPronte ? [] : (d.datiInseriti || []).filter(([e, v]) => pulisci(e) && pulisci(v));
   if (dati.length) {
     sezioni.push({ titolo: "Dati inseriti", righe: dati.map(([e, v]) => ({ etichetta: pulisci(e), valore: pulisci(v) })), testo: null });
   }
-  sezioni.push(...sezioniDaRisultato(d.titoloRisultato || "Risultato", d.risultato || []));
-  if (d.testoDocumento && pulisci(d.testoDocumento)) {
+  if (!d.sezioniPronte) sezioni.push(...sezioniDaRisultato(d.titoloRisultato || "Risultato", d.risultato || []));
+  if (!d.sezioniPronte && d.testoDocumento && pulisci(d.testoDocumento)) {
     sezioni.push({ titolo: "Documento", righe: [], testo: pulisci(d.testoDocumento) });
   }
 
