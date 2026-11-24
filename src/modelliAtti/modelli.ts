@@ -559,7 +559,246 @@ const PRECISAZIONE: ModelloAtto = {
   ],
 };
 
+
+// ---- Elementi comuni a dichiarazione 553, atto di precetto e sfratto ----
+const NOTIFICA: Opzione[] = [
+  { value: "nessuna", label: "Nessuna" }, { value: "unep", label: "UNEP" }, { value: "in_proprio", label: "In proprio (posta)" }, { value: "pec", label: "PEC" },
+];
+const campiNotifica = (def: string, opzioni: string[] = ["nessuna", "unep", "in_proprio", "pec"]): CampoModello[] => [
+  { tipo: "scelta", key: "notifica", label: "Notifica", default: def, opzioni: NOTIFICA.filter((o) => opzioni.includes(o.value)) },
+];
+const campiInProprio = (): CampoModello[] => [
+  testo("autorizzazione", "Estremi dell'autorizzazione", { obbligatorio: true, mostraSe: (f) => f.notifica === "in_proprio" }),
+  testo("ufficio_postale", "Ufficio postale", { obbligatorio: true, mostraSe: (f) => f.notifica === "in_proprio" }),
+];
+const soggetto = (extra: CampoRigaLista[] = [], cfObbligatorio = true): CampoRigaLista[] => [
+  { tipo: "testo", key: "nome", label: "Nome", obbligatorio: true },
+  { tipo: "bool", key: "persona_giuridica", label: "Persona giuridica" },
+  { tipo: "testo", key: "rappresentante_legale", label: "Rappresentante legale", mostraSe: (r) => !!r.persona_giuridica },
+  { tipo: "testo", key: "codice_fiscale", label: "Codice fiscale o partita IVA", obbligatorio: cfObbligatorio },
+  ...extra,
+];
+const campiPec = (): CampoRigaLista[] => [
+  { tipo: "testo", key: "pec", label: "Indirizzo PEC", obbligatorio: true, mostraSe: (_r, f) => f.notifica === "pec" },
+  { tipo: "scelta", key: "provenienza_pec", label: "Provenienza della PEC", default: "inipec", opzioni: PROVENIENZA_PEC, mostraSe: (_r, f) => f.notifica === "pec" },
+];
+const campiEconomici = (conCompensoPrecetto: boolean): CampoModello[] => [
+  testo("compensi_liquidati", "Compensi liquidati (€)", { obbligatorio: !conCompensoPrecetto }),
+  testo("spese_esenti", "Spese esenti liquidate (€)"),
+  testo("spese_imponibili", "Spese imponibili liquidate (€)"),
+  ...(conCompensoPrecetto ? [testo("compenso_precetto", "Compenso per l'atto di precetto (€)", { aiuto: "Se lasci vuoto si usa la tariffa media sul capitale residuo." })] : []),
+  bool("spese_generali", "Spese generali", true),
+  testo("percentuale_spese_generali", "Percentuale spese generali (%)", { default: "15", mostraSe: (f) => !!f.spese_generali }),
+];
+const voci = (iniziali: Record<string, string>[]): CampoModello => ({
+  tipo: "lista", key: "voci", label: "Altre voci di spesa", etichettaAggiungi: "Aggiungi una voce", nomeVoce: "voce", max: 20, righeIniziali: iniziali,
+  campi: [{ tipo: "testo", key: "descrizione", label: "Descrizione" }, { tipo: "testo", key: "esenti", label: "Esenti (€)" }, { tipo: "testo", key: "imponibili", label: "Imponibili (€)" }],
+});
+const campiIva = (): CampoModello[] => [
+  testo("iva", "Aliquota IVA (%)", { default: "22", aiuto: "Se vuota o 0 vale 22." }),
+  bool("regime_semplificato", "Regime semplificato (senza riga IVA)"),
+];
+
+// ---- 9. Dichiarazione del terzo ex art. 553 c.p.c. ----
+const DICHIARAZIONE_553: ModelloAtto = {
+  id: "dichiarazione-553",
+  titolo: "Dichiarazione 553 cpc",
+  endpoint: "/atti-modello/dichiarazione-553",
+  gruppi: [
+    {
+      titolo: "Avvocato",
+      campi: [
+        { tipo: "scelta", key: "incipit", label: "Incipit", opzioni: INCIPIT },
+        testo("avvocato", "Avvocato", { obbligatorio: true }),
+        testo("codice_fiscale", "Codice fiscale", { obbligatorio: true }),
+        testo("indirizzo_studio", "Indirizzo dello studio", { obbligatorio: true }),
+        testo("pec", "PEC dell'avvocato"),
+        testo("ordine", "Ordine degli avvocati di", { aiuto: "Se lasci vuoto la formula «iscritto all'albo» non compare." }),
+        testo("luogo", "Luogo", { obbligatorio: true }),
+        { tipo: "data", key: "data", label: "Data", vuotaOggi: true, aiuto: "Se lasci vuoto vale oggi." },
+        ...campiNotifica("pec"),
+        ...campiInProprio(),
+      ],
+    },
+    {
+      titolo: "Parti",
+      campi: [
+        { tipo: "lista", key: "parte", label: "Parte assistita", etichettaAggiungi: "", nomeVoce: "parte", min: 1, comeOggetto: true, campi: soggetto() },
+        {
+          tipo: "lista", key: "terzo", label: "Terzo pignorato", etichettaAggiungi: "", nomeVoce: "terzo", min: 1, comeOggetto: true,
+          campi: [
+            { tipo: "testo", key: "nome", label: "Nome", obbligatorio: true },
+            { tipo: "bool", key: "persona_giuridica", label: "Persona giuridica" },
+            { tipo: "testo", key: "rappresentante_legale", label: "Rappresentante legale", mostraSe: (r) => !!r.persona_giuridica },
+            { tipo: "testo", key: "residenza", label: "Residenza o sede", obbligatorio: true },
+            { tipo: "testo", key: "codice_fiscale", label: "Codice fiscale o partita IVA" },
+            ...campiPec(),
+          ],
+        },
+      ],
+    },
+    {
+      titolo: "Procedimento e credito",
+      campi: [
+        testo("numero_rg", "Numero R.G."),
+        testo("ufficio_giudiziario", "Ufficio giudiziario"),
+        testo("titolo", "Titolo", { lungo: true, aiuto: "Una riga per ogni titolo." }),
+        testo("importo_assegnato", "Importo assegnato (€)", { obbligatorio: true }),
+        { tipo: "data", key: "decorrenza_interessi", label: "Decorrenza degli interessi legali", aiuto: "Facoltativa: se indicata compaiono gli interessi fino alla data della dichiarazione." },
+        ...campiEconomici(false),
+        voci([{ descrizione: "Marca da bollo", esenti: "27,00", imponibili: "" }, { descrizione: "Contributo unificato", esenti: "", imponibili: "" }, { descrizione: "Spese di notifica", esenti: "", imponibili: "" }]),
+        ...campiIva(),
+      ],
+    },
+    {
+      titolo: "Pagamento",
+      campi: [
+        {
+          tipo: "scelta", key: "modalita_pagamento", label: "Modalità di pagamento", default: "bonifico", opzioni: [
+            { value: "bonifico", label: "Bonifico" }, { value: "assegno", label: "Assegno" }, { value: "assegno_circolare", label: "Assegno circolare" }, { value: "contanti", label: "Contanti" },
+          ],
+        },
+        testo("banca", "Banca", { mostraSe: (f) => f.modalita_pagamento === "bonifico" }),
+        testo("iban", "IBAN", { obbligatorio: true, mostraSe: (f) => f.modalita_pagamento === "bonifico" }),
+        testo("bic", "BIC", { mostraSe: (f) => f.modalita_pagamento === "bonifico" }),
+        testo("beneficiario", "Beneficiario"),
+      ],
+    },
+  ],
+};
+
+// ---- 10. Atto di precetto ----
+const ATTO_PRECETTO: ModelloAtto = {
+  id: "atto-precetto",
+  titolo: "Atto di Precetto",
+  endpoint: "/atti-modello/atto-precetto",
+  introduzione: "Il testo cambia con il sesso ricavato dal codice fiscale dei soggetti.",
+  gruppi: [
+    {
+      titolo: "Avvocato",
+      campi: [
+        testo("avvocato", "Avvocato", { obbligatorio: true }),
+        testo("codice_fiscale", "Codice fiscale", { obbligatorio: true }),
+        testo("indirizzo_studio", "Indirizzo dello studio", { obbligatorio: true }),
+        testo("pec", "PEC", { obbligatorio: true }),
+        testo("ordine", "Ordine degli avvocati di", { aiuto: "Se lasci vuoto «del Foro di …» non compare." }),
+        testo("tribunale", "Tribunale", { aiuto: "Se lasci vuoto la riga di intestazione non compare." }),
+        {
+          tipo: "scelta", key: "procura", label: "Procura", default: "calce_atto", opzioni: [
+            { value: "calce_atto", label: "In calce all'atto" }, { value: "margine_atto", label: "A margine dell'atto" },
+            { value: "calce_introduttivo", label: "In calce all'atto introduttivo" }, { value: "margine_introduttivo", label: "A margine dell'atto introduttivo" },
+            { value: "calce_comparsa", label: "In calce alla comparsa" }, { value: "margine_comparsa", label: "A margine della comparsa" },
+            { value: "calce_ricorso_di", label: "In calce al ricorso di" }, { value: "margine_ricorso_di", label: "A margine del ricorso di" },
+            { value: "notarile", label: "Procura notarile" },
+          ],
+        },
+        testo("estremi_procura_notarile", "Estremi della procura notarile", { mostraSe: (f) => f.procura === "notarile" }),
+        testo("luogo", "Luogo", { obbligatorio: true }),
+        { tipo: "data", key: "data", label: "Data", vuotaOggi: true, aiuto: "Se lasci vuoto vale oggi." },
+        ...campiNotifica("unep"),
+        testo("tribunale_notifica", "Tribunale per la notifica UNEP", { mostraSe: (f) => f.notifica === "unep", aiuto: "Non compare nel testo." }),
+        ...campiInProprio(),
+        bool("altro_domicilio", "Domicilio diverso dallo studio"),
+        testo("domicilio", "Domicilio", { obbligatorio: true, mostraSe: (f) => !!f.altro_domicilio }),
+      ],
+    },
+    {
+      titolo: "Soggetti",
+      campi: [
+        { tipo: "lista", key: "parti", label: "Parti istanti", etichettaAggiungi: "Aggiungi una parte", nomeVoce: "parte", min: 1, max: 20, campi: soggetto() },
+        {
+          tipo: "lista", key: "debitori", label: "Debitori", etichettaAggiungi: "Aggiungi un debitore", nomeVoce: "debitore", min: 1, max: 20,
+          campi: soggetto([{ tipo: "testo", key: "residenza", label: "Residenza o sede", obbligatorio: true }, ...campiPec()], false),
+        },
+      ],
+    },
+    {
+      titolo: "Credito",
+      campi: [
+        testo("titolo", "Titolo", { lungo: true, aiuto: "Una riga per ogni titolo." }),
+        bool("notificato_contestualmente", "Titolo notificato contestualmente", true, { aiuto: "Cambia solo il promemoria." }),
+        testo("capitale", "Capitale (€)", { obbligatorio: true }),
+        { tipo: "scelta", key: "interessi", label: "Interessi", default: "moratori", opzioni: [{ value: "moratori", label: "Moratori" }, { value: "legale", label: "Al tasso legale" }] },
+        { tipo: "data", key: "decorrenza_interessi", label: "Decorrenza degli interessi", obbligatorio: true },
+        testo("acconti", "Acconti ricevuti (€)"),
+        ...campiEconomici(true),
+        voci([]),
+        ...campiIva(),
+      ],
+    },
+  ],
+};
+
+// ---- 11. Sfratto per morosità ----
+const MESI_OPZ: Opzione[] = MESI.map((m, i) => ({ value: String(i + 1), label: m }));
+const SFRATTO: ModelloAtto = {
+  id: "sfratto-morosita",
+  titolo: "Sfratto per Morosità",
+  endpoint: "/atti-modello/sfratto-morosita",
+  gruppi: [
+    {
+      titolo: "Avvocato e procedimento",
+      campi: [
+        testo("avvocato", "Avvocato", { obbligatorio: true }),
+        testo("codice_fiscale", "Codice fiscale", { obbligatorio: true }),
+        testo("indirizzo_studio", "Indirizzo dello studio"),
+        testo("ordine", "Ordine degli avvocati di"),
+        testo("tribunale", "Tribunale", { obbligatorio: true }),
+        { tipo: "data", key: "data_udienza", label: "Data dell'udienza", aiuto: "Deve essere successiva a oggi. Se lasci vuoto resta «……» da compilare." },
+        {
+          tipo: "scelta", key: "procura", label: "Procura", default: "calce_atto", opzioni: [
+            { value: "calce_atto", label: "In calce all'atto" }, { value: "margine_atto", label: "A margine dell'atto" }, { value: "notarile", label: "Procura notarile" },
+          ],
+        },
+        testo("luogo", "Luogo", { obbligatorio: true }),
+        { tipo: "data", key: "data", label: "Data", vuotaOggi: true, aiuto: "Se lasci vuoto vale oggi." },
+        ...campiNotifica("unep"),
+      ],
+    },
+    {
+      titolo: "Parti",
+      campi: [
+        { tipo: "lista", key: "ricorrente", label: "Ricorrente", etichettaAggiungi: "", nomeVoce: "ricorrente", min: 1, comeOggetto: true, campi: soggetto() },
+        {
+          tipo: "lista", key: "conduttore", label: "Conduttore", etichettaAggiungi: "", nomeVoce: "conduttore", min: 1, comeOggetto: true,
+          campi: soggetto([{ tipo: "testo", key: "residenza", label: "Residenza o sede", obbligatorio: true }, ...campiPec()], false),
+        },
+      ],
+    },
+    {
+      titolo: "Immobile e contratto",
+      campi: [
+        bool("stesso_indirizzo", "L'immobile è all'indirizzo del conduttore", true),
+        testo("indirizzo_immobile", "Indirizzo dell'immobile", { obbligatorio: true, mostraSe: (f) => !f.stesso_indirizzo }),
+        bool("uso_commerciale", "Uso commerciale (altrimenti abitativo)"),
+        { tipo: "data", key: "data_contratto", label: "Data del contratto" },
+        testo("luogo_registrazione", "Luogo di registrazione"),
+        { tipo: "data", key: "data_registrazione", label: "Data di registrazione" },
+        testo("numero_registrazione", "Numero di registrazione"),
+      ],
+    },
+    {
+      titolo: "Canoni",
+      campi: [
+        {
+          tipo: "lista", key: "canoni", label: "Canoni non pagati", etichettaAggiungi: "Aggiungi un periodo", nomeVoce: "periodo", min: 1, max: 20,
+          campi: [
+            { tipo: "scelta", key: "mese_dal", label: "Dal mese", default: "1", invio: "numero", opzioni: MESI_OPZ },
+            { tipo: "numero", key: "anno_dal", label: "Dall'anno", invio: "intero", default: String(new Date().getFullYear()) },
+            { tipo: "scelta", key: "mese_al", label: "Al mese", default: "0", invio: "numero", opzioni: [{ value: "0", label: "Solo il mese iniziale" }, ...MESI_OPZ] },
+            { tipo: "numero", key: "anno_al", label: "All'anno", invio: "intero", mostraSe: (r) => r.mese_al !== "0" },
+            { tipo: "testo", key: "importo_mensile", label: "Importo mensile (€)" },
+          ] as CampoRigaLista[],
+        },
+        testo("oneri_condominiali", "Oneri condominiali (€)"),
+        testo("premessa", "Premessa", { lungo: true, aiuto: "Una riga per paragrafo." }),
+        testo("allegati", "Allegati", { lungo: true, aiuto: "Una riga per documento." }),
+      ],
+    },
+  ],
+};
+
 export const MODELLI_ATTI: Record<string, ModelloAtto> = Object.fromEntries(
-  [ATTESTAZIONE, RELATA, FASCICOLO, INDICE, LETTERA, NOTULA, NOTE_TRATTAZIONE, PRECISAZIONE].map((m) => [m.id, m]),
+  [ATTESTAZIONE, RELATA, FASCICOLO, INDICE, LETTERA, NOTULA, NOTE_TRATTAZIONE, PRECISAZIONE, DICHIARAZIONE_553, ATTO_PRECETTO, SFRATTO].map((m) => [m.id, m]),
 );
 export type ModelloAttoId = string;

@@ -87,7 +87,7 @@ export default function ModelloAtto({ modello }: { modello: Modello }) {
       return (
         <View key={c.key}>
           <Text accessibilityRole="header" style={lbl}>{etichetta(c)}</Text>
-          <ListaInput testID={id} value={form[c.key] || []} onChange={(v) => imposta(c.key, v)} campiRiga={c.campi} etichettaAggiungi={c.etichettaAggiungi} form={form} max={c.max} nomeVoce={c.nomeVoce} />
+          <ListaInput testID={id} value={form[c.key] || []} onChange={(v) => imposta(c.key, v)} campiRiga={c.campi} etichettaAggiungi={c.etichettaAggiungi} form={form} max={c.max} nomeVoce={c.nomeVoce} fissa={c.comeOggetto} />
         </View>
       );
     }

@@ -61,6 +61,7 @@ function valoreCampo(c: { tipo: string; invio?: string; omettiSeVuoto?: boolean;
 
 function righeLista(c: Extract<CampoModello, { tipo: "lista" }>, righe: Record<string, string>[], f: Modulo, oggi: string): unknown[] {
   const campi = c.campi.filter((x) => x.tipo !== "azione");
+  if (c.comeOggetto) return [righeLista({ ...c, comeOggetto: false }, righe.slice(0, 1), f, oggi)[0] ?? {}];
   if (c.comeTesti) {
     const k = campi[0];
     return righe.map((r) => String(r[k.key] ?? "").trim()).filter(Boolean);
@@ -85,7 +86,7 @@ export function costruisciBody(m: ModelloAtto, f: Modulo, oggi: string = oggiIso
       if ("valoreSeNascosto" in c) body[c.key] = c.valoreSeNascosto;
       continue;
     }
-    const v = c.tipo === "lista" ? righeLista(c, f[c.key] || [], f, oggi) : valoreCampo(c, f[c.key], oggi);
+    const v = c.tipo === "lista" ? (c.comeOggetto ? righeLista(c, f[c.key] || [], f, oggi)[0] : righeLista(c, f[c.key] || [], f, oggi)) : valoreCampo(c, f[c.key], oggi);
     if (v !== undefined) body[c.key] = v;
   }
   return body;

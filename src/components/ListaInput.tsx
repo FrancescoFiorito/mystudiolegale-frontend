@@ -47,7 +47,7 @@ export function rigaVuota(campiRiga: CampoRigaLista[]): Record<string, string> {
 // usato per le parti assistite delle parcelle (riquadro con cestino per
 // riga, "+ aggiungi" sotto), qui reso generico per qualunque forma di riga.
 export default function ListaInput({
-  value, onChange, campiRiga, testID, etichettaAggiungi = "Aggiungi una voce", form, max, nomeVoce = "voce",
+  value, onChange, campiRiga, testID, etichettaAggiungi = "Aggiungi una voce", form, max, nomeVoce = "voce", fissa = false,
 }: {
   value: Record<string, string>[];
   onChange: (v: Record<string, string>[]) => void;
@@ -60,6 +60,8 @@ export default function ListaInput({
   max?: number;
   // Come chiamare una riga nelle etichette per VoiceOver (es. "parte", "allegato").
   nomeVoce?: string;
+  // Una sola riga fissa: niente cestino né "aggiungi" (campi di un singolo oggetto).
+  fissa?: boolean;
 }) {
   const { t } = useTheme();
 
@@ -73,11 +75,11 @@ export default function ListaInput({
     <View>
       {value.map((riga, indice) => (
         <View key={indice} style={{ marginTop: indice === 0 ? 0 : SPACING.sm, padding: SPACING.md, borderRadius: RADIUS.md, backgroundColor: t.surfaceSecondary }}>
-          <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
+          {fissa ? null : <View style={{ flexDirection: "row", justifyContent: "flex-end" }}>
             <Pressable testID={testID ? `${testID}-rimuovi-${indice}` : undefined} onPress={() => rimuovi(indice)} accessibilityRole="button" accessibilityLabel={`Rimuovi ${nomeVoce} ${indice + 1}`} style={{ padding: 4 }}>
               <Feather name="trash-2" size={16} color={t.onSurfaceTertiary} />
             </Pressable>
-          </View>
+          </View>}
           {campiRiga.filter((c) => !c.mostraSe || c.mostraSe(riga, form || {})).map((c) => {
             const id = testID ? `${testID}-${indice}-${c.key}` : undefined;
             const etichetta = `${c.label}${"obbligatorio" in c && c.obbligatorio ? " *" : ""}`;
@@ -133,7 +135,7 @@ export default function ListaInput({
           })}
         </View>
       ))}
-      {max !== undefined && value.length >= max ? null : <Pressable testID={testID ? `${testID}-aggiungi` : undefined} accessibilityRole="button" onPress={aggiungi} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
+      {fissa || (max !== undefined && value.length >= max) ? null : <Pressable testID={testID ? `${testID}-aggiungi` : undefined} accessibilityRole="button" onPress={aggiungi} style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: SPACING.sm }}>
         <Feather name="plus-circle" size={16} color={t.brand} />
         <Text style={{ color: t.brand, fontWeight: "700", fontSize: 13 }}>{etichettaAggiungi}</Text>
       </Pressable>}

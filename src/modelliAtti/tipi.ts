@@ -32,8 +32,9 @@ export type CampoModello = Comune & (
   | { tipo: "scelta"; opzioni: Opzione[]; default?: string; invio?: "stringa" | "numero"; omettiSeVuoto?: boolean }
   | { tipo: "bool"; default?: boolean }
   // Elenco ripetibile ("aggiungi" / "rimuovi"). Con `comeTesti` ogni riga ha un solo campo e al server
-  // va l'elenco dei soli testi (es. parti assistite).
-  | { tipo: "lista"; campi: CampoRigaLista[]; min?: number; max?: number; etichettaAggiungi: string; nomeVoce: string; righeIniziali?: Record<string, string>[]; comeTesti?: boolean }
+  // va l'elenco dei soli testi (es. parti assistite). Con `comeOggetto` c'è una sola riga fissa (senza "aggiungi"/"rimuovi")
+  // e al server va l'oggetto con i suoi campi (es. il ricorrente).
+  | { tipo: "lista"; campi: CampoRigaLista[]; min?: number; max?: number; etichettaAggiungi: string; nomeVoce: string; righeIniziali?: Record<string, string>[]; comeTesti?: boolean; comeOggetto?: boolean }
 );
 
 export type GruppoCampi = { titolo?: string; campi: CampoModello[] };
