@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, Pressable, KeyboardAvoid
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import * as WebBrowser from "expo-web-browser";
 import { useTheme } from "@/src/ThemeContext";
 import { useAuth } from "@/src/AuthContext";
 import { api } from "@/src/api";
@@ -4246,7 +4247,13 @@ type VoceMenuCalcolatori =
   // Modello di atto compilabile, descritto in src/modelliAtti/modelli.ts.
   | { nome: string; tipo: "modello"; modelloId: string; sottotitolo: string; icona: string }
   | { nome: string; tipo: "tabella"; tabellaId: TabellaId }
+  // Collegamento a una pagina ufficiale, aperta nel browser in-app.
+  | { nome: string; tipo: "link"; url: string; sottotitolo: string; icona: string }
   | { nome: string; tipo: "in_arrivo" };
+
+// Slug stabile del nome della voce, usato per i testID (es. "link-note-iscrizione-ruolo").
+const slugVoce = (nome: string): string =>
+  nome.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 type CategoriaMenuCalcolatori = { id: string; titolo: string; icona: string; voci: VoceMenuCalcolatori[] };
 
@@ -4329,12 +4336,12 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Indice Allegati", tipo: "modello", modelloId: "indice-allegati", sottotitolo: "Elenco numerato degli allegati", icona: "list" },
       { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
       { nome: "Ricerca uffici UNEP", tipo: "in_arrivo" },
-      { nome: "Note Iscrizione Ruolo", tipo: "in_arrivo" },
+      { nome: "Note Iscrizione Ruolo", tipo: "link", url: "https://www.giustizia.it/giustizia/page/it/provvedimento_ministeriale_selezionato?contentId=SDC30901", sottotitolo: "Modelli ufficiali del Ministero della Giustizia", icona: "external-link" },
       { nome: "Codici Iscrizione Ruolo", tipo: "tabella", tabellaId: "codici-iscrizione-ruolo" },
       { nome: "Calcolo Impronta Hash", tipo: "calcolatore", calcId: "impronta-hash" },
       { nome: "Controllo Cause a Ruolo", tipo: "in_arrivo" },
-      { nome: "Tassazione Atti Giudiziari", tipo: "in_arrivo" },
-      { nome: "Testimonianza Scritta (257-bis cpc)", tipo: "in_arrivo" },
+      { nome: "Tassazione Atti Giudiziari", tipo: "link", url: "https://www.agenziaentrate.gov.it/portale/schede/pagamenti/tassazioneregistrazioneattigiudiziari/accedi-al-servizio-tassazione-registrazione", sottotitolo: "Servizio dell'Agenzia delle Entrate", icona: "external-link" },
+      { nome: "Testimonianza Scritta (257-bis cpc)", tipo: "link", url: "https://www.giustizia.it/giustizia/page/it/provvedimento_ministeriale_selezionato?contentId=SDC152832", sottotitolo: "Modulo ufficiale del Ministero della Giustizia", icona: "external-link" },
       { nome: "Verifica Gratuito Patrocinio", tipo: "calcolatore", calcId: "gratuito-patrocinio" },
       { nome: "Codice di Procedura Civile", tipo: "in_arrivo" },
       { nome: "Codice della Strada", tipo: "in_arrivo" },
@@ -6081,14 +6088,17 @@ export default function Calcolatori() {
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
   const sottotitoloVoce = (v: VoceMenuCalcolatori) =>
-    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "modello" ? v.sottotitolo : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].sottotitolo : undefined;
-  const testIDVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => (v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "modello" ? `modello-${v.modelloId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : `calc-${v.calcId}`);
+    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "modello" ? v.sottotitolo : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].sottotitolo : v.tipo === "link" ? v.sottotitolo : undefined;
+  const testIDVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => (v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "modello" ? `modello-${v.modelloId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : v.tipo === "link" ? `link-${slugVoce(v.nome)}` : `calc-${v.calcId}`);
   const apriVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => {
     if (v.tipo === "atto") apriAtto(v.attoId);
     else if (v.tipo === "modello") setModelloAperto(v.modelloId);
     else if (v.tipo === "tabella") setTabellaAperta(v.tabellaId);
+    else if (v.tipo === "link") WebBrowser.openBrowserAsync(v.url);
     else apriCalcolatore(v.calcId);
   };
+  const etichettaVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>, categoriaTitolo: string) =>
+    v.tipo === "link" ? `${v.nome}, ${categoriaTitolo}, apre una pagina esterna` : `${v.nome}, ${categoriaTitolo}`;
   const ricercaAttiva = ricercaCalc.trim().length > 0;
   const risultatiRicerca = ricercaAttiva
     ? cercaVociCalcolatori(CATEGORIE_CALC.map((c) => ({ id: c.id, titolo: c.titolo, voci: vociCategoria(c.id) })), ricercaCalc, sottotitoloVoce)
@@ -6122,7 +6132,7 @@ export default function Calcolatori() {
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun calcolatore trovato</Text>
             </View>
           ) : risultatiRicerca.map(({ voce: v, categoriaId, categoriaTitolo, sottotitolo }, i) => {
-            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "modello" ? v.icona : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
+            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "modello" ? v.icona : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].icona : v.tipo === "link" ? v.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
             if (v.tipo === "in_arrivo") {
               return (
                 <View key={`${categoriaId}-${i}`} accessible accessibilityLabel={`${v.nome}, ${categoriaTitolo}, in arrivo`} accessibilityState={{ disabled: true }} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
@@ -6140,8 +6150,8 @@ export default function Calcolatori() {
             return (
               <Pressable
                 key={`${categoriaId}-${i}`}
-                testID={`ricerca-${testIDVoce(v)}`} accessibilityRole="button"
-                accessibilityLabel={`${v.nome}, ${categoriaTitolo}`}
+                testID={`ricerca-${testIDVoce(v)}`} accessibilityRole={v.tipo === "link" ? "link" : "button"}
+                accessibilityLabel={etichettaVoce(v, categoriaTitolo)}
                 onPress={() => { Keyboard.dismiss(); apriVoce(v); }}
                 style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
               >
@@ -6201,11 +6211,12 @@ export default function Calcolatori() {
                   </View>
                 );
               }
-              const sorgente: { icona?: string; sottotitolo?: string } | undefined = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "modello" ? v : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId] : ATTI.find((a) => a.id === v.attoId);
+              const sorgente: { icona?: string; sottotitolo?: string } | undefined = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "modello" || v.tipo === "link" ? v : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId] : ATTI.find((a) => a.id === v.attoId);
               return (
                 <Pressable
                   key={i}
-                  testID={testIDVoce(v)} accessibilityRole="button"
+                  testID={testIDVoce(v)} accessibilityRole={v.tipo === "link" ? "link" : "button"}
+                  accessibilityLabel={v.tipo === "link" ? etichettaVoce(v, categoriaCorrente?.titolo || "") : undefined}
                   onPress={() => apriVoce(v)}
                   style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
                 >
