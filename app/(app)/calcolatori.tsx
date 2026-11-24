@@ -23,6 +23,8 @@ import TariffeForensi2004 from "@/src/components/TariffeForensi2004";
 import ImprontaHash from "@/src/components/ImprontaHash";
 import RimborsoAci from "@/src/components/RimborsoAci";
 import EsportaDocumento from "@/src/components/EsportaDocumento";
+import TabellaConsultazione from "@/src/components/TabellaConsultazione";
+import { TABELLE_CONSULTAZIONE, type TabellaId } from "@/src/utils/tabelleConsultazione";
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
 import { cercaVociCalcolatori } from "@/src/utils/ricercaCalcolatori";
@@ -4239,6 +4241,7 @@ Object.assign(CONFIG_GENERICI, CONFIG_LOTTO_A);
 type VoceMenuCalcolatori =
   | { nome: string; tipo: "calcolatore"; calcId: CalcId }
   | { nome: string; tipo: "atto"; attoId: AttoId }
+  | { nome: string; tipo: "tabella"; tabellaId: TabellaId }
   | { nome: string; tipo: "in_arrivo" };
 
 type CategoriaMenuCalcolatori = { id: string; titolo: string; icona: string; voci: VoceMenuCalcolatori[] };
@@ -4254,13 +4257,13 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Lettera Adeguamento Canone Locazione", tipo: "in_arrivo" },
       { nome: "Calcolo Devalutazione", tipo: "calcolatore", calcId: "devalutazione" },
       { nome: "Rivalutazione Storica", tipo: "calcolatore", calcId: "rivalutazione-storica" },
-      { nome: "Variazioni Storiche Istat", tipo: "in_arrivo" },
-      { nome: "Tabella Variazioni Istat", tipo: "in_arrivo" },
-      { nome: "Ultimo Indice Istat", tipo: "in_arrivo" },
+      { nome: "Variazioni Storiche Istat", tipo: "tabella", tabellaId: "variazioni-storiche-istat" },
+      { nome: "Tabella Variazioni Istat", tipo: "tabella", tabellaId: "variazioni-istat" },
+      { nome: "Ultimo Indice Istat", tipo: "tabella", tabellaId: "ultimo-indice-istat" },
       { nome: "Rivalutazione Annuale Media", tipo: "calcolatore", calcId: "rivalutazione-annuale-media" },
       { nome: "Rivalutazione TFR", tipo: "calcolatore", calcId: "coefficiente-rivalutazione-tfr" },
       { nome: "Calcolo Inflazione", tipo: "calcolatore", calcId: "inflazione" },
-      { nome: "Inflazione e Titoli di Stato", tipo: "in_arrivo" },
+      { nome: "Inflazione e Titoli di Stato", tipo: "tabella", tabellaId: "inflazione-titoli-di-stato" },
     ],
   },
   {
@@ -4276,10 +4279,10 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Surroga", tipo: "calcolatore", calcId: "surroga-mutuo" },
       { nome: "Calcolo Tasso di Usura", tipo: "calcolatore", calcId: "tasso-usura" },
       { nome: "Calcolo TAEG", tipo: "calcolatore", calcId: "taeg" },
-      { nome: "Tabella Interessi Legali", tipo: "in_arrivo" },
-      { nome: "Tabella Interessi di Mora", tipo: "in_arrivo" },
+      { nome: "Tabella Interessi Legali", tipo: "tabella", tabellaId: "interessi-legali" },
+      { nome: "Tabella Interessi di Mora", tipo: "tabella", tabellaId: "interessi-di-mora" },
       { nome: "Interessi Mora Appalti", tipo: "calcolatore", calcId: "interessi-mora-appalti" },
-      { nome: "Tabella Tassi Appalti", tipo: "in_arrivo" },
+      { nome: "Tabella Tassi Appalti", tipo: "tabella", tabellaId: "tassi-appalti" },
     ],
   },
   {
@@ -4302,7 +4305,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
     id: "atti-giudiziari", titolo: "Atti Giudiziari", icona: "file-text",
     voci: [
       { nome: "Calcolo Contributo Unificato", tipo: "calcolatore", calcId: "contributo-unificato" },
-      { nome: "Tabella Contributo Unificato", tipo: "in_arrivo" },
+      { nome: "Tabella Contributo Unificato", tipo: "tabella", tabellaId: "contributo-unificato" },
       { nome: "Calcolo Diritti di Copia", tipo: "calcolatore", calcId: "diritti-copia" },
       { nome: "Copie Processo Tributario", tipo: "calcolatore", calcId: "diritti-copia-tributario" },
       { nome: "Fascicolo di Parte", tipo: "in_arrivo" },
@@ -4323,7 +4326,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
       { nome: "Ricerca uffici UNEP", tipo: "in_arrivo" },
       { nome: "Note Iscrizione Ruolo", tipo: "in_arrivo" },
-      { nome: "Codici Iscrizione Ruolo", tipo: "in_arrivo" },
+      { nome: "Codici Iscrizione Ruolo", tipo: "tabella", tabellaId: "codici-iscrizione-ruolo" },
       { nome: "Calcolo Impronta Hash", tipo: "calcolatore", calcId: "impronta-hash" },
       { nome: "Controllo Cause a Ruolo", tipo: "in_arrivo" },
       { nome: "Tassazione Atti Giudiziari", tipo: "in_arrivo" },
@@ -4346,7 +4349,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2014 Penale", tipo: "calcolatore", calcId: "parametri-penali-2014" },
       { nome: "Parametri Stragiudiziali", tipo: "calcolatore", calcId: "parametri-stragiudiziali" },
       { nome: "Spese Trasferta Avvocati", tipo: "calcolatore", calcId: "spese-trasferta-avvocati" },
-      { nome: "Tabelle Parametri", tipo: "in_arrivo" },
+      { nome: "Tabelle Parametri", tipo: "tabella", tabellaId: "parametri-forensi" },
       { nome: "Parametri 2012 Civile", tipo: "calcolatore", calcId: "parametri-civili-2012" },
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
       { nome: "Tariffe Forensi 2004", tipo: "calcolatore", calcId: "tariffe-forensi-2004" },
@@ -4387,10 +4390,10 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Menomazioni Plurime", tipo: "calcolatore", calcId: "menomazioni-plurime" },
       { nome: "Risarcimento INAIL", tipo: "calcolatore", calcId: "risarcimento-inail" },
       { nome: "Calcolo Equo Indennizzo", tipo: "calcolatore", calcId: "equo-indennizzo" },
-      { nome: "Tabelle Danno Biologico", tipo: "in_arrivo" },
-      { nome: "Tabella Unica Macropermanenti", tipo: "in_arrivo" },
-      { nome: "Tabelle Milano e Roma", tipo: "in_arrivo" },
-      { nome: "Tabella delle Menomazioni", tipo: "in_arrivo" },
+      { nome: "Tabelle Danno Biologico", tipo: "tabella", tabellaId: "danno-biologico-lieve" },
+      { nome: "Tabella Unica Macropermanenti", tipo: "tabella", tabellaId: "tabella-unica-macropermanenti" },
+      { nome: "Tabelle Milano e Roma", tipo: "tabella", tabellaId: "danno-milano-roma" },
+      { nome: "Tabella delle Menomazioni", tipo: "tabella", tabellaId: "menomazioni" },
     ],
   },
   {
@@ -4409,18 +4412,18 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo Eredità", tipo: "calcolatore", calcId: "quote-ereditarie" },
       { nome: "Calcolo Imposte di Successione", tipo: "calcolatore", calcId: "imposta-successione" },
       { nome: "Calcolo Usufrutto", tipo: "calcolatore", calcId: "usufrutto" },
-      { nome: "Coefficienti Usufrutto", tipo: "in_arrivo" },
+      { nome: "Coefficienti Usufrutto", tipo: "tabella", tabellaId: "coefficienti-usufrutto" },
       { nome: "Pensione di Reversibilità", tipo: "calcolatore", calcId: "pensione-reversibilita" },
       { nome: "Grado di Parentela", tipo: "calcolatore", calcId: "grado-parentela" },
       { nome: "Calcolo IMU", tipo: "calcolatore", calcId: "imu" },
       { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
-      { nome: "Categorie Catastali", tipo: "in_arrivo" },
+      { nome: "Categorie Catastali", tipo: "tabella", tabellaId: "categorie-catastali" },
       { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
       { nome: "Calcolo Superficie Commerciale", tipo: "calcolatore", calcId: "superficie-commerciale" },
       { nome: "Imposte Compravendita", tipo: "calcolatore", calcId: "imposte-compravendita-immobiliare" },
       { nome: "Calcolo Cedolare Secca", tipo: "calcolatore", calcId: "cedolare-secca" },
       { nome: "Tassa Registro Locazioni", tipo: "calcolatore", calcId: "tassa-registro-locazione" },
-      { nome: "Spese Condominiali", tipo: "in_arrivo" },
+      { nome: "Spese Condominiali", tipo: "tabella", tabellaId: "spese-condominiali" },
     ],
   },
 ];
@@ -4901,6 +4904,7 @@ export default function Calcolatori() {
   };
   // Atti (bozze di documenti)
   const [attoAperto, setAttoAperto] = React.useState<AttoId | null>(null);
+  const [tabellaAperta, setTabellaAperta] = React.useState<TabellaId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
   const [attoCrediti, setAttoCrediti] = React.useState<{ descrizione: string; importo: string }[]>([]);
   const [procuraParti, setProcuraParti] = React.useState<{ nome: string; persona_giuridica: boolean; legale_rappresentante: string; cf_piva: string; indirizzo: string }[]>([]);
@@ -4917,8 +4921,8 @@ export default function Calcolatori() {
   // l'overlay (stesso problema e stessa soluzione di profilo.tsx).
   // Disattivato finche' un overlay e' visibile.
   React.useEffect(() => {
-    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto) });
-  }, [categoriaCalc, calcAperto, attoAperto, navigation]);
+    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto || tabellaAperta) });
+  }, [categoriaCalc, calcAperto, attoAperto, tabellaAperta, navigation]);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
@@ -6071,7 +6075,7 @@ export default function Calcolatori() {
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
   const sottotitoloVoce = (v: VoceMenuCalcolatori) =>
-    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : undefined;
+    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].sottotitolo : undefined;
   const ricercaAttiva = ricercaCalc.trim().length > 0;
   const risultatiRicerca = ricercaAttiva
     ? cercaVociCalcolatori(CATEGORIE_CALC.map((c) => ({ id: c.id, titolo: c.titolo, voci: vociCategoria(c.id) })), ricercaCalc, sottotitoloVoce)
@@ -6105,7 +6109,7 @@ export default function Calcolatori() {
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun calcolatore trovato</Text>
             </View>
           ) : risultatiRicerca.map(({ voce: v, categoriaId, categoriaTitolo, sottotitolo }, i) => {
-            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
+            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
             if (v.tipo === "in_arrivo") {
               return (
                 <View key={`${categoriaId}-${i}`} accessible accessibilityLabel={`${v.nome}, ${categoriaTitolo}, in arrivo`} accessibilityState={{ disabled: true }} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
@@ -6123,9 +6127,9 @@ export default function Calcolatori() {
             return (
               <Pressable
                 key={`${categoriaId}-${i}`}
-                testID={`ricerca-${v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`}`} accessibilityRole="button"
+                testID={`ricerca-${v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : `calc-${v.calcId}`}`} accessibilityRole="button"
                 accessibilityLabel={`${v.nome}, ${categoriaTitolo}`}
-                onPress={() => { Keyboard.dismiss(); if (v.tipo === "atto") apriAtto(v.attoId); else apriCalcolatore(v.calcId); }}
+                onPress={() => { Keyboard.dismiss(); if (v.tipo === "atto") apriAtto(v.attoId); else if (v.tipo === "tabella") setTabellaAperta(v.tabellaId); else apriCalcolatore(v.calcId); }}
                 style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
               >
                 <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
@@ -6167,7 +6171,7 @@ export default function Calcolatori() {
       </ScrollView>
 
       {categoriaCalc ? (
-        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto}>
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surfaceSecondary }} onDismiss={() => setCategoriaCalc(null)} disabled={!!calcAperto || !!attoAperto || !!tabellaAperta}>
           <Header variant="hero" title={categoriaCorrente?.titolo || "Calcolatori"} onBack={() => setCategoriaCalc(null)} />
           <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: SPACING.xxxl }}>
             {vociCategoria(categoriaCalc).map((v, i) => {
@@ -6184,12 +6188,12 @@ export default function Calcolatori() {
                   </View>
                 );
               }
-              const sorgente = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : ATTI.find((a) => a.id === v.attoId);
+              const sorgente = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId] : ATTI.find((a) => a.id === v.attoId);
               return (
                 <Pressable
                   key={i}
-                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : `calc-${v.calcId}`} accessibilityRole="button"
-                  onPress={() => (v.tipo === "atto" ? apriAtto(v.attoId) : apriCalcolatore(v.calcId))}
+                  testID={v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : `calc-${v.calcId}`} accessibilityRole="button"
+                  onPress={() => (v.tipo === "atto" ? apriAtto(v.attoId) : v.tipo === "tabella" ? setTabellaAperta(v.tabellaId) : apriCalcolatore(v.calcId))}
                   style={[st.calcCard, { backgroundColor: t.surface, borderColor: t.border, marginBottom: SPACING.sm }]}
                 >
                   <View style={[st.calcIcon, { backgroundColor: t.brandSecondary }]}>
@@ -6206,6 +6210,13 @@ export default function Calcolatori() {
               );
             })}
           </ScrollView>
+        </SwipeBackScreen>
+      ) : null}
+
+      {tabellaAperta ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setTabellaAperta(null)}>
+          <Header variant="hero" title={TABELLE_CONSULTAZIONE[tabellaAperta].titolo} onBack={() => setTabellaAperta(null)} backTestID="tabella-indietro" />
+          <TabellaConsultazione key={tabellaAperta} id={tabellaAperta} />
         </SwipeBackScreen>
       ) : null}
 
