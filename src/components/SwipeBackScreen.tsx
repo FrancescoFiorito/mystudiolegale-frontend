@@ -48,8 +48,13 @@ export default function SwipeBackScreen({ onDismiss, disabled, ...props }: Props
 
   const finish = useCallback(() => {
     dismiss();
-    translateX.value = 0;
-  }, [dismiss, translateX]);
+    // Gli overlay chiusi con onDismiss vengono smontati: riportare subito
+    // translateX a 0 li rimostrava per qualche fotogramma, prima che React
+    // completasse lo smontaggio (lampeggio a fine swipe). Va riportato a 0
+    // solo per le schermate vere (router.back), che restano montate dietro
+    // nei Tabs e devono essere al loro posto quando si torna su di esse.
+    if (!onDismiss) translateX.value = 0;
+  }, [dismiss, onDismiss, translateX]);
 
   const pan = Gesture.Pan()
     .enabled(!disabled)
