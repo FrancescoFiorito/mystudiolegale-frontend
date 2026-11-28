@@ -29,6 +29,9 @@ Il comunicato dell'Agenzia delle Entrate con le tabelle nazionali dei costi chil
 - Da provare su iPhone: ricerca con tastiera, cambio anno, chilometri con virgola e punto, PDF e Word, VoiceOver (elenco in `docs/rimborso-aci.md`, sezione "Da provare su iPhone").
 - Gli endpoint sono in produzione dal 23/11/2026.
 
+### Moltiplicatore catastale gruppo B dal 1° gennaio 2027
+Dal 1° gennaio 2027 il moltiplicatore del gruppo B (B/1–B/8) passa da 140 a 168 (art. 299, comma 5, D.Lgs. 141/2026). La tabella delle categorie catastali mostra già 168. Il calcolatore del valore catastale (`server.py`, dizionario con `"B": 140`) usa ancora 140: a gennaio 2027 portarlo a 168, oppure fargli scegliere il valore in base alla data.
+
 ### Fornitori: passi successivi
 
 Stato al 23/11/2026 dopo il controllo dei fornitori (dettaglio in `docs/revisione-sicurezza-novembre.md` del backend).
