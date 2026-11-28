@@ -364,7 +364,7 @@ const LETTERA: ModelloAtto = {
   ],
 };
 
-// ---- 6. Modelli di notula (per ora solo «Decreto Ingiuntivo») ----
+// ---- 6. Modelli di notula (decreto ingiuntivo, precetto, esecuzioni) ----
 const VOCI_DECRETO_INGIUNTIVO: Opzione[] = [
   { value: "1", label: "1 · Posizione e archivio" },
   { value: "2", label: "2 · Disamina" },
@@ -385,6 +385,62 @@ const VOCI_DECRETO_INGIUNTIVO: Opzione[] = [
   { value: "80.2", label: "80.2 · Diritti di collazione per stampa" },
   { value: "51", label: "51 · Procedimento di ingiunzione (onorari)" },
 ];
+// Voci dei modelli di notula (diritti dal processo di cognizione o di esecuzione; l'onorario in fondo a ciascun elenco).
+const voceNotula = (codice: string, etichetta: string): Opzione => ({ value: codice, label: `${codice} · ${etichetta}` });
+const VOCI_PRECETTO: Opzione[] = [
+  voceNotula("1", "Posizione e archivio"), voceNotula("2", "Disamina"), voceNotula("6", "Autentica di ogni firma"), voceNotula("21", "Consultazione con il cliente"),
+  voceNotula("22", "Corrispondenza informativa"), voceNotula("24", "Esame relata di notifica"), voceNotula("30", "Richiesta alla cancelleria di copia di atti"),
+  voceNotula("42.1", "Registrazione della sentenza"), voceNotula("42.2", "Registrazione provvedimento giudiziale"), voceNotula("45.1", "Accesso agli uffici"),
+  voceNotula("45.2", "Ritiro atto"), voceNotula("46", "Disamina titolo esecutivo"), voceNotula("47.1", "Redazione atto di precetto"),
+  voceNotula("48.1", "Notifica titolo esecutivo"), voceNotula("48.2", "Notifica titolo esecutivo a più persone"), voceNotula("48.3", "Notifica precetto"),
+  voceNotula("48.4", "Notifica precetto a più persone"), voceNotula("80.1", "Diritti di collazione per dattilografia"), voceNotula("80.2", "Diritti di collazione per stampa"),
+  voceNotula("52", "Redazione del precetto (onorari)"),
+];
+const VOCI_ESECUZIONE_MOBILIARE: Opzione[] = [
+  voceNotula("1", "Posizione e archivio"), voceNotula("2", "Disamina"), voceNotula("15.3", "Esame ordinanza"), voceNotula("21", "Consultazione con il cliente"),
+  voceNotula("22", "Corrispondenza informativa"), voceNotula("40", "Redazione nota spese giudiziale"), voceNotula("48.5", "Notifica atto di pignoramento"),
+  voceNotula("49.2", "Redazione atto di pignoramento autoveicolo"), voceNotula("50", "Esame verbale di pignoramento mobiliare"), voceNotula("52.1", "Intervento nell'esecuzione"),
+  voceNotula("61", "Deposito somme"), voceNotula("62", "Domanda di vendita beni pignorati"), voceNotula("63", "Comparizione davanti al giudice dell'esecuzione"),
+  voceNotula("68", "Per concorrere alla distribuzione del prezzo"), voceNotula("69", "Formazione progetto di distribuzione amichevole"),
+  voceNotula("70", "Esame del progetto di distribuzione"), voceNotula("71", "Discussione progetto di distribuzione"), voceNotula("72", "Approvazione progetto di distribuzione"),
+  voceNotula("80.1", "Diritti di collazione per dattilografia"), voceNotula("80.2", "Diritti di collazione per stampa"),
+  voceNotula("55.1", "Procedure esecutive mobiliari (onorari)"),
+];
+const VOCI_ESECUZIONE_IMMOBILIARE: Opzione[] = [
+  voceNotula("1", "Posizione e archivio"), voceNotula("2", "Disamina"), voceNotula("6", "Autentica di ogni firma"), voceNotula("8", "Versamento contributo unificato"),
+  voceNotula("9", "Iscrizione della causa a ruolo"), voceNotula("15.3", "Esame ordinanza"), voceNotula("18", "Formazione del fascicolo"),
+  voceNotula("21", "Consultazione con il cliente"), voceNotula("22", "Corrispondenza informativa"), voceNotula("24", "Esame relata di notifica"),
+  voceNotula("31.2", "Deposito documenti in cancelleria"), voceNotula("37.1", "Esame relazione del consulente tecnico"), voceNotula("40", "Redazione nota spese giudiziale"),
+  voceNotula("48.5", "Notifica atto di pignoramento"), voceNotula("48.6", "Notifica atto di pignoramento a più persone"),
+  voceNotula("49.1", "Redazione atto di pignoramento immobiliare"), voceNotula("52.1", "Intervento nell'esecuzione"), voceNotula("52.3", "Redazione intimazione ad altri creditori"),
+  voceNotula("53.2", "Compilazione nota di trascrizione pubblici registri"), voceNotula("55.1", "Esame certificato ipotecario"), voceNotula("55.2", "Esame certificato catastale"),
+  voceNotula("56.1", "Richiesta di certificato ipotecario"), voceNotula("56.2", "Richiesta di certificato catastale"), voceNotula("57", "Redazione nota di ispezione ipotecaria"),
+  voceNotula("58", "Ispezione catastale"), voceNotula("59", "Richiesta pubblicità di avvisi"), voceNotula("60", "Esame domanda e titoli dei creditori"),
+  voceNotula("62", "Domanda di vendita beni pignorati"), voceNotula("63", "Comparizione davanti al giudice dell'esecuzione"), voceNotula("65", "Assistenza all'incanto"),
+  voceNotula("68", "Per concorrere alla distribuzione del prezzo"), voceNotula("69", "Formazione progetto di distribuzione amichevole"),
+  voceNotula("70", "Esame del progetto di distribuzione"), voceNotula("71", "Discussione progetto di distribuzione"), voceNotula("72", "Approvazione progetto di distribuzione"),
+  voceNotula("80.1", "Diritti di collazione per dattilografia"), voceNotula("80.2", "Diritti di collazione per stampa"),
+  voceNotula("54", "Procedure esecutive immobiliari (onorari)"),
+];
+const VOCI_ESECUZIONE_PRESSO_TERZI: Opzione[] = [
+  voceNotula("1", "Posizione e archivio"), voceNotula("2", "Disamina"), voceNotula("6", "Autentica di ogni firma"), voceNotula("8", "Versamento contributo unificato"),
+  voceNotula("9", "Iscrizione della causa a ruolo"), voceNotula("15.3", "Esame ordinanza"), voceNotula("21", "Consultazione con il cliente"), voceNotula("22", "Corrispondenza informativa"),
+  voceNotula("23.1", "Notifica atto"), voceNotula("24", "Esame relata di notifica"), voceNotula("30", "Richiesta alla cancelleria di copia di atti"),
+  voceNotula("31.1", "Deposito atti in cancelleria"), voceNotula("40", "Redazione nota spese giudiziale"), voceNotula("42.2", "Registrazione provvedimento giudiziale"),
+  voceNotula("45.1", "Accesso agli uffici"), voceNotula("45.2", "Ritiro atto"), voceNotula("47.2", "Redazione atto di pignoramento presso terzi"),
+  voceNotula("48.5", "Notifica atto di pignoramento"), voceNotula("48.6", "Notifica atto di pignoramento a più persone"), voceNotula("52.1", "Intervento nell'esecuzione"),
+  voceNotula("63", "Comparizione davanti al giudice dell'esecuzione"), voceNotula("68", "Per concorrere alla distribuzione del prezzo"),
+  voceNotula("69", "Formazione progetto di distribuzione amichevole"), voceNotula("70", "Esame del progetto di distribuzione"), voceNotula("71", "Discussione progetto di distribuzione"),
+  voceNotula("72", "Approvazione progetto di distribuzione"), voceNotula("80.1", "Diritti di collazione per dattilografia"), voceNotula("80.2", "Diritti di collazione per stampa"),
+  voceNotula("56.1", "Procedure esecutive presso terzi (onorari)"),
+];
+const VOCI_NOTULA: Record<string, Opzione[]> = {
+  decreto_ingiuntivo: VOCI_DECRETO_INGIUNTIVO, precetto: VOCI_PRECETTO, esecuzione_mobiliare: VOCI_ESECUZIONE_MOBILIARE,
+  esecuzione_immobiliare: VOCI_ESECUZIONE_IMMOBILIARE, esecuzione_presso_terzi: VOCI_ESECUZIONE_PRESSO_TERZI,
+};
+// Codice dell'onorario di ciascun modello: sui diritti «Spese esenti/imponibili» (il codice 55.1 o 56.1 può essere un diritto in un altro modello).
+const ONORARIO_NOTULA: Record<string, string> = { decreto_ingiuntivo: "51", precetto: "52", esecuzione_mobiliare: "55.1", esecuzione_immobiliare: "54", esecuzione_presso_terzi: "56.1" };
+const nonDecreto = (f: Record<string, any>) => f.modello !== "decreto_ingiuntivo";
 const TARIFFE: Opzione[] = [
   { value: "minima", label: "Minima" }, { value: "media", label: "Media" }, { value: "massima", label: "Massima" }, { value: "specificata", label: "Specificata" },
 ];
@@ -397,7 +453,13 @@ const NOTULA: ModelloAtto = {
     {
       titolo: "Modello e valore",
       campi: [
-        { tipo: "scelta", key: "modello", label: "Modello", default: "decreto_ingiuntivo", opzioni: [{ value: "decreto_ingiuntivo", label: "Decreto Ingiuntivo" }] },
+        {
+          tipo: "scelta", key: "modello", label: "Modello", default: "decreto_ingiuntivo", opzioni: [
+            { value: "decreto_ingiuntivo", label: "Decreto ingiuntivo" }, { value: "precetto", label: "Precetto" },
+            { value: "esecuzione_mobiliare", label: "Esecuzione mobiliare" }, { value: "esecuzione_immobiliare", label: "Esecuzione immobiliare" },
+            { value: "esecuzione_presso_terzi", label: "Esecuzione presso terzi" },
+          ],
+        },
         {
           tipo: "scelta", key: "valore_tipo", label: "Valore della causa", default: "specificato", opzioni: [
             { value: "specificato", label: "Specificato" }, { value: "indeterminabile", label: "Indeterminabile" }, { value: "indeterminabile_importanza", label: "Indeterminabile di particolare importanza" },
@@ -415,7 +477,7 @@ const NOTULA: ModelloAtto = {
           tipo: "lista", key: "attivita", label: "Voci da includere", etichettaAggiungi: "Aggiungi una voce", nomeVoce: "voce", min: 1,
           mostraSe: (f) => !f.tutte_le_voci,
           campi: [
-            { tipo: "scelta", key: "codice", label: "Voce", default: "1", opzioni: VOCI_DECRETO_INGIUNTIVO },
+            { tipo: "scelta", key: "codice", label: "Voce", default: "1", opzioni: (f: Record<string, any>) => VOCI_NOTULA[f.modello] ?? VOCI_DECRETO_INGIUNTIVO },
             { tipo: "numero", key: "quantita", label: "Quantità", default: "1", invio: "intero" },
             {
               tipo: "scelta", key: "tariffa", label: "Tariffa della voce", default: "", omettiSeVuoto: true,
@@ -425,10 +487,24 @@ const NOTULA: ModelloAtto = {
               tipo: "numero", key: "valore", label: "Importo della tariffa specificata (€)", invio: "numero",
               mostraSe: (r, f) => r.tariffa === "specificata" || (!r.tariffa && f.tariffa_predefinita === "specificata"),
             },
-            { tipo: "numero", key: "spese_esenti", label: "Spese esenti (€)", invio: "numero", mostraSe: (r) => r.codice !== "51" },
-            { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili (€)", invio: "numero", mostraSe: (r) => r.codice !== "51" },
+            { tipo: "numero", key: "spese_esenti", label: "Spese esenti (€)", invio: "numero", mostraSe: (r, f) => r.codice !== ONORARIO_NOTULA[f.modello] },
+            { tipo: "numero", key: "spese_imponibili", label: "Spese imponibili (€)", invio: "numero", mostraSe: (r, f) => r.codice !== ONORARIO_NOTULA[f.modello] },
           ] as CampoRigaLista[],
         },
+      ],
+    },
+    {
+      titolo: "Capitale e spese",
+      mostraSe: nonDecreto,
+      campi: [
+        { tipo: "numero", key: "capitale", label: "Capitale (€)", invio: "numero", segnaposto: "0", mostraSe: nonDecreto },
+        { tipo: "numero", key: "interessi", label: "Interessi (€)", invio: "numero", segnaposto: "0", mostraSe: nonDecreto, aiuto: "Entrano solo nel totale generale." },
+        {
+          tipo: "numero", key: "spese_liquidate", label: "Spese liquidate (€)", invio: "numero", segnaposto: "0", mostraSe: nonDecreto,
+          aiuto: "Nel precetto sono le spese liquidate nel titolo (entrano nella notula). Nelle esecuzioni è «Diritti Onorari e Spese del Precetto»: va solo nel totale generale.",
+        },
+        { tipo: "numero", key: "spese_liquidate_esenti", label: "Spese liquidate esenti (€)", invio: "numero", segnaposto: "0", mostraSe: nonDecreto },
+        { tipo: "numero", key: "spese_liquidate_imponibili", label: "Spese liquidate imponibili (€)", invio: "numero", segnaposto: "0", mostraSe: nonDecreto },
       ],
     },
     {
