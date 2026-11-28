@@ -32,6 +32,9 @@ Il comunicato dell'Agenzia delle Entrate con le tabelle nazionali dei costi chil
 ### Moltiplicatore catastale gruppo B dal 1° gennaio 2027
 Dal 1° gennaio 2027 il moltiplicatore del gruppo B (B/1–B/8) passa da 140 a 168 (art. 299, comma 5, D.Lgs. 141/2026). La tabella delle categorie catastali mostra già 168. Il calcolatore del valore catastale (`server.py`, dizionario con `"B": 140`) usa ancora 140: a gennaio 2027 portarlo a 168, oppure fargli scegliere il valore in base alla data.
 
+### Competenza del Giudice di Pace dal 31 ottobre 2027
+Il D.Lgs. 116/2017 porta il limite del Giudice di Pace per i beni mobili da 10.000 a 30.000 € (art. 7 c.p.c.); l'entrata in vigore è rinviata, a oggi, al 31/10/2027. A quella data aggiornare `AM_DI_SOGLIA_GDP` in `server.py` (avviso del Decreto Ingiuntivo), dopo aver controllato che non ci siano altri rinvii.
+
 ### Fornitori: passi successivi
 
 Stato al 23/11/2026 dopo il controllo dei fornitori (dettaglio in `docs/revisione-sicurezza-novembre.md` del backend).
