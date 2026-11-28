@@ -126,7 +126,7 @@ export default function ModelloAtto({ modello }: { modello: Modello }) {
       <Text style={{ color: t.warning, fontSize: 12 }}>
         {modello.introduzione ? `${modello.introduzione} ` : ""}Il documento generato va sempre controllato prima dell&apos;uso. I campi con * sono obbligatori.
       </Text>
-      {modello.gruppi.map((g, i) => (
+      {modello.gruppi.filter((g) => !g.mostraSe || g.mostraSe(form)).map((g, i) => (
         <View key={i} style={{ marginTop: SPACING.lg }}>
           {g.titolo ? <Text accessibilityRole="header" style={{ color: t.onSurface, fontSize: 15, fontWeight: "800" }}>{g.titolo}</Text> : null}
           {g.campi.map(campo)}

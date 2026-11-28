@@ -31,6 +31,8 @@ import { TABELLE_CONSULTAZIONE, type TabellaId } from "@/src/utils/tabelleConsul
 import { sincronizzaSeConnesso } from "@/src/utils/calendarioDispositivo";
 import { useApriAtto } from "@/src/utils/apriAtto";
 import { cercaVociCalcolatori } from "@/src/utils/ricercaCalcolatori";
+import RicercaPubblica from "@/src/components/RicercaPubblica";
+import { RICERCHE, type RicercaId } from "@/src/utils/ricerchePubbliche";
 import { TARIFFA_MINIMA_MASSIMA, TARIFFA_SCELTE, TARIFFA_SCELTE_RIGA, DEROGHE_NOTA_SPESE, DEROGHE_NOTULA_PENALE, tariffaEffettiva, limitiConDeroga, testoIntervallo, erroreImporto, type Limiti } from "@/src/utils/tariffaSpecificata";
 import { INTERVALLI_VUOTI, richiesteIntervalli, intervalliDaRisposta, type IntervalliNotaSpese, type SezioneNotaSpese } from "@/src/utils/intervalliNotaSpese";
 import type { RisultatoTariffe } from "@/src/utils/tariffeForensi2004";
@@ -4247,6 +4249,8 @@ type VoceMenuCalcolatori =
   // Modello di atto compilabile, descritto in src/modelliAtti/modelli.ts.
   | { nome: string; tipo: "modello"; modelloId: string; sottotitolo: string; icona: string }
   | { nome: string; tipo: "tabella"; tabellaId: TabellaId }
+  // Ricerca su dati pubblici (codici catastali, uffici giudiziari, UNEP), descritta in src/utils/ricerchePubbliche.ts.
+  | { nome: string; tipo: "ricerca"; ricercaId: RicercaId }
   // Collegamento a una pagina ufficiale, aperta nel browser in-app.
   | { nome: string; tipo: "link"; url: string; sottotitolo: string; icona: string }
   | { nome: string; tipo: "in_arrivo" };
@@ -4334,8 +4338,8 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Pignoramento stipendio o pensione", tipo: "calcolatore", calcId: "pignoramento-stipendio-pensione" },
       { nome: "Dichiarazione 553 cpc", tipo: "modello", modelloId: "dichiarazione-553", sottotitolo: "Dichiarazione del terzo pignorato ex art. 553 c.p.c.", icona: "file-text" },
       { nome: "Indice Allegati", tipo: "modello", modelloId: "indice-allegati", sottotitolo: "Elenco numerato degli allegati", icona: "list" },
-      { nome: "Cerca ufficio giudiziario competente", tipo: "in_arrivo" },
-      { nome: "Ricerca uffici UNEP", tipo: "in_arrivo" },
+      { nome: "Cerca ufficio giudiziario competente", tipo: "ricerca", ricercaId: "uffici-giudiziari" },
+      { nome: "Ricerca uffici UNEP", tipo: "ricerca", ricercaId: "uffici-unep" },
       { nome: "Note Iscrizione Ruolo", tipo: "link", url: "https://www.giustizia.it/giustizia/page/it/provvedimento_ministeriale_selezionato?contentId=SDC30901", sottotitolo: "Modelli ufficiali del Ministero della Giustizia", icona: "external-link" },
       { nome: "Codici Iscrizione Ruolo", tipo: "tabella", tabellaId: "codici-iscrizione-ruolo" },
       { nome: "Calcolo Impronta Hash", tipo: "calcolatore", calcId: "impronta-hash" },
@@ -4365,7 +4369,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Parametri 2012 Penale", tipo: "calcolatore", calcId: "parametri-penali-2012" },
       { nome: "Tariffe Forensi 2004", tipo: "calcolatore", calcId: "tariffe-forensi-2004" },
       { nome: "Calcolo Nota Spese", tipo: "calcolatore", calcId: "nota-spese-tariffe-2004" },
-      { nome: "Modelli di Notula", tipo: "modello", modelloId: "modelli-notula", sottotitolo: "Notula per il decreto ingiuntivo (tariffe 2004)", icona: "file-text" },
+      { nome: "Modelli di Notula", tipo: "modello", modelloId: "modelli-notula", sottotitolo: "Notula per decreto ingiuntivo, precetto ed esecuzioni (tariffe 2004)", icona: "file-text" },
       { nome: "Calcolo Notula Penale", tipo: "calcolatore", calcId: "notula-penale-tariffario-2004" },
     ],
   },
@@ -4429,7 +4433,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Calcolo IMU", tipo: "calcolatore", calcId: "imu" },
       { nome: "Calcolo Valore Catastale", tipo: "calcolatore", calcId: "valore-catastale" },
       { nome: "Categorie Catastali", tipo: "tabella", tabellaId: "categorie-catastali" },
-      { nome: "Ricerca Codici Catastali", tipo: "in_arrivo" },
+      { nome: "Ricerca Codici Catastali", tipo: "ricerca", ricercaId: "codici-catastali" },
       { nome: "Calcolo Superficie Commerciale", tipo: "calcolatore", calcId: "superficie-commerciale" },
       { nome: "Imposte Compravendita", tipo: "calcolatore", calcId: "imposte-compravendita-immobiliare" },
       { nome: "Calcolo Cedolare Secca", tipo: "calcolatore", calcId: "cedolare-secca" },
@@ -4918,6 +4922,7 @@ export default function Calcolatori() {
   // Modello di atto aperto (id in MODELLI_ATTI): il modulo è montato solo finché la schermata resta aperta.
   const [modelloAperto, setModelloAperto] = React.useState<string | null>(null);
   const [tabellaAperta, setTabellaAperta] = React.useState<TabellaId | null>(null);
+  const [ricercaAperta, setRicercaAperta] = React.useState<RicercaId | null>(null);
   const [attoForm, setAttoForm] = React.useState<Record<string, string>>({});
   const [attoCrediti, setAttoCrediti] = React.useState<{ descrizione: string; importo: string }[]>([]);
   const [procuraParti, setProcuraParti] = React.useState<{ nome: string; persona_giuridica: boolean; legale_rappresentante: string; cf_piva: string; indirizzo: string }[]>([]);
@@ -4934,8 +4939,8 @@ export default function Calcolatori() {
   // l'overlay (stesso problema e stessa soluzione di profilo.tsx).
   // Disattivato finche' un overlay e' visibile.
   React.useEffect(() => {
-    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto || modelloAperto || tabellaAperta) });
-  }, [categoriaCalc, calcAperto, attoAperto, modelloAperto, tabellaAperta, navigation]);
+    navigation.setOptions({ gestureEnabled: !(categoriaCalc || calcAperto || attoAperto || modelloAperto || tabellaAperta || ricercaAperta) });
+  }, [categoriaCalc, calcAperto, attoAperto, modelloAperto, tabellaAperta, ricercaAperta, navigation]);
 
   React.useEffect(() => { api.get("/pratiche").then(setPratiche).catch(() => {}); }, []);
   React.useEffect(() => { api.get("/calc/termini-notevoli-cpc").then(setTerminiCpc).catch(() => {}); }, []);
@@ -6088,12 +6093,13 @@ export default function Calcolatori() {
   const categoriaCorrente = CATEGORIE_CALC.find((c) => c.id === categoriaCalc);
 
   const sottotitoloVoce = (v: VoceMenuCalcolatori) =>
-    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "modello" ? v.sottotitolo : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].sottotitolo : v.tipo === "link" ? v.sottotitolo : undefined;
-  const testIDVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => (v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "modello" ? `modello-${v.modelloId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : v.tipo === "link" ? `link-${slugVoce(v.nome)}` : `calc-${v.calcId}`);
+    v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.sottotitolo : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.sottotitolo : v.tipo === "ricerca" ? RICERCHE[v.ricercaId].sottotitolo : v.tipo === "modello" ? v.sottotitolo : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].sottotitolo : v.tipo === "link" ? v.sottotitolo : undefined;
+  const testIDVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => (v.tipo === "atto" ? `atto-${v.attoId}` : v.tipo === "modello" ? `modello-${v.modelloId}` : v.tipo === "tabella" ? `tabella-${v.tabellaId}` : v.tipo === "ricerca" ? `pubblica-${v.ricercaId}` : v.tipo === "link" ? `link-${slugVoce(v.nome)}` : `calc-${v.calcId}`);
   const apriVoce = (v: Exclude<VoceMenuCalcolatori, { tipo: "in_arrivo" }>) => {
     if (v.tipo === "atto") apriAtto(v.attoId);
     else if (v.tipo === "modello") setModelloAperto(v.modelloId);
     else if (v.tipo === "tabella") setTabellaAperta(v.tabellaId);
+    else if (v.tipo === "ricerca") setRicercaAperta(v.ricercaId);
     else if (v.tipo === "link") WebBrowser.openBrowserAsync(v.url);
     else apriCalcolatore(v.calcId);
   };
@@ -6132,7 +6138,7 @@ export default function Calcolatori() {
               <Text style={{ color: t.onSurfaceTertiary, marginTop: SPACING.sm }}>Nessun calcolatore trovato</Text>
             </View>
           ) : risultatiRicerca.map(({ voce: v, categoriaId, categoriaTitolo, sottotitolo }, i) => {
-            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "modello" ? v.icona : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].icona : v.tipo === "link" ? v.icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
+            const icona = (v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId)?.icona : v.tipo === "atto" ? ATTI.find((a) => a.id === v.attoId)?.icona : v.tipo === "modello" ? v.icona : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId].icona : v.tipo === "link" ? v.icona : v.tipo === "ricerca" ? RICERCHE[v.ricercaId].icona : undefined) || CATEGORIE_CALC.find((c) => c.id === categoriaId)?.icona;
             if (v.tipo === "in_arrivo") {
               return (
                 <View key={`${categoriaId}-${i}`} accessible accessibilityLabel={`${v.nome}, ${categoriaTitolo}, in arrivo`} accessibilityState={{ disabled: true }} style={[st.calcCard, { backgroundColor: t.surfaceSecondary, borderColor: t.border, marginBottom: SPACING.sm, opacity: 0.55 }]}>
@@ -6211,7 +6217,7 @@ export default function Calcolatori() {
                   </View>
                 );
               }
-              const sorgente: { icona?: string; sottotitolo?: string } | undefined = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "modello" || v.tipo === "link" ? v : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId] : ATTI.find((a) => a.id === v.attoId);
+              const sorgente: { icona?: string; sottotitolo?: string } | undefined = v.tipo === "calcolatore" ? CALCOLATORI.find((c) => c.id === v.calcId) : v.tipo === "modello" || v.tipo === "link" ? v : v.tipo === "ricerca" ? RICERCHE[v.ricercaId] : v.tipo === "tabella" ? TABELLE_CONSULTAZIONE[v.tabellaId] : ATTI.find((a) => a.id === v.attoId);
               return (
                 <Pressable
                   key={i}
@@ -6250,6 +6256,13 @@ export default function Calcolatori() {
         <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setTabellaAperta(null)}>
           <Header variant="hero" title={TABELLE_CONSULTAZIONE[tabellaAperta].titolo} onBack={() => setTabellaAperta(null)} backTestID="tabella-indietro" />
           <TabellaConsultazione key={tabellaAperta} id={tabellaAperta} />
+        </SwipeBackScreen>
+      ) : null}
+
+      {ricercaAperta ? (
+        <SwipeBackScreen edges={["top"]} style={{ backgroundColor: t.surface }} onDismiss={() => setRicercaAperta(null)}>
+          <Header variant="hero" title={RICERCHE[ricercaAperta].titolo} onBack={() => setRicercaAperta(null)} backTestID="ricerca-indietro" />
+          <RicercaPubblica key={ricercaAperta} id={ricercaAperta} />
         </SwipeBackScreen>
       ) : null}
 

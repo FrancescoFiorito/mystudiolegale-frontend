@@ -37,7 +37,8 @@ export type CampoModello = Comune & (
   | { tipo: "lista"; campi: CampoRigaLista[]; min?: number; max?: number; etichettaAggiungi: string; nomeVoce: string; righeIniziali?: Record<string, string>[]; comeTesti?: boolean; comeOggetto?: boolean }
 );
 
-export type GruppoCampi = { titolo?: string; campi: CampoModello[] };
+// `mostraSe` di gruppo: il gruppo (titolo compreso) compare solo se la funzione restituisce true.
+export type GruppoCampi = { titolo?: string; mostraSe?: (f: Modulo) => boolean; campi: CampoModello[] };
 
 export type ModelloAtto = {
   id: string;
