@@ -982,6 +982,13 @@ const DECRETO_INGIUNTIVO: ModelloAtto = {
       ],
     },
     {
+      titolo: "Provvisoria esecuzione",
+      campi: [
+        bool("provvisoria_esecuzione", "Chiedi la provvisoria esecuzione (art. 642 c.p.c.)", true, { aiuto: "L'art. 642 c.p.c. la ammette solo in certi casi e va motivata." }),
+        testo("motivi_provvisoria_esecuzione", "Motivi della provvisoria esecuzione", { lungo: true, mostraSe: (f) => !!f.provvisoria_esecuzione, aiuto: "Facoltativo: diventa un paragrafo del ricorso. Se lasci vuoto compare un promemoria." }),
+      ],
+    },
+    {
       titolo: "Allegati al ricorso",
       campi: [testo("allegati", "Elenco allegati", { lungo: true, aiuto: "Una riga per allegato." })],
     },
