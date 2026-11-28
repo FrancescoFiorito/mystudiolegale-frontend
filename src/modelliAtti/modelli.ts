@@ -6,6 +6,8 @@ import type { CampoRigaLista } from "@/src/components/ListaInput";
 import { improntaFile } from "@/src/utils/improntaFile";
 import { riferimentoTemporale } from "@/src/utils/improntaHash";
 import * as DocumentPicker from "expo-document-picker";
+import { ORDINI_AVVOCATI } from "@/src/documenti/ordiniAvvocati";
+import { oggiIso } from "./corpo";
 import type { CampoModello, ModelloAtto, Opzione } from "./tipi";
 
 // ---- Opzioni comuni a più modelli ----
@@ -874,7 +876,126 @@ const SFRATTO: ModelloAtto = {
   ],
 };
 
+// ---- 12. Ricorso per decreto ingiuntivo (su fattura) ----
+// Con un solo avvocato domicilio e autentica delle firme sono impliciti; con più avvocati serve un domiciliatario.
+const unAvvocato = (f: Record<string, any>) => (f.avvocati?.length ?? 0) === 1;
+const domiciliatario = (r: Record<string, string>, f: Record<string, any>) => unAvvocato(f) || !!r.domicilio_eletto;
+const autentica = (r: Record<string, string>, f: Record<string, any>) => domiciliatario(r, f) || !!r.autentica_firme;
+const DECRETO_INGIUNTIVO: ModelloAtto = {
+  id: "decreto-ingiuntivo",
+  titolo: "Decreto Ingiuntivo",
+  endpoint: "/atti-modello/decreto-ingiuntivo",
+  introduzione: "Genera solo il ricorso per decreto ingiuntivo: il decreto del giudice e la procura alle liti non sono compresi. Gli interessi non vengono calcolati: la scelta serve solo alla formula di rito.",
+  gruppi: [
+    {
+      titolo: "Dati del ricorso",
+      campi: [
+        { tipo: "scelta", key: "competenza", label: "Competenza", default: "giudice_di_pace", opzioni: [{ value: "giudice_di_pace", label: "Giudice di Pace" }, { value: "tribunale", label: "Tribunale" }], aiuto: "Di norma fino a € 5.000,00 Giudice di Pace, altrimenti Tribunale (non è un controllo)." },
+        testo("ufficio_giudiziario", "Di", { obbligatorio: true }),
+        {
+          tipo: "scelta", key: "procura", label: "Procura alle liti", default: "calce_atto", opzioni: [
+            { value: "calce_atto", label: "In calce al presente atto" }, { value: "margine_atto", label: "A margine del presente atto" }, { value: "notarile", label: "Giusta procura notarile" },
+          ],
+        },
+        testo("estremi_procura", "Dati procura", { obbligatorio: true, mostraSe: (f) => f.procura === "notarile", aiuto: "Nome del notaio, n° di repertorio e data." }),
+        testo("luogo", "Luogo", { obbligatorio: true }),
+        { tipo: "data", key: "data", label: "Data", vuotaOggi: true, aiuto: "Se lasci vuoto vale oggi." },
+      ],
+    },
+    {
+      titolo: "Avvocati",
+      campi: [
+        {
+          tipo: "lista", key: "avvocati", label: "Avvocati", etichettaAggiungi: "Aggiungi un avvocato", nomeVoce: "avvocato", min: 1, max: 16,
+          righeIniziali: [{ nome: "", domicilio_eletto: "true", autentica_firme: "true", indirizzo: "", codice_fiscale: "", fax: "", pec: "", ordine: "" }],
+          campi: [
+            { tipo: "testo", key: "nome", label: "Nome e Cognome", obbligatorio: true },
+            { tipo: "bool", key: "domicilio_eletto", label: "Eletto domicilio", mostraSe: (_r, f) => !unAvvocato(f), nota: () => "Con più avvocati ne serve esattamente uno." },
+            { tipo: "bool", key: "autentica_firme", label: "Autentica firme", mostraSe: (r, f) => !unAvvocato(f) && !r.domicilio_eletto },
+            { tipo: "testo", key: "indirizzo", label: "Indirizzo studio", obbligatorio: true, mostraSe: (r, f) => domiciliatario(r, f) },
+            { tipo: "testo", key: "codice_fiscale", label: "Codice fiscale" },
+            { tipo: "testo", key: "fax", label: "Fax", obbligatorio: true, mostraSe: (r, f) => autentica(r, f) },
+            { tipo: "testo", key: "pec", label: "PEC", obbligatorio: true, mostraSe: (r, f) => autentica(r, f) },
+            { tipo: "scelta", key: "ordine", label: "Ordine avvocati", default: "", opzioni: [{ value: "", label: "Non indicato" }, ...ORDINI_AVVOCATI.map((o) => ({ value: o, label: o }))] },
+          ] as CampoRigaLista[],
+        },
+      ],
+    },
+    {
+      titolo: "Parti assistite",
+      campi: [
+        {
+          tipo: "lista", key: "parti", label: "Parti assistite", etichettaAggiungi: "Aggiungi una parte", nomeVoce: "parte", min: 1, max: 20,
+          campi: [
+            { tipo: "testo", key: "nome", label: "Nomin. / Rag. Soc.", obbligatorio: true },
+            { tipo: "bool", key: "persona_giuridica", label: "Pers. giuridica" },
+            { tipo: "testo", key: "rappresentante_legale", label: "Rappres. Legale", mostraSe: (r) => !!r.persona_giuridica },
+            { tipo: "testo", key: "codice_fiscale", label: "CF / P.IVA", obbligatorio: true },
+          ] as CampoRigaLista[],
+        },
+      ],
+    },
+    {
+      titolo: "Debitori",
+      campi: [
+        {
+          tipo: "lista", key: "debitori", label: "Debitori", etichettaAggiungi: "Aggiungi un debitore", nomeVoce: "debitore", min: 1, max: 20,
+          campi: [
+            { tipo: "testo", key: "nome", label: "Nomin. / Rag. Soc.", obbligatorio: true },
+            { tipo: "testo", key: "residenza", label: "Residenza / Sede", obbligatorio: true },
+            { tipo: "bool", key: "persona_giuridica", label: "Pers. giuridica" },
+            { tipo: "testo", key: "rappresentante_legale", label: "Rappres. Legale", mostraSe: (r) => !!r.persona_giuridica },
+            { tipo: "testo", key: "codice_fiscale", label: "CF / P.IVA" },
+            { tipo: "testo", key: "pec", label: "PEC" },
+            { tipo: "scelta", key: "provenienza_pec", label: "Proveniente da", default: "", opzioni: PROVENIENZA_PEC_FACOLTATIVA, mostraSe: (r) => !!r.pec?.trim() },
+          ] as CampoRigaLista[],
+        },
+      ],
+    },
+    {
+      titolo: "Premesso che",
+      campi: [testo("premessa", "Testo libero", { lungo: true, aiuto: "Facoltativo. Il testo segue «Premesso che» nello stesso paragrafo." })],
+    },
+    {
+      titolo: "Fatture e acconti",
+      campi: [
+        { tipo: "scelta", key: "interessi", label: "Interessi", default: "moratori", opzioni: [{ value: "legale", label: "Al tasso legale" }, { value: "moratori", label: "Moratori" }] },
+        {
+          tipo: "lista", key: "movimenti", label: "Fatture e acconti", etichettaAggiungi: "Aggiungi un documento", nomeVoce: "documento", min: 1, max: 64,
+          campi: [
+            { tipo: "scelta", key: "tipo", label: "Documento", default: "fattura", opzioni: [{ value: "fattura", label: "Fattura" }, { value: "acconto", label: "Acconto" }] },
+            { tipo: "testo", key: "numero", label: "Numero" },
+            { tipo: "data", key: "data", label: "Del", default: oggiIso() },
+            { tipo: "testo", key: "importo", label: "Importo", default: "0,00", obbligatorio: true },
+            { tipo: "testoLungo", key: "descrizione", label: "Descrizione" },
+          ] as CampoRigaLista[],
+        },
+      ],
+    },
+    {
+      titolo: "Ulteriori spese",
+      campi: [
+        {
+          tipo: "lista", key: "spese", label: "Ulteriori spese", etichettaAggiungi: "Aggiungi una voce di spesa", nomeVoce: "spesa", max: 32,
+          campi: [{ tipo: "testo", key: "descrizione", label: "Descrizione voce di spesa" }, { tipo: "testo", key: "importo", label: "Importo €" }] as CampoRigaLista[],
+        },
+      ],
+    },
+    {
+      titolo: "Provvisoria esecuzione",
+      campi: [
+        bool("provvisoria_esecuzione", "Chiedi la provvisoria esecuzione (art. 642 c.p.c.)", true, { aiuto: "L'art. 642 c.p.c. la ammette solo in certi casi e va motivata." }),
+        testo("motivi_provvisoria_esecuzione", "Motivi della provvisoria esecuzione", { lungo: true, mostraSe: (f) => !!f.provvisoria_esecuzione, aiuto: "Facoltativo: diventa un paragrafo del ricorso. Se lasci vuoto compare un promemoria." }),
+      ],
+    },
+    {
+      titolo: "Allegati al ricorso",
+      campi: [testo("allegati", "Elenco allegati", { lungo: true, aiuto: "Una riga per allegato." })],
+    },
+  ],
+};
+
 export const MODELLI_ATTI: Record<string, ModelloAtto> = Object.fromEntries(
-  [ATTESTAZIONE, RELATA, FASCICOLO, INDICE, LETTERA, NOTULA, NOTE_TRATTAZIONE, PRECISAZIONE, DICHIARAZIONE_553, ATTO_PRECETTO, SFRATTO].map((m) => [m.id, m]),
+  [ATTESTAZIONE, RELATA, FASCICOLO, INDICE, LETTERA, NOTULA, NOTE_TRATTAZIONE, PRECISAZIONE, DICHIARAZIONE_553, ATTO_PRECETTO, SFRATTO, DECRETO_INGIUNTIVO].map((m) => [m.id, m]),
 );
 export type ModelloAttoId = string;

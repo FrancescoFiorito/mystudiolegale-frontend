@@ -4331,7 +4331,7 @@ const CATEGORIE_MENU_CALCOLATORI: CategoriaMenuCalcolatori[] = [
       { nome: "Visibilità Fascicolo Telematico", tipo: "in_arrivo" },
       { nome: "Note di Trattazione Scritta", tipo: "modello", modelloId: "note-trattazione-scritta", sottotitolo: "Note scritte per l'udienza a trattazione scritta", icona: "edit-3" },
       { nome: "Sollecito di Pagamento", tipo: "atto", attoId: "messa_in_mora" },
-      { nome: "Decreto Ingiuntivo", tipo: "in_arrivo" },
+      { nome: "Decreto Ingiuntivo", tipo: "modello", modelloId: "decreto-ingiuntivo", sottotitolo: "Ricorso per decreto ingiuntivo su fattura", icona: "file-text" },
       { nome: "Sfratto per Morosità", tipo: "modello", modelloId: "sfratto-morosita", sottotitolo: "Ricorso per convalida di sfratto per morosità", icona: "home" },
       { nome: "Atto di Precetto", tipo: "modello", modelloId: "atto-precetto", sottotitolo: "Atto di precetto con interessi e compensi", icona: "file-text" },
       { nome: "Nota di Precisazione del Credito", tipo: "modello", modelloId: "nota-precisazione-credito", sottotitolo: "Credito, interessi e compensi dopo il precetto", icona: "file-text" },
